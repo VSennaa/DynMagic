@@ -1,6 +1,12 @@
-# DynMagic v0.2.0 — arte, som e servidor dedicado
+# DynMagic v0.2.1 — espectador, braços e servidor dedicado
 
-## Novidades na 0.2.0
+## Novidades na 0.2.1
+
+- **Modo espectador**: em Jogar LAN marque **Entrar como espectador** (ou `--spectate`). Não ocupa vaga, pode entrar com a partida em andamento. Teclas **1/2** seguem cada jogador em 3ª pessoa, **0** câmera livre (WASD, Espaço/Ctrl, Shift).
+- **Braços em primeira pessoa** com FOV próprio (60, como o padrão do CS2; ajustável de 54 a 68 em Configurações → FOV das mãos), menores e nos cantos inferiores.
+- Build do servidor Linux corrigido (a 0.2.0 não chegou a ser publicada).
+
+## Novidades da 0.2.0
 
 - **Servidor dedicado** (Windows ou Linux): `DynMagic.exe --headless -- --server --name "Minha Arena"`. Os jogadores entram pela lista de salas (LAN) ou por IP (VPS), clicam em Pronto e a partida começa sozinha; depois do resultado todos voltam ao lobby. Pacote Linux separado nesta release com `README` e unidade systemd.
 - **Texturas pintadas à mão** em todos os modelos (geradas proceduralmente no Blender).

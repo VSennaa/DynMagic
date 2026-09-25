@@ -28,6 +28,10 @@ const CHANNEL_SNAPSHOT: int = 2
 var player_name: String = "Mago"
 ## True on a dedicated server (--server): the host is not a player.
 var dedicated: bool = false
+## peer id -> name of connected spectators (not players; no slot limit besides MAX_CLIENTS).
+var spectators: Dictionary[int, String] = {}
+## This client asked to join as a spectator.
+var spectating: bool = false
 ## Network simulator for unreliable streams (spec 04 §9): added one-way delay, jitter and loss.
 var sim_latency_ms: float = 0.0
 var sim_jitter_ms: float = 0.0
@@ -95,8 +99,9 @@ func host(p_port: int = DEFAULT_PORT, p_lobby_name: String = "", p_dedicated: bo
 	return OK
 
 
-func join(address: String, p_port: int = DEFAULT_PORT) -> Error:
+func join(address: String, p_port: int = DEFAULT_PORT, as_spectator: bool = false) -> Error:
 	close()
+	spectating = as_spectator
 	var peer: ENetMultiplayerPeer = ENetMultiplayerPeer.new()
 	var err: Error = peer.create_client(address, p_port, 3)
 	if err != OK:
@@ -115,6 +120,7 @@ func close() -> void:
 		multiplayer.multiplayer_peer.close()
 	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
 	players.clear()
+	spectators.clear()
 	dedicated = false
 	MatchState.active = false
 
@@ -122,11 +128,11 @@ func close() -> void:
 # --- Handshake (spec 04 §3) -------------------------------------------------
 
 func _on_connected_to_server() -> void:
-	_rpc_hello.rpc_id(1, PROTOCOL_VERSION, player_name)
+	_rpc_hello.rpc_id(1, PROTOCOL_VERSION, player_name, spectating)
 
 
 @rpc("any_peer", "call_remote", "reliable", CHANNEL_RELIABLE)
-func _rpc_hello(version: int, name: String) -> void:
+func _rpc_hello(version: int, name: String, as_spectator: bool = false) -> void:
 	if not multiplayer.is_server():
 		return
 	var peer_id: int = multiplayer.get_remote_sender_id()
@@ -135,6 +141,11 @@ func _rpc_hello(version: int, name: String) -> void:
 	if version != PROTOCOL_VERSION:
 		_rpc_reject.rpc_id(peer_id, "Versão diferente (host %d, você %d)" % [PROTOCOL_VERSION, version])
 		_kick_later(peer_id)
+		return
+	if as_spectator:
+		spectators[peer_id] = name.strip_edges().left(24) if name.strip_edges() != "" else "Espectador %d" % peer_id
+		_log("peer %d joined as spectator '%s'" % [peer_id, spectators[peer_id]])
+		_rpc_welcome.rpc(players, false, spectators, _in_match())
 		return
 	if players.size() >= 2:
 		_rpc_reject.rpc_id(peer_id, "Sala cheia")
@@ -152,16 +163,24 @@ func _rpc_hello(version: int, name: String) -> void:
 		return
 	players[peer_id] = clean_name
 	_log("peer %d joined as '%s'" % [peer_id, players[peer_id]])
-	_rpc_welcome.rpc(players, old_id != 0)
+	_rpc_welcome.rpc(players, old_id != 0, spectators, _in_match())
 	peer_joined.emit(peer_id, players[peer_id])
 
 
 @rpc("authority", "call_remote", "reliable", CHANNEL_RELIABLE)
-func _rpc_welcome(all_players: Dictionary, reconnecting: bool = false) -> void:
-	var first_time: bool = players.is_empty()
+func _rpc_welcome(all_players: Dictionary, reconnecting: bool = false, all_spectators: Dictionary = {}, in_match: bool = false) -> void:
+	var first_time: bool = players.is_empty() and spectators.is_empty()
 	players.clear()
 	for id: Variant in all_players:
 		players[int(id)] = str(all_players[id])
+	spectators.clear()
+	for id: Variant in all_spectators:
+		spectators[int(id)] = str(all_spectators[id])
+	# Spectators joining mid-match go straight to the arena.
+	if first_time and spectating and in_match:
+		_log("joined as spectator (match in progress)")
+		SceneRouter.go_to(SceneRouter.MATCH)
+		return
 	if first_time:
 		_log("joined; players %s" % [players])
 		if reconnecting and get_tree().get_first_node_in_group(&"net_match") == null:
@@ -177,6 +196,10 @@ func _rpc_reject(reason: String) -> void:
 	close.call_deferred()
 
 
+func _in_match() -> bool:
+	return get_tree().get_first_node_in_group(&"net_match") != null
+
+
 func _kick_later(peer_id: int) -> void:
 	# Give the reject RPC time to leave before dropping the peer.
 	await get_tree().create_timer(0.3).timeout
@@ -190,11 +213,16 @@ func _on_peer_connected(_peer_id: int) -> void:
 
 
 func _on_peer_disconnected(peer_id: int) -> void:
+	if spectators.erase(peer_id):
+		_log("spectator %d left" % peer_id)
+		if multiplayer.is_server():
+			_rpc_welcome.rpc(players, false, spectators, _in_match())
+		return
 	if players.erase(peer_id):
 		_log("peer %d left" % peer_id)
 		peer_left.emit(peer_id)
 		if multiplayer.is_server():
-			_rpc_welcome.rpc(players)
+			_rpc_welcome.rpc(players, false, spectators, _in_match())
 
 
 func _on_connection_failed() -> void:
@@ -350,7 +378,7 @@ func _parse_cli() -> void:
 		if host(port, "" if player_name == "Mago" else player_name, true) == OK:
 			get_tree().change_scene_to_file(SERVER_SCENE)
 	elif action == "join":
-		if join(address, port) == OK:
+		if join(address, port, args.has("--spectate")) == OK:
 			# --lobby waits in the lobby screen (UI flow tests); otherwise jump straight into the match.
 			get_tree().change_scene_to_file("res://scenes/ui/lobby_screen.tscn" if args.has("--lobby") else NET_MATCH_SCENE)
 

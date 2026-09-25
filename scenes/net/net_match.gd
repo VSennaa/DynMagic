@@ -54,8 +54,12 @@ func _ready() -> void:
 	_hud.add_child(_match_label)
 	MatchState.changed.connect(_on_match_changed)
 	_pause = PauseMenu.new()
-	_pause.leave_text = "Desistir"
+	_pause.leave_text = "Sair" if Net.spectating else "Desistir"
 	add_child(_pause)
+	if Net.spectating:
+		_spectator = SpectatorCamera.new()
+		_spectator.players_provider = _players_in_order
+		add_child(_spectator)
 	_overlay = Label.new()
 	_overlay.position = Vector2(16, 16)
 	_overlay.add_theme_color_override(&"font_outline_color", Color.BLACK)
@@ -127,7 +131,7 @@ func _sync_players() -> void:
 		_loaded_sent = true
 		if Net.is_host() and not MatchState.active:
 			MatchState.start_match(Lobby.overtime_setting, Lobby.arena_setting)
-		if not Net.dedicated:
+		if not Net.dedicated and not Net.spectating:
 			MatchState.mark_loaded()
 
 
@@ -321,7 +325,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _process(_delta: float) -> void:
-	_match_label.text = _match_text()
+	_match_label.text = _match_text() + ("\n" + _spectator.mode_text() if _spectator != null else "")
 	if not _overlay.visible:
 		return
 	var me: Player = _player(multiplayer.get_unique_id())
@@ -344,7 +348,7 @@ func _on_match_changed() -> void:
 	var paused: bool = MatchState.phase() == MatchFsm.Phase.PAUSED
 	process_mode = Node.PROCESS_MODE_DISABLED if paused else Node.PROCESS_MODE_INHERIT
 	if paused:
-		_match_label.text = _match_text()
+		_match_label.text = _match_text() + ("\n" + _spectator.mode_text() if _spectator != null else "")
 		for child: Node in _players_root.get_children():
 			(child as Player).frozen = true
 		return
@@ -425,6 +429,11 @@ func _match_text() -> String:
 			other = int(id)
 	var clock: String = "%d:%02d" % [int(view["time_left"]) / 60, int(view["time_left"]) % 60]
 	var head: String = "Round %d   Você %d × %d Oponente   %s" % [int(view["round"]), int(score.get(me, 0)), int(score.get(other, 0)), clock]
+	if Net.spectating or Net.dedicated:
+		var names: PackedStringArray = PackedStringArray()
+		for id: Variant in score:
+			names.append("%s %d" % [Net.players.get(int(id), str(id)), int(score[id])])
+		head = "Round %d   %s   %s" % [int(view["round"]), " × ".join(names), clock]
 	match MatchState.phase():
 		MatchFsm.Phase.DRAFT:
 			var my_turn: bool = (int(view["draft_step"]) == MatchFsm.DraftStep.SIDE_A and int(view["north"]) == me) or (int(view["draft_step"]) == MatchFsm.DraftStep.SIDE_B and int(view["north"]) != me)
@@ -523,6 +532,7 @@ func _set_overtime_flags(sudden: bool, surge: bool) -> void:
 
 var _menu: Control
 var _pause: PauseMenu
+var _spectator: SpectatorCamera
 
 
 func _show_results(winner_id: int, reason: StringName) -> void:
@@ -586,7 +596,7 @@ var _draft_panel: Control
 
 ## Four element cards (taken/other-turn cards disabled) plus the rune offer, over the frozen arena.
 func _update_draft_panel(view: Dictionary) -> void:
-	if Net.dedicated:
+	if Net.dedicated or Net.spectating:
 		return
 	var drafting: bool = MatchState.phase() == MatchFsm.Phase.DRAFT
 	if not drafting:
@@ -671,3 +681,12 @@ func _bot_aim(me: Player) -> void:
 		var to: Vector3 = other.global_position - me.global_position
 		me.set_look(atan2(-to.x, -to.z), 0.0)
 		return
+
+## Players sorted by id (stable order for the spectator's 1/2 keys).
+func _players_in_order() -> Array:
+	var list: Array = []
+	for child: Node in _players_root.get_children():
+		if child is Player:
+			list.append(child)
+	list.sort_custom(func(a: Node, b: Node) -> bool: return int(String(a.name)) < int(String(b.name)))
+	return list

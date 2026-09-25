@@ -60,6 +60,12 @@ var colorblind_mode: int = 0:
 		SpellDB.apply_palette(colorblind_mode)
 		changed.emit(&"colorblind_mode")
 
+## First-person arms FOV, independent of the world FOV (CS2 uses 60, range 54-68).
+var viewmodel_fov: float = 60.0:
+	set(value):
+		viewmodel_fov = clampf(value, 54.0, 68.0)
+		changed.emit(&"viewmodel_fov")
+
 var show_fps: bool = false:
 	set(value):
 		show_fps = value
@@ -93,6 +99,7 @@ func load_settings(path: String = PATH) -> void:
 		_apply_all()
 		return
 	fov = cfg.get_value("video", "fov", fov)
+	viewmodel_fov = cfg.get_value("video", "viewmodel_fov", viewmodel_fov)
 	video.read_config(cfg)
 	fullscreen = cfg.get_value("video", "fullscreen", fullscreen)
 	vsync = cfg.get_value("video", "vsync", vsync)
@@ -114,6 +121,7 @@ func save_settings(path: String = PATH) -> Error:
 	var cfg: ConfigFile = ConfigFile.new()
 	video.write_config(cfg)
 	cfg.set_value("video", "fov", fov)
+	cfg.set_value("video", "viewmodel_fov", viewmodel_fov)
 	cfg.set_value("video", "fullscreen", fullscreen)
 	cfg.set_value("video", "vsync", vsync)
 	cfg.set_value("video", "max_fps", max_fps)

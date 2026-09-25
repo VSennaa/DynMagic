@@ -13,6 +13,7 @@ var _arena: OptionButton
 var _ip_edit: LineEdit
 var _list: ItemList
 var _status: Label
+var _spectate: CheckBox
 
 
 func _ready() -> void:
@@ -37,6 +38,10 @@ func _ready() -> void:
 	column.add_child(_list)
 	_ip_edit = _line("127.0.0.1", "IP do host")
 	column.add_child(UiKit.row([_ip_edit, UiKit.button("Entrar por IP", _join_ip), UiKit.button("Entrar na selecionada", _join_selected)]))
+	_spectate = CheckBox.new()
+	_spectate.text = "Entrar como espectador"
+	_spectate.add_theme_color_override(&"font_color", UiKit.CREAM)
+	column.add_child(_spectate)
 	_status = UiKit.label("", 18)
 	column.add_child(_status)
 	column.add_child(UiKit.button("Voltar", func() -> void: SceneRouter.go_to(SceneRouter.MAIN_MENU)))
@@ -80,7 +85,7 @@ func _join(ip: String, port: int) -> void:
 	Settings.player_name = _name_edit.text
 	Settings.save_settings()
 	_status.text = "Conectando a %s..." % ip
-	Net.join(ip, port)
+	Net.join(ip, port, _spectate.button_pressed)
 
 
 func _refresh_list() -> void:

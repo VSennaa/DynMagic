@@ -1,8 +1,12 @@
-﻿extends Node
+extends Node
 ## Camera-local viewmodel composited over the world, below the HUD.
 ## An isolated World3D has no arena depth, so walls cannot clip the arms.
 const ARMS_LAYER: int = 1 << 19
 const CAST_FLASH: float = 0.12
+## Resting placement tuned like CS2/TF2 viewmodels: own FOV (default 60, range 54-68),
+## hands low in the bottom corners, roughly the lower quarter of the screen.
+const REST_OFFSET: Vector3 = Vector3(0.0, -0.085, -0.16)
+const ARMS_SCALE: float = 0.72
 var player: Player
 var source_camera: Camera3D
 var view: SubViewport
@@ -72,7 +76,7 @@ func _process(delta: float) -> void:
 		return
 	_time += delta
 	_flash = maxf(0.0, _flash - delta)
-	camera.fov = source_camera.fov
+	camera.fov = Settings.viewmodel_fov
 	camera.keep_aspect = source_camera.keep_aspect
 	view.msaa_3d = player.get_viewport().msaa_3d
 	overlay.visible = player.is_local and source_camera.current and not player.stats.is_dead and player.stats.hp > 0.0
@@ -88,5 +92,6 @@ func _process(delta: float) -> void:
 	arms.set("pose", pose)
 	var aim: float = 1.0 if player.composer.state == SpellComposer.State.AIMING else 0.0
 	var recoil: float = sin((_flash / CAST_FLASH) * PI) if _flash > 0.0 else 0.0
-	arms.position = Vector3(0.0, aim * .035 + sin(_time * 2.0) * .004, -aim * .045 - recoil * .08)
+	arms.scale = Vector3.ONE * ARMS_SCALE
+	arms.position = REST_OFFSET + Vector3(0.0, aim * .035 + sin(_time * 2.0) * .004, -aim * .045 - recoil * .08)
 	arms.rotation.x = -aim * .05 - recoil * .08

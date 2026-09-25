@@ -44,6 +44,7 @@ func _ready() -> void:
 	body.add_child(_option("Antialiasing", ["Off", "FXAA", "MSAA 2×", "MSAA 4×"], Settings.video.antialiasing, func(i: int) -> void: Settings.set_video(&"antialiasing", i)))
 	body.add_child(_check("VSync", Settings.vsync, func(v: bool) -> void: Settings.vsync = v))
 	body.add_child(_slider("FOV", 80.0, 110.0, 1.0, Settings.fov, func(v: float) -> void: Settings.fov = v))
+	body.add_child(_slider("FOV das mãos", 54.0, 68.0, 1.0, Settings.viewmodel_fov, func(v: float) -> void: Settings.viewmodel_fov = v))
 	var fps: OptionButton = OptionButton.new()
 	for value: int in FPS_OPTIONS:
 		fps.add_item("sem limite" if value == 0 else str(value))

@@ -44,6 +44,10 @@ func _refresh() -> void:
 		var you: String = " — você" if id == multiplayer.get_unique_id() else ""
 		var state: String = "PRONTO" if Lobby.ready_flags.get(id, false) else "aguardando"
 		_players.add_child(UiKit.label("%s%s%s   [%s]" % [Net.players[id], tag, you, state], 22))
+	for spec_id: int in Net.spectators:
+		var me_tag: String = " — você" if spec_id == multiplayer.get_unique_id() else ""
+		_players.add_child(UiKit.label("%s%s   [espectador]" % [Net.spectators[spec_id], me_tag], 18))
+	_ready_button.visible = not Net.spectating
 	if ids.size() < 2:
 		_players.add_child(UiKit.label("Aguardando oponente...", 18))
 	_rules.text = "Overtime: %s   Arena: %s" % [String(Lobby.overtime_setting), String(Lobby.arena_setting)]

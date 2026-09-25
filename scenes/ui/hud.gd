@@ -12,6 +12,8 @@ var player: Player
 
 var _trail: Label
 var _wheel: CrosshairWheel
+## Bars and cooldown grid: hidden when no player is bound (spectators).
+var _player_widgets: Array[Control] = []
 var _hint: Label
 var _hp_bar: ProgressBar
 var _shield_bar: ProgressBar
@@ -43,7 +45,11 @@ func bind(p_player: Player) -> void:
 
 func _process(delta: float) -> void:
 	_update_captions(delta)
-	if player == null or not is_instance_valid(player):
+	var has_player: bool = player != null and is_instance_valid(player)
+	for widget: Control in _player_widgets:
+		widget.visible = has_player
+	_wheel.visible = has_player
+	if not has_player:
 		return
 	var stats: Stats = player.stats
 	_update_damage_arrow(delta, stats.hp + stats.shield)
@@ -129,6 +135,7 @@ func _build() -> void:
 	root.add_child(_core_bar)
 
 	var bars: VBoxContainer = VBoxContainer.new()
+	_player_widgets.append(bars)
 	bars.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	bars.position = Vector2(32, -150)
 	bars.custom_minimum_size = Vector2(320, 0)
@@ -148,6 +155,7 @@ func _build() -> void:
 	bars.add_child(_status_label)
 
 	var grid: GridContainer = GridContainer.new()
+	_player_widgets.append(grid)
 	grid.columns = 4
 	grid.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
 	grid.position = Vector2(-340, -150)

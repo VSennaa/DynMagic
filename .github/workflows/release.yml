@@ -46,9 +46,10 @@ jobs:
       - name: Smoke test the dedicated server
         run: |
           chmod +x build/linux/DynMagic-server.x86_64
-          timeout 20 build/linux/DynMagic-server.x86_64 --headless -- --server --name CI > server.log 2>&1 || true
+          # --quit-after exits cleanly (stdout is flushed); timeout is only a safety net.
+          timeout 60 build/linux/DynMagic-server.x86_64 --headless --quit-after 300 -- --server --name CI > server.log 2>&1 || echo "exit code $?"
           cat server.log
-          grep -q "\[server\] lobby 'CI'" server.log
+          grep -q "dedicated server on port 7777 as 'CI'" server.log
 
       - name: Package
         run: |
