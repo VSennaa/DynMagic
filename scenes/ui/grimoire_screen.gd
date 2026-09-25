@@ -35,6 +35,7 @@ func _ready() -> void:
 
 
 func _pick(slot: int, index: int) -> void:
+	AudioBus.play_ui("page", -6.0)
 	match slot:
 		0: _element = index
 		1: _form = index

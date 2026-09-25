@@ -20,6 +20,7 @@ func _ready() -> void:
 	add_child(hud)
 	hud.bind(player)
 	add_child(PauseMenu.new())
+	player.add_child(Footsteps.new())
 	_spawn_dummies()
 
 

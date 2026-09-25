@@ -57,6 +57,7 @@ func _ready() -> void:
 	mat.emission = spell.color
 	mat.emission_energy_multiplier = 0.6
 	_mesh.material_override = mat
+	AudioBus.play_sample_at("stone", global_position, get_parent(), -2.0)
 
 
 func _process(delta: float) -> void:

@@ -41,6 +41,7 @@ func _ready() -> void:
 
 
 func _impulse(player: Player) -> void:
+	AudioBus.play_sample_at("cloth", player.global_position, player.get_parent(), 0.0)
 	var start: Vector3 = player.global_position
 	var distance: float = float(spell.param(&"distance", 9.0))
 	if bool(spell.param(&"teleport", false)):

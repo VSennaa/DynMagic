@@ -192,6 +192,7 @@ func _bar(color: Color) -> ProgressBar:
 func _update_damage_arrow(delta: float, total_hp: float) -> void:
 	if _last_hp >= 0.0 and total_hp < _last_hp - 0.5:
 		_arrow_time = 1.0
+		AudioBus.play_ui("hit", -6.0)
 	_last_hp = total_hp
 	_arrow_time = maxf(_arrow_time - delta, 0.0)
 	_damage_arrow.visible = _arrow_time > 0.0 and threat != null and is_instance_valid(threat)

@@ -51,6 +51,8 @@ static func button(text: String, on_pressed: Callable) -> Button:
 	b.add_theme_stylebox_override(&"focus", hover)
 	b.add_theme_stylebox_override(&"pressed", _box(Color(ACCENT, 0.45), ACCENT))
 	b.add_theme_color_override(&"font_color", CREAM)
+	b.pressed.connect(func() -> void: AudioBus.play_ui("click"))
+	b.mouse_entered.connect(func() -> void: AudioBus.play_ui("hover", -16.0))
 	b.pressed.connect(on_pressed)
 	return b
 
