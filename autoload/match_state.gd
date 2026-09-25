@@ -5,6 +5,8 @@ extends Node
 signal changed
 signal round_ended(winner_id: int, reason: StringName)
 signal match_ended(winner_id: int, reason: StringName)
+## C2: aggregated damage dealt by the local player, flushed every 100 ms for hit feedback.
+signal damage_dealt(amount: float, hits: int)
 
 var fsm: MatchFsm
 ## Client-side mirror of the host FSM (also filled on the host for uniform reads).
@@ -17,9 +19,15 @@ var disconnected_id: int = 0
 var reconnecting_id: int = 0
 var _pending_deaths: Array[int] = []
 var _hp_before: Dictionary = {}
+## D12: local telemetry. The host writes one JSON per finished match.
+const TELEMETRY_DIR: String = "user://telemetry"
+var _match_started_at: int = 0
+## C2: source_id -> {amount, hits} accumulated since the last 100 ms flush.
+var _damage_pending: Dictionary = {}
+var _damage_flush: float = 0.0
 
 
-func start_match(overtime_setting: StringName = &"random", arena_setting: StringName = &"rotation") -> void:
+func start_match(overtime_setting: StringName = &"collapse", arena_setting: StringName = &"rotation") -> void:
 	if not Net.is_host():
 		return
 	fsm = MatchFsm.new()
@@ -42,6 +50,7 @@ func start_match(overtime_setting: StringName = &"random", arena_setting: String
 		stats[id] = {"dealt": 0.0, "taken": 0.0, "casts": {}, "hits": {}, "cores": 0}
 	fsm.arena_setting = arena_setting
 	active = true
+	_match_started_at = int(Time.get_unix_time_from_system())
 	if not Net.peer_left.is_connected(_on_peer_left):
 		Net.peer_left.connect(_on_peer_left)
 	fsm.start(ids, overtime_setting)
@@ -89,6 +98,11 @@ func _physics_process(delta: float) -> void:
 	# Keep clients' clocks honest once per second without spamming reliable RPCs.
 	if int(fsm.time_left) != before:
 		_broadcast()
+	# C2: feedback batches every 100 ms so a burst of hits is one event.
+	_damage_flush += delta
+	if _damage_flush >= 0.1:
+		_damage_flush = 0.0
+		_flush_damage()
 
 
 func phase() -> MatchFsm.Phase:
@@ -173,6 +187,28 @@ func report_damage(source_id: int, target_id: int, amount: float, form: StringNa
 		if form != &"":
 			var hits: Dictionary = stats[source_id]["hits"]
 			hits[form] = int(hits.get(form, 0)) + 1
+	# C2: queue attacker feedback; the flush groups everything that lands in 100 ms.
+	if source_id != 0 and source_id != target_id and amount > 0.0:
+		var acc: Dictionary = _damage_pending.get(source_id, {"amount": 0.0, "hits": 0})
+		acc["amount"] = float(acc["amount"]) + amount
+		if form != &"":
+			acc["hits"] = int(acc["hits"]) + 1
+		_damage_pending[source_id] = acc
+
+
+func _flush_damage() -> void:
+	for id: int in _damage_pending:
+		var acc: Dictionary = _damage_pending[id]
+		if id == multiplayer.get_unique_id():
+			damage_dealt.emit(float(acc["amount"]), int(acc["hits"]))
+		else:
+			_damage_dealt.rpc_id(id, float(acc["amount"]), int(acc["hits"]))
+	_damage_pending.clear()
+
+
+@rpc("authority", "call_remote", "reliable", Net.CHANNEL_RELIABLE)
+func _damage_dealt(amount: float, hits: int) -> void:
+	damage_dealt.emit(amount, hits)
 
 
 func _sender() -> int:
@@ -221,7 +257,44 @@ func _round_ended(winner_id: int, reason: StringName) -> void:
 func _match_ended(winner_id: int, reason: StringName, final_stats: Dictionary) -> void:
 	stats = final_stats
 	print("[match] match won by %d (%s) stats=%s" % [winner_id, reason, final_stats])
+	if Net.is_host():
+		_write_telemetry(winner_id, reason)
 	match_ended.emit(winner_id, reason)
+
+
+## D12: private local JSON (no upload) with the match outcome and per-player stats.
+func _write_telemetry(winner_id: int, reason: StringName) -> void:
+	var players: Dictionary = {}
+	for id: int in stats:
+		var s: Dictionary = stats[id]
+		players[participant_names.get(id, str(id))] = {
+			"dealt": float(s.get("dealt", 0.0)), "taken": float(s.get("taken", 0.0)),
+			"casts": s.get("casts", {}), "hits": s.get("hits", {}),
+			"cores": int(s.get("cores", 0)), "compose_avg": ComposeMetrics.average(s),
+		}
+	var payload: Dictionary = {
+		"game": "DynMagic",
+		"version": ProjectSettings.get_setting("application/config/version", "?"),
+		"mode": "dedicated" if Net.dedicated else ("lan" if Net.is_online() else "offline"),
+		"started_at": _match_started_at,
+		"finished_at": int(Time.get_unix_time_from_system()),
+		"winner": participant_names.get(winner_id, str(winner_id)) if winner_id != 0 else "",
+		"reason": String(reason),
+		"score": fsm.score.duplicate() if fsm != null else {},
+		"arena": fsm.arena if fsm != null else &"",
+		"overtime_rule": fsm.overtime_rule if fsm != null else &"",
+		"players": players,
+	}
+	var dir: DirAccess = DirAccess.open("user://")
+	if dir != null and not dir.dir_exists("telemetry"):
+		dir.make_dir_recursive("telemetry")
+	var path: String = "%s/match_%d.json" % [TELEMETRY_DIR, int(Time.get_unix_time_from_system())]
+	var file: FileAccess = FileAccess.open(path, FileAccess.WRITE)
+	if file == null:
+		push_warning("telemetry: could not write %s" % path)
+		return
+	file.store_string(JSON.stringify(payload, "  "))
+	print("[telemetry] wrote %s" % ProjectSettings.globalize_path(path))
 
 
 func _hp_by_player() -> Dictionary:

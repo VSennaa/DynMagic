@@ -11,7 +11,7 @@ Player (CharacterBody3D)
 │  └─ CastOrigin (Marker3D) 0,3 m à frente, 0,2 m abaixo da câmera
 ├─ ThirdPersonModel        visível só para o oponente (camadas de render)
 │  └─ RuneCircle           círculo de composição visto pelo oponente
-├─ Hurtbox (Area3D)        cabeça (×1,5 dano) e corpo
+├─ Hurtbox (Area3D)        corpo (área de dano; sem headshot — D9)
 ├─ SpellComposer (Node)
 ├─ Stats (Node)            HP, mana, escudo, status, cooldown
 └─ NetSync (Node)          previsão, reconciliação, interpolação
@@ -38,7 +38,7 @@ Sem mira com zoom. Sem queda de dano por altura.
 - Mana 100, regenera 12/s. A regeneração pausa por 0,5 s depois de cada conjuração.
 - Escudo absorve dano antes do HP e some quando acaba a duração.
 - Status acumula duração do mesmo tipo até o máximo de 2× a duração base. Não acumula intensidade.
-- Headshot: ×1,5 só para Seta e Orbe (acerto direto).
+- Sem headshot: todo acerto no corpo causa o dano da magia (D9).
 
 ## 4. Conjuração em 1ª pessoa
 

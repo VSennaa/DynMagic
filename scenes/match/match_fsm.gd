@@ -40,8 +40,8 @@ var rune_offers: Dictionary[int, Array] = {}
 var runes: Dictionary[int, StringName] = {}
 var last_round_loser: int = 0
 var decisive: bool = false
-## "random" or a fixed rule id, chosen in the lobby.
-var overtime_setting: StringName = &"random"
+## "collapse" (alpha default), "sudden_death", "mana_surge" or "random", chosen in the lobby.
+var overtime_setting: StringName = &"collapse"
 var overtime_rule: StringName = &""
 ## "rotation" (default), "random", or a fixed variant id (spec 03 §3).
 var arena_setting: StringName = &"rotation"
@@ -59,7 +59,7 @@ var _paused_phase: Phase = Phase.LOBBY
 var _paused_time: float = 0.0
 
 
-func start(p_players: Array[int], p_overtime_setting: StringName = &"random") -> void:
+func start(p_players: Array[int], p_overtime_setting: StringName = &"collapse") -> void:
 	players = p_players.duplicate()
 	overtime_setting = p_overtime_setting
 	score.clear()

@@ -1,16 +1,17 @@
 class_name CrosshairWheel
 extends Control
-## Composition wheel around the crosshair. Three sectors follow the key layout:
-## Q on top, E bottom-left, R bottom-right. Settings.wheel_labels picks what each sector shows:
+## Composition wheel around the crosshair. D6: the three sectors form a Q-E-R arc
+## (left to right) in keyboard order. Settings.wheel_labels picks what each sector shows:
 ## the SpellGlyph symbol of the option (meaning) or the bound key (shortcuts).
-## Colour = element. Sectors dim while that spell is on cooldown. While aiming,
+## Colour = element. Sectors dim while that spell is on cooldown; a ring marks
+## confirmed (aim + LMB) spells and a dot marks quick ones. While aiming,
 ## the chosen letters sit in the centre and the ring pulses.
 
 const RADIUS: float = 46.0
 const BAND: float = 16.0
 const SECTOR_SPAN: float = deg_to_rad(96.0)
-## Sector centre angles (screen space, 0 = right, clockwise): Q top, E bottom-left, R bottom-right.
-const ANGLES: Array[float] = [-PI / 2.0, PI * 5.0 / 6.0, PI / 6.0]
+## Sector centre angles (screen space, 0 = right, clockwise): Q upper-left, E top, R upper-right.
+const ANGLES: Array[float] = [-PI * 0.75, -PI * 0.5, -PI * 0.25]
 const SLOT_ACTIONS: Array[StringName] = [&"slot_1", &"slot_2", &"slot_3"]
 const GLYPH_RADIUS: float = 10.5
 const FORMS: Array[StringName] = [&"projectile", &"self", &"area"]
@@ -72,6 +73,15 @@ func _draw_sectors(center: Vector2, color: Color, options: Array[StringName], al
 		draw_arc(center, RADIUS + BAND * 0.5, start, end, 24, Color(color.lightened(0.3), sector_alpha), 1.5, true)
 		var pos: Vector2 = center + Vector2.from_angle(ANGLES[i]) * RADIUS
 		_draw_option(pos, options[i], Color(1, 1, 1, clampf(sector_alpha + 0.1, 0.0, 1.0)), 1.0)
+		# D6: quick spells get a dot, confirmed spells (aim + LMB) an outer ring.
+		if form != &"":
+			var spell: ResolvedSpell = SpellDB.resolve(player.composer.element_id, form, EFFECTS[i])
+			var mark_pos: Vector2 = center + Vector2.from_angle(ANGLES[i]) * (RADIUS + BAND * 0.5 + 6.0)
+			var mark_color: Color = Color(1, 1, 1, clampf(sector_alpha, 0.0, 1.0))
+			if spell != null and not spell.is_quick():
+				draw_arc(mark_pos, 3.5, 0.0, TAU, 12, mark_color, 1.5, true)
+			else:
+				draw_circle(mark_pos, 2.0, mark_color)
 
 
 ## Chosen options above the crosshair: symbols, or the keys that picked them.

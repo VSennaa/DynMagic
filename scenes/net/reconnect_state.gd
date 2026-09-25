@@ -2,7 +2,7 @@ class_name ReconnectState
 extends RefCounted
 ## Host-only capture and authority-RPC restore of surviving world objects.
 
-const PLAYER_FIELDS: Array[StringName] = [&"overcharge_time", &"overcharge_casts", &"invulnerable_time", &"glide_time", &"sudden_death", &"mana_surge", &"_dash_velocity", &"_dash_time", &"_knockback", &"_burn_dps", &"_burn_tick", &"_slow_strength", &"_air_jumps_used"]
+const PLAYER_FIELDS: Array[StringName] = [&"overcharge_time", &"overcharge_casts", &"invulnerable_time", &"glide_time", &"sudden_death", &"mana_surge", &"_dash_velocity", &"_dash_time", &"_knockback", &"_burn_dps", &"_burn_tick", &"_slow_strength", &"_air_jumps_used", &"_arrow_charges", &"_arrow_recharge"]
 
 static func player_state(player: Player) -> Dictionary:
 	var state: Dictionary = fields(player, PLAYER_FIELDS)

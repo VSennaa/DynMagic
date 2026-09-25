@@ -4,7 +4,7 @@ Versão 0.1 · 2026-09-24 · Status: rascunho para revisão
 
 ## 1. Visão
 
-Arena 1v1 de magia dinâmica em primeira pessoa. O jogador não escolhe magias prontas: ele **compõe** cada magia em tempo real, apertando até 3 hotkeys em sequência (Elemento → Forma → Efeito), e dispara com o botão do mouse. O elemento é travado no início de cada round num draft rápido. Partidas são melhor de 7 rounds em arenas pequenas inspiradas no Skirmish do Valorant, jogadas em LAN.
+Arena 1v1 de magia dinâmica em primeira pessoa. O jogador não escolhe magias prontas: ele **compõe** cada magia em tempo real, apertando 2 teclas em sequência (Forma → Efeito) sobre o **elemento fixo do round**, e dispara com o botão do mouse. O elemento é travado no início de cada round num draft rápido. Partidas são melhor de 7 rounds em arenas pequenas inspiradas no Skirmish do Valorant, jogadas em LAN.
 
 Pilares:
 

@@ -6,6 +6,7 @@ const PLAY_LAN: String = "res://scenes/ui/play_lan.tscn"
 const LOBBY: String = "res://scenes/ui/lobby_screen.tscn"
 const SETTINGS: String = "res://scenes/ui/settings_screen.tscn"
 const GRIMOIRE: String = "res://scenes/ui/grimoire_screen.tscn"
+const HOW_TO_PLAY: String = "res://scenes/ui/how_to_play.tscn"
 const TRAINING: String = "res://scenes/sandbox/training.tscn"
 const MATCH: String = "res://scenes/net/net_match.tscn"
 const FADE_TIME: float = 0.3

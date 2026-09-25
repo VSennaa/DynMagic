@@ -12,6 +12,10 @@ const PITCH_LIMIT: float = deg_to_rad(89.0)
 const KNOCKBACK_DECAY: float = 18.0
 const BURN_TICK: float = 0.5
 const GLIDE_GRAVITY_SCALE: float = 0.25
+## D1: the Arrow (projectile/direct) uses 3 charges instead of a per-cast cooldown.
+const ARROW_KEY: StringName = &"projectile_direct"
+const ARROW_CHARGES: int = 3
+const ARROW_RECHARGE: float = 1.2
 
 @export var tuning: PlayerTuning = preload("res://data/player_tuning.tres")
 ## Only the local player reads input. Remote players are driven by NetSync (M3).
@@ -66,6 +70,9 @@ var _coyote_timer: float = 0.0
 var _current_height: float = 1.8
 var _pitch: float = 0.0
 var cast_lockout: float = 0.0
+## D1: Arrow charges and the 1.2 s recharge timer (replicated with the player runtime).
+var _arrow_charges: int = ARROW_CHARGES
+var _arrow_recharge: float = 0.0
 
 @onready var stats: Stats = $Stats
 @onready var composer: SpellComposer = $SpellComposer
@@ -98,7 +105,9 @@ func _ready() -> void:
 		_camera.add_child(arms)
 		arms.setup(self, _camera)
 	else:
-		_add_nameplate()
+		# C15: the dedicated server has no camera to look at, so skip the model/animation.
+		if not Net.dedicated:
+			_add_nameplate()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -157,13 +166,16 @@ static func _buttons(jump: bool, crouch: bool, sprint: bool) -> int:
 func simulate(delta: float, input_dir: Vector2, want_jump: bool, want_crouch: bool, want_sprint: bool) -> void:
 	cast_lockout = maxf(0.0, cast_lockout - delta)
 	if frozen or stats.is_dead:
+		# Spawn barriers and the death freeze: the body keeps its place, statuses stop mattering.
 		velocity = Vector3.ZERO
 		return
-	if frozen:
-		input_dir = Vector2.ZERO
-		want_jump = false
-		want_sprint = false
 	move_input = input_dir
+	# D1: recharge one Arrow charge every 1.2 s up to 3.
+	if _arrow_charges < ARROW_CHARGES:
+		_arrow_recharge += delta
+		if _arrow_recharge >= ARROW_RECHARGE:
+			_arrow_recharge -= ARROW_RECHARGE
+			_arrow_charges = mini(_arrow_charges + 1, ARROW_CHARGES)
 	overcharge_time = maxf(overcharge_time - delta, 0.0)
 	invulnerable_time = maxf(invulnerable_time - delta, 0.0)
 	if active_aura != null and not stats.has_status(&"aura"):
@@ -382,8 +394,13 @@ func _validate_cast(spell: ResolvedSpell) -> StringName:
 		return &"dead"
 	if frozen:
 		return &"frozen"
+	if spell.key == ARROW_KEY and _arrow_charges <= 0:
+		return &"cooldown"
 	if stats.is_on_cooldown(spell.key):
 		return &"cooldown"
+	# D1: RMB only repeats confirmed spells; quick spells are cast with their keys.
+	if composer.is_recasting and spell.is_quick():
+		return &"invalid"
 	if not stats.can_afford(mana_cost_for(spell, composer.is_recasting)):
 		return &"no_mana"
 	return &""
@@ -392,10 +409,26 @@ func _validate_cast(spell: ResolvedSpell) -> StringName:
 func _on_cast_requested(spell: ResolvedSpell) -> void:
 	cast_lockout = SpellComposer.CAST_LOCKOUT
 	stats.spend_mana(mana_cost_for(spell, composer.is_recasting))
-	stats.start_cooldown(spell.key, cooldown_for(spell))
+	if spell.key == ARROW_KEY:
+		consume_arrow_charge()
+	else:
+		stats.start_cooldown(spell.key, cooldown_for(spell))
 	if has_overcharge():
 		overcharge_casts -= 1
 	spell_cast.emit(spell)
+
+
+## D1: how many Arrow shots are ready right now (host validation and HUD).
+func arrow_charges() -> int:
+	return _arrow_charges
+
+
+func consume_arrow_charge() -> void:
+	if _arrow_charges <= 0:
+		return
+	if _arrow_charges == ARROW_CHARGES:
+		_arrow_recharge = 0.0
+	_arrow_charges -= 1
 
 
 ## Impulse: dash along the movement input (forward when idle) over dash_time seconds.
@@ -507,6 +540,8 @@ func reset_round() -> void:
 	overcharge_time = 0.0
 	overcharge_casts = 0
 	cast_lockout = 0.0
+	_arrow_charges = ARROW_CHARGES
+	_arrow_recharge = 0.0
 	_burn_dps = 0.0
 	_burn_tick = 0.0
 	_slow_strength = 0.0

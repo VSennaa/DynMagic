@@ -9,6 +9,10 @@ const SNAPSHOT_RATE: float = 30.0
 const RESULTS_TIME: int = 15
 ## Host rejects casts whose origin is farther than this from the caster's cast origin.
 const MAX_ORIGIN_ERROR: float = 1.5
+## Host rejects confirmed targets (Mark/Wall) farther than this from the caster (C10).
+const MAX_TARGET_RANGE: float = 80.0
+## Host rejects compose times outside these bounds (C10: unsanitized client numbers).
+const MAX_COMPOSE_SECONDS: float = 60.0
 
 var _snapshot_timer: float = 0.0
 var _tick: int = 0
@@ -40,8 +44,18 @@ func _ready() -> void:
 	Net.joined.connect(_sync_players)
 	Net.disconnected.connect(func() -> void: SceneRouter.go_to(SceneRouter.MAIN_MENU))
 	MatchState.match_ended.connect(_show_results)
-	MatchState.round_ended.connect(func(_w: int, _r: StringName) -> void: AudioBus.play_ui("bell", -8.0))
+	MatchState.round_ended.connect(_on_round_ended)
 	_bot = OS.get_cmdline_user_args().has("--bot")
+	# C15: a dedicated server keeps the simulation but skips every presentation layer.
+	if Net.dedicated:
+		Engine.physics_ticks_per_second = 60
+	else:
+		_build_presentation()
+	MatchState.changed.connect(_on_match_changed)
+	_sync_players()
+
+
+func _build_presentation() -> void:
 	_hud = Hud.new()
 	add_child(_hud)
 	_match_label = Label.new()
@@ -53,7 +67,6 @@ func _ready() -> void:
 	_match_label.add_theme_color_override(&"font_outline_color", Color.BLACK)
 	_match_label.add_theme_constant_override(&"outline_size", 6)
 	_hud.add_child(_match_label)
-	MatchState.changed.connect(_on_match_changed)
 	_pause = PauseMenu.new()
 	_pause.leave_text = "Sair" if Net.spectating else "Desistir"
 	add_child(_pause)
@@ -67,7 +80,6 @@ func _ready() -> void:
 	_overlay.add_theme_constant_override(&"outline_size", 6)
 	_overlay.visible = false
 	_hud.add_child(_overlay)
-	_sync_players()
 
 
 func _physics_process(delta: float) -> void:
@@ -121,12 +133,12 @@ func _sync_players() -> void:
 		# Host (id 1) starts north, the guest south (sides swap per round in M4).
 		var spawn: Marker3D = _arena.get_node(^"Layout/SpawnNorth" if id == 1 else ^"Layout/SpawnSouth") as Marker3D
 		player.global_transform = spawn.global_transform
-		if player.is_local:
+		if player.is_local and _hud != null:
 			_hud.bind(player)
 		if Net.is_host():
 			player.stats.died.connect(func() -> void: MatchState.report_death(int(String(player.name))))
 	for child: Node in _players_root.get_children():
-		if child is Player and not (child as Player).is_local:
+		if child is Player and not (child as Player).is_local and _hud != null:
 			_hud.threat = child as Node3D
 	if Net.players.size() >= 2 and not _loaded_sent and _players_root.get_child_count() >= 2:
 		_loaded_sent = true
@@ -250,8 +262,18 @@ func _request_cast(form: StringName, effect: StringName, origin: Vector3, direct
 	if not origin.is_finite() or not direction.is_finite() or not target.is_finite() or direction.length_squared() < 0.01 or not is_finite(compose_seconds):
 		_cast_rejected.rpc_id(caster_id, spell.key, &"invalid", player.stats.export_state())
 		return
+	if target.distance_to(player.global_position) > MAX_TARGET_RANGE or compose_seconds > MAX_COMPOSE_SECONDS:
+		_cast_rejected.rpc_id(caster_id, spell.key, &"invalid", player.stats.export_state())
+		return
 	if player.cast_lockout > 0.0 or (is_recast and (player.composer.last_spell == null or player.composer.last_spell.key != spell.key)):
 		_cast_rejected.rpc_id(caster_id, spell.key, &"lockout", player.stats.export_state())
+		return
+	# D1: RMB only repeats confirmed spells; the Arrow uses charges, not a cooldown.
+	if is_recast and spell.is_quick():
+		_cast_rejected.rpc_id(caster_id, spell.key, &"invalid", player.stats.export_state())
+		return
+	if spell.key == Player.ARROW_KEY and player.arrow_charges() <= 0:
+		_cast_rejected.rpc_id(caster_id, spell.key, &"cooldown", player.stats.export_state())
 		return
 	player.set_look(atan2(-direction.x, -direction.z), asin(clampf(direction.normalized().y, -1.0, 1.0)))
 	var params: Array = (player.get_node(^"SpellCaster") as SpellCaster).cast_params(spell)
@@ -262,7 +284,10 @@ func _request_cast(form: StringName, effect: StringName, origin: Vector3, direct
 	if player.has_overcharge():
 		player.overcharge_casts -= 1
 	player.stats.spend_mana(cost)
-	player.stats.start_cooldown(spell.key, player.cooldown_for(spell))
+	if spell.key == Player.ARROW_KEY:
+		player.consume_arrow_charge()
+	else:
+		player.stats.start_cooldown(spell.key, player.cooldown_for(spell))
 	player.composer.last_spell = spell
 	_broadcast_spawn(caster_id, spell, origin, direction, target, -1.0 if is_recast else compose_seconds)
 
@@ -325,7 +350,8 @@ func _bot_step(delta: float) -> void:
 			Input.action_press(&"move_right")
 	var me: Player = _player(multiplayer.get_unique_id())
 	_bot_draft()
-	if MatchState.phase() == MatchFsm.Phase.DRAFT:
+	# Poll the confirm request: at 60 Hz a per-frame RPC would flood the reliable channel.
+	if MatchState.phase() == MatchFsm.Phase.DRAFT and fmod(_bot_clock, 0.5) < delta:
 		MatchState.confirm_draft()
 	_bot_aim(me)
 	if me != null and not me.frozen and fmod(_bot_clock, 2.0) < delta:
@@ -344,11 +370,13 @@ func _log_state() -> void:
 	print("[net] ", " | ".join(parts))
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed(&"net_overlay"):
+	if _overlay != null and event.is_action_pressed(&"net_overlay"):
 		_overlay.visible = not _overlay.visible
 
 
 func _process(_delta: float) -> void:
+	if _match_label == null:
+		return  # C15: dedicated server, no presentation.
 	_match_label.text = _match_text() + ("\n" + _spectator.mode_text() if _spectator != null else "")
 	if not _overlay.visible:
 		return
@@ -399,7 +427,8 @@ func _on_match_changed() -> void:
 			if p != null:
 				p.apply_rune(runes.get(int(String(p.name)), &""))
 	_update_core(view, round_number)
-	_hud.set_core_progress(float((view.get("core_progress", {}) as Dictionary).get(multiplayer.get_unique_id(), 0.0)))
+	if _hud != null:
+		_hud.set_core_progress(float((view.get("core_progress", {}) as Dictionary).get(multiplayer.get_unique_id(), 0.0)))
 	_update_overtime(view, round_number)
 	_update_draft_panel(view)
 	var frozen: bool = MatchState.is_frozen()
@@ -464,14 +493,16 @@ func _match_text() -> String:
 	match MatchState.phase():
 		MatchFsm.Phase.DRAFT:
 			var my_turn: bool = (int(view["draft_step"]) == MatchFsm.DraftStep.SIDE_A and int(view["north"]) == me) or (int(view["draft_step"]) == MatchFsm.DraftStep.SIDE_B and int(view["north"]) != me)
-			var taken: String = ", ".join(PackedStringArray((view.get("elements", {}) as Dictionary).values().map(func(e: Variant) -> String: return String(e))))
+			var taken_names: PackedStringArray = PackedStringArray()
+			for element: Variant in (view.get("elements", {}) as Dictionary).values():
+				taken_names.append(Glossary.element(StringName(element)))
 			var runes: Array = (view.get("rune_offers", {}) as Dictionary).get(me, [])
-			var rune_line: String = "" if runes.is_empty() else "\nRuna (5-7): %s" % ", ".join(PackedStringArray(runes.map(func(r: Variant) -> String: return String(r))))
-			return "%s\nDRAFT 0:00 — %s  [escolhidos: %s]%s" % [head, "SUA VEZ: 1 Fogo · 2 Gelo · 3 Raio · 4 Vento" if my_turn else "oponente escolhendo...", taken, rune_line]
+			var rune_line: String = "" if runes.is_empty() else "\nRuna (5-7): %s" % ", ".join(PackedStringArray(runes.map(func(r: Variant) -> String: return Glossary.rune(StringName(r)))))
+			return "%s\nESCOLHA — %s  [escolhidos: %s]%s" % [head, "SUA VEZ: 1 Fogo · 2 Gelo · 3 Raio · 4 Vento" if my_turn else "oponente escolhendo...", ", ".join(taken_names), rune_line]
 		MatchFsm.Phase.COUNTDOWN:
 			return "%s\nPrepare-se..." % head
 		MatchFsm.Phase.OVERTIME:
-			return "%s\nOVERTIME: %s" % [head, String(view.get("overtime_rule", ""))]
+			return "%s\nPRORROGAÇÃO: %s" % [head, Glossary.overtime(StringName(view.get("overtime_rule", "")))]
 		MatchFsm.Phase.ROUND_END:
 			return "%s\nFim do round" % head
 		MatchFsm.Phase.MATCH_END:
@@ -480,16 +511,22 @@ func _match_text() -> String:
 			return "%s\nPAUSADO — oponente desconectado" % head
 	return head
 
-## Bot: pick the first free element when it is our turn in the draft.
+## Bot: pick the first free element when it is our turn, plus the first offered rune.
+## Both are needed for `confirm_draft` to succeed, so a full match runs unattended.
 func _bot_draft() -> void:
 	var view: Dictionary = MatchState.view
 	if MatchState.phase() != MatchFsm.Phase.DRAFT or view.is_empty():
 		return
 	var me: int = multiplayer.get_unique_id()
+	var elements: Dictionary = view.get("elements", {})
+	var offers: Array = (view.get("rune_offers", {}) as Dictionary).get(me, [])
+	var runes: Dictionary = view.get("runes", {})
+	if not offers.is_empty() and not runes.has(me):
+		MatchState.pick_rune(StringName(offers[0]))
 	var my_turn: bool = (int(view["draft_step"]) == MatchFsm.DraftStep.SIDE_A and int(view["north"]) == me) or (int(view["draft_step"]) == MatchFsm.DraftStep.SIDE_B and int(view["north"]) != me)
-	if not my_turn or (view.get("elements", {}) as Dictionary).has(me):
+	if not my_turn or elements.has(me):
 		return
-	var taken: Array = (view.get("elements", {}) as Dictionary).values()
+	var taken: Array = elements.values()
 	for element: StringName in MatchFsm.ELEMENTS:
 		if not taken.has(element):
 			MatchState.pick_element(element)
@@ -562,6 +599,19 @@ var _pause: PauseMenu
 var _spectator: SpectatorCamera
 
 
+func _on_round_ended(winner_id: int, reason: StringName) -> void:
+	AudioBus.play_ui("bell", -8.0)
+	if _hud == null:
+		return
+	var me: int = multiplayer.get_unique_id()
+	if winner_id == 0:
+		_hud.show_banner("Round empatado — %s" % Glossary.reason(reason), Color(0.9, 0.9, 0.9))
+	elif winner_id == me:
+		_hud.show_banner("Você venceu o round — %s" % Glossary.reason(reason), Color(0.6, 1.0, 0.6))
+	else:
+		_hud.show_banner("Oponente venceu o round — %s" % Glossary.reason(reason), Color(1.0, 0.55, 0.55))
+
+
 func _show_results(winner_id: int, reason: StringName) -> void:
 	if Net.dedicated:
 		# Dedicated server: no UI; give players time to read the results, then back to the lobby.
@@ -574,10 +624,13 @@ func _show_results(winner_id: int, reason: StringName) -> void:
 		_menu.queue_free()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	var me: int = multiplayer.get_unique_id()
-	_menu = _panel("Vitória!" if winner_id == me else "Derrota")
+	if _hud != null:
+		_hud.show_banner("Vitória!" if winner_id == me else ("Empate" if winner_id == 0 else "Derrota"), Color(0.6, 1.0, 0.6) if winner_id == me else Color(1.0, 0.55, 0.55))
+	var title: String = "Vitória!" if winner_id == me else "Derrota"
+	_menu = _panel(title)
 	var column: VBoxContainer = _menu.get_node(^"Column") as VBoxContainer
 	var score: Dictionary = MatchState.view.get("score", {})
-	column.add_child(UiKit.label("Placar: %s   (%s)" % [" × ".join(PackedStringArray(score.values().map(func(v: Variant) -> String: return str(v)))), String(reason)], 20))
+	column.add_child(UiKit.label("Placar: %s   (%s)" % [" × ".join(PackedStringArray(score.values().map(func(v: Variant) -> String: return str(v)))), Glossary.reason(reason)], 20))
 	for id: Variant in MatchState.stats:
 		var s: Dictionary = MatchState.stats[id]
 		var compose_text: String = "%.2f s" % ComposeMetrics.average(s) if int(s.get("compose_count", 0)) > 0 else "—"
@@ -586,7 +639,7 @@ func _show_results(winner_id: int, reason: StringName) -> void:
 		var hits: Dictionary = s.get("hits", {})
 		var accuracy: PackedStringArray = PackedStringArray()
 		for form: Variant in casts:
-			accuracy.append("%s %d%%" % [form, roundi(100.0 * float(hits.get(form, 0)) / maxf(float(casts[form]), 1.0))])
+			accuracy.append("%s %d%%" % [Glossary.form(StringName(form)), roundi(100.0 * float(hits.get(form, 0)) / maxf(float(casts[form]), 1.0))])
 		column.add_child(UiKit.label("%s — dano causado %d, recebido %d, Núcleos %d\nprecisão: %s" % [
 			Net.players.get(int(id), str(id)), roundi(float(s["dealt"])), roundi(float(s["taken"])), int(s["cores"]), ", ".join(accuracy)], 18))
 	column.add_child(UiKit.button("Voltar ao lobby", func() -> void:
@@ -614,9 +667,19 @@ func _panel(heading: String) -> Control:
 # --- Draft screen (spec 06 §1) --------------------------------------------------------------
 
 var _draft_panel: Control
+var _draft_title: Label
+var _draft_cards: Array[Button] = []
+var _draft_owned: Label
+var _draft_rune_label: Label
+var _draft_rune_row: HBoxContainer
+var _draft_rune_buttons: Array[Button] = []
+var _draft_rune_desc: Label
+var _draft_timer: Label
+var _draft_offers: Array = []
 
 
-## Four element cards (taken/other-turn cards disabled) plus the rune offer, over the frozen arena.
+## C5: the panel is built once per draft and refreshed in place, so a 1 Hz state sync
+## cannot destroy the button under the player's cursor.
 func _update_draft_panel(view: Dictionary) -> void:
 	if Net.dedicated or Net.spectating:
 		return
@@ -625,39 +688,85 @@ func _update_draft_panel(view: Dictionary) -> void:
 		if _draft_panel != null:
 			_draft_panel.queue_free()
 			_draft_panel = null
+			_draft_cards.clear()
+			_draft_rune_buttons.clear()
 			if _menu == null and not PauseMenu.is_open:
 				Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 		return
-	if _draft_panel != null:
-		_draft_panel.queue_free()
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	var me: int = multiplayer.get_unique_id()
 	var my_turn: bool = (int(view["draft_step"]) == MatchFsm.DraftStep.SIDE_A and int(view["north"]) == me) \
 			or (int(view["draft_step"]) == MatchFsm.DraftStep.SIDE_B and int(view["north"]) != me)
 	var elements: Dictionary = view.get("elements", {})
 	var taken: Array = elements.values()
-	_draft_panel = _panel("Escolha seu elemento" if my_turn else "Oponente escolhendo...")
+	var offers: Array = (view.get("rune_offers", {}) as Dictionary).get(me, [])
+	_draft_offers = offers
+	if _draft_panel == null:
+		_build_draft_panel()
+		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	_draft_title.text = "Escolha seu elemento" if my_turn else "Oponente escolhendo..."
+	for i: int in _draft_cards.size():
+		var element_id: StringName = MatchFsm.ELEMENTS[i]
+		var card: Button = _draft_cards[i]
+		card.disabled = not my_turn or taken.has(element_id) or elements.has(me)
+		card.modulate = Color(0.65, 1.0, 0.65) if elements.get(me, &"") == element_id else Color(1, 1, 1)
+	_draft_owned.visible = elements.has(me)
+	if elements.has(me):
+		_draft_owned.text = "Seu elemento: %s" % Glossary.element(elements[me])
+	_draft_rune_label.visible = not offers.is_empty()
+	_draft_rune_row.visible = not offers.is_empty()
+	_draft_rune_desc.visible = not offers.is_empty()
+	for i: int in _draft_rune_buttons.size():
+		var button: Button = _draft_rune_buttons[i]
+		button.visible = i < offers.size()
+		if i < offers.size():
+			var rune_id: StringName = StringName(offers[i])
+			button.text = "%d %s" % [i + 5, Glossary.rune(rune_id)]
+			button.tooltip_text = Glossary.rune_description(rune_id)
+	if not offers.is_empty():
+		var descriptions: PackedStringArray = PackedStringArray()
+		for rune: Variant in offers:
+			descriptions.append("%s: %s" % [Glossary.rune(StringName(rune)), Glossary.rune_description(StringName(rune))])
+		_draft_rune_desc.text = "   ".join(descriptions)
+	_draft_timer.text = "Tempo: %d s" % ceili(float(view.get("time_left", 0.0)))
+
+
+func _build_draft_panel() -> void:
+	_draft_panel = _panel("Escolha seu elemento")
 	var column: VBoxContainer = _draft_panel.get_node(^"Column") as VBoxContainer
+	_draft_title = column.get_child(0) as Label
 	var cards: Array[Control] = []
 	for element_id: StringName in MatchFsm.ELEMENTS:
 		var element: ElementDef = SpellDB.elements.get(element_id)
-		var card: Button = UiKit.button(element.display_name if element != null else String(element_id), MatchState.pick_element.bind(element_id))
+		var card: Button = UiKit.button(element.display_name if element != null else Glossary.element(element_id), MatchState.pick_element.bind(element_id))
 		card.custom_minimum_size = Vector2(130, 110)
 		if element != null:
 			card.add_theme_color_override(&"font_color", element.color)
-		card.disabled = not my_turn or taken.has(element_id) or elements.has(me)
+		_draft_cards.append(card)
 		cards.append(card)
 	column.add_child(UiKit.row(cards))
-	if elements.has(me):
-		column.add_child(UiKit.label("Seu elemento: %s" % String(elements[me]), 18))
-	var offers: Array = (view.get("rune_offers", {}) as Dictionary).get(me, [])
-	if not offers.is_empty():
-		column.add_child(UiKit.label("Runa do round (perdeu o anterior):", 18))
-		var rune_buttons: Array[Control] = []
-		for rune: Variant in offers:
-			rune_buttons.append(UiKit.button(String(rune), MatchState.pick_rune.bind(StringName(rune))))
-		column.add_child(UiKit.row(rune_buttons))
-	column.add_child(UiKit.label("Tempo: %d s" % ceili(float(view.get("time_left", 0.0))), 18))
+	_draft_owned = UiKit.label("", 18)
+	column.add_child(_draft_owned)
+	_draft_rune_label = UiKit.label("Runa do round (perdeu o anterior):", 18)
+	column.add_child(_draft_rune_label)
+	_draft_rune_row = HBoxContainer.new()
+	_draft_rune_row.add_theme_constant_override(&"separation", 12)
+	column.add_child(_draft_rune_row)
+	_draft_rune_buttons.clear()
+	for i: int in 3:
+		var button: Button = UiKit.button("", _pick_rune_index.bind(i))
+		_draft_rune_row.add_child(button)
+		_draft_rune_buttons.append(button)
+	_draft_rune_desc = UiKit.label("", 16)
+	_draft_rune_desc.modulate = Color(1, 1, 1, 0.7)
+	_draft_rune_desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	column.add_child(_draft_rune_desc)
+	_draft_timer = UiKit.label("", 18)
+	column.add_child(_draft_timer)
+
+
+func _pick_rune_index(index: int) -> void:
+	if index < _draft_offers.size():
+		MatchState.pick_rune(StringName(_draft_offers[index]))
 
 ## Host: capture progress ratios for the view (clients get them once per second).
 func core_progress() -> Dictionary:
@@ -685,9 +794,10 @@ func _scoreboard_input(event: InputEvent) -> void:
 			for id: int in Net.players:
 				var player: Player = _player(id)
 				column.add_child(UiKit.label("%s — %d rounds — %s%s — HP %d" % [
-					Net.players[id], int(score.get(id, 0)), String(elements.get(id, "?")),
-					" + " + String(runes[id]) if runes.has(id) else "", roundi(player.stats.hp) if player else 0], 20))
+					Net.players[id], int(score.get(id, 0)), Glossary.element(StringName(elements.get(id, &""))),
+					" + " + Glossary.rune(StringName(runes[id])) if runes.has(id) else "", roundi(player.stats.hp) if player else 0], 20))
 			column.add_child(UiKit.label("Round %d · arena %s" % [int(view.get("round", 0)), String(view.get("arena", "A"))], 18))
+			_add_spell_card(column)
 		elif not event.is_pressed() and _scoreboard != null:
 			_scoreboard.queue_free()
 			_scoreboard = null
@@ -703,6 +813,28 @@ func _bot_aim(me: Player) -> void:
 		var to: Vector3 = other.global_position - me.global_position
 		me.set_look(atan2(-to.x, -to.z), 0.0)
 		return
+
+## C14: 3×3 card of the local player's spells for this round.
+func _add_spell_card(column: VBoxContainer) -> void:
+	var local: Player = _player(multiplayer.get_unique_id())
+	if local == null:
+		return
+	var column_header: Label = UiKit.label("Seu grimório — %s" % Glossary.element(local.composer.element_id), 18)
+	column.add_child(column_header)
+	for form: StringName in SpellDB.FORMS:
+		var cells: Array[Control] = []
+		for effect: StringName in SpellDB.EFFECTS:
+			var spell: ResolvedSpell = SpellDB.resolve(local.composer.element_id, form, effect)
+			var name: String = spell.display_name if spell != null else "%s %s" % [Glossary.form(form), Glossary.effect(effect)]
+			var mode: String = "rápida" if spell != null and spell.is_quick() else "confirmada"
+			var cell: Label = UiKit.label("%s\n%s" % [name, mode], 14)
+			cell.custom_minimum_size = Vector2(140, 0)
+			cell.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			if spell != null:
+				cell.add_theme_color_override(&"font_color", spell.color.lerp(Color.WHITE, 0.3))
+			cells.append(cell)
+		column.add_child(UiKit.row(cells))
+
 
 ## Players sorted by id (stable order for the spectator's 1/2 keys).
 func _players_in_order() -> Array:

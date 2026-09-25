@@ -4,8 +4,8 @@ extends Node
 signal changed
 signal match_starting
 
-## Host-chosen rules (spec 06 §1): "random" | collapse | sudden_death | mana_surge.
-var overtime_setting: StringName = &"random"
+## Host-chosen rules (spec 06 §1): "collapse" (default) | sudden_death | mana_surge | random.
+var overtime_setting: StringName = &"collapse"
 ## "rotation" | "random" | "A" | "B" | "C".
 var arena_setting: StringName = &"rotation"
 ## peer id -> ready
@@ -19,6 +19,8 @@ var _starting: bool = false
 
 
 func _ready() -> void:
+	overtime_setting = default_overtime()
+	arena_setting = default_arena()
 	Net.peer_joined.connect(func(_id: int, _name: String) -> void: _push())
 	Net.peer_left.connect(func(id: int) -> void:
 		ready_flags.erase(id)
@@ -29,8 +31,17 @@ func _ready() -> void:
 func reset() -> void:
 	_starting = false
 	ready_flags.clear()
-	overtime_setting = &"random"
-	arena_setting = &"rotation"
+	overtime_setting = default_overtime()
+	arena_setting = default_arena()
+
+
+## D3: Colapso is the alpha default; the host lobby or the server flags override it.
+func default_overtime() -> StringName:
+	return Net.cli_overtime if Net.cli_overtime != &"" else &"collapse"
+
+
+func default_arena() -> StringName:
+	return Net.cli_arena if Net.cli_arena != &"" else &"rotation"
 
 
 func set_ready(value: bool) -> void:

@@ -5,7 +5,7 @@
 | Tela | Conteúdo |
 |---|---|
 | **Menu principal** | Fundo 3D animado (arena em órbita lenta). Botões: Jogar LAN, Treino, Grimório, Configurações, Sair |
-| **Jogar LAN** | Abas "Hospedar" e "Entrar". Hospedar: nome do lobby, porta, arenas (Fixa/Rotação/Aleatória), overtime (Aleatório/Colapso/Morte Súbita/Maré de Mana). Entrar: lista de lobbies descobertos + campo de IP manual |
+| **Jogar LAN** | Abas "Hospedar" e "Entrar". Hospedar: nome do lobby, porta, arenas (Fixa/Rotação/Aleatória), overtime (Colapso padrão/Morte Súbita/Maré de Mana/Aleatório). Entrar: lista de lobbies descobertos + campo de IP:porta |
 | **Lobby** | 2 cartões de jogador (nome, pronto), regras escolhidas, botão Pronto, botão Sair. O host tem botão Iniciar |
 | **Treino** | Arena escolhida + boneco com HP infinito e contador de DPS. Sem rede |
 | **Grimório** | Referência interativa das 36 magias: escolhe elemento, forma e efeito e vê descrição, números e vídeo curto/prévia |

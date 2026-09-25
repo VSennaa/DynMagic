@@ -93,13 +93,13 @@ func test_aim_times_out_without_casting() -> void:
 	assert_eq(casts.size(), 0)
 
 
-func test_recast_repeats_last_spell() -> void:
+func test_recast_ignores_quick_spells() -> void:
 	composer.press_slot(1)
 	composer.press_slot(1)  # Impulse (quick)
 	composer.tick(0.2)
 	composer.press_recast()
-	assert_eq(casts.size(), 2)
-	assert_eq(casts[1].key, &"self_burst")
+	assert_eq(casts.size(), 1, "D1: RMB never repeats a quick spell")
+	assert_eq(composer.state, SpellComposer.State.IDLE)
 
 
 func test_recast_of_confirm_spell_enters_aiming() -> void:

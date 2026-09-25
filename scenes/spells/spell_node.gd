@@ -10,6 +10,10 @@ var direction: Vector3 = Vector3.FORWARD
 var target_point: Vector3 = Vector3.ZERO
 ## Host only: seconds to rewind targets for instant hits from remote casters (lag compensation).
 var rewind: float = 0.0
+## Outgoing damage multiplier captured at spawn. The multiplier is read once, on the
+## cast that created the spell (Overcharge consumes its 3rd charge before impact; a zone
+## must not gain/lose the bonus when the Core is captured or expires mid-flight).
+var _damage_mult: float = 1.0
 
 
 func setup(p_spell: ResolvedSpell, p_caster: Node3D, origin: Vector3, p_direction: Vector3, p_target: Vector3) -> void:
@@ -18,6 +22,7 @@ func setup(p_spell: ResolvedSpell, p_caster: Node3D, origin: Vector3, p_directio
 	direction = p_direction.normalized()
 	target_point = p_target
 	position = origin
+	_damage_mult = float(caster.call(&"damage_mult")) if caster != null and caster.has_method(&"damage_mult") else 1.0
 
 
 ## Deals this spell's damage (scaled) to a target in the "damageable" group.
@@ -33,8 +38,7 @@ func hit_amount(target: Node, amount: float) -> void:
 		return
 	if not has_authority():
 		return
-	if caster != null and caster.has_method(&"damage_mult"):
-		amount *= float(caster.call(&"damage_mult"))
+	amount *= _damage_mult
 	target.call(&"receive_hit", amount, spell, caster)
 
 

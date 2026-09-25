@@ -28,6 +28,9 @@ func _ready() -> void:
 	column.add_child(_lobby_edit)
 	_overtime = _options(OVERTIME_LABELS)
 	_arena = _options(ARENA_LABELS)
+	# D3: Colapso is the alpha default; server flags still win.
+	_overtime.selected = maxi(OVERTIME_OPTIONS.find(Net.cli_overtime), 0) if Net.cli_overtime != &"" else 1
+	_arena.selected = maxi(ARENA_OPTIONS.find(Net.cli_arena), 0) if Net.cli_arena != &"" else 0
 	column.add_child(UiKit.row([UiKit.label("Overtime", 18), _overtime, UiKit.label("Arena", 18), _arena]))
 	column.add_child(UiKit.button("Criar sala", _host))
 
@@ -36,7 +39,7 @@ func _ready() -> void:
 	_list.custom_minimum_size = Vector2(0, 140)
 	_list.item_activated.connect(func(_i: int) -> void: _join_selected())
 	column.add_child(_list)
-	_ip_edit = _line("127.0.0.1", "IP do host")
+	_ip_edit = _line("127.0.0.1", "IP:porta do host")
 	column.add_child(UiKit.row([_ip_edit, UiKit.button("Entrar por IP", _join_ip), UiKit.button("Entrar na selecionada", _join_selected)]))
 	_spectate = CheckBox.new()
 	_spectate.text = "Entrar como espectador"
@@ -66,7 +69,14 @@ func _host() -> void:
 
 
 func _join_ip() -> void:
-	_join(_ip_edit.text.strip_edges(), Net.DEFAULT_PORT)
+	# C13: accept "host" or "host:port" (rooms 2 and 3 on the VPS use other ports).
+	var text: String = _ip_edit.text.strip_edges()
+	var port: int = Net.DEFAULT_PORT
+	if text.contains(":"):
+		var parts: PackedStringArray = text.split(":", false, 1)
+		text = parts[0]
+		port = int(parts[1]) if parts.size() > 1 else Net.DEFAULT_PORT
+	_join(text, port)
 
 
 func _join_selected() -> void:

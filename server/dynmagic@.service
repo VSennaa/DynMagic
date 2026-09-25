@@ -1,0 +1,34 @@
+[Unit]
+Description=DynMagic dedicated server (%i)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=dynmagic
+WorkingDirectory=/opt/dynmagic
+# Per-instance overrides. Copy server/dynmagic@.env.example to
+# /etc/dynmagic/<instance>.env and edit.
+EnvironmentFile=-/etc/dynmagic/%i.env
+Environment=DYNMAGIC_PORT=7777
+Environment=DYNMAGIC_NAME=DynMagic
+Environment=DYNMAGIC_EXTRA=
+ExecStart=/opt/dynmagic/DynMagic-server.x86_64 --headless -- --server --port ${DYNMAGIC_PORT} --name "${DYNMAGIC_NAME}" ${DYNMAGIC_EXTRA}
+Restart=on-failure
+RestartSec=5
+# D13/C15: cap each room so three rooms fit on the 2 GB VPS with headroom.
+# Measured target (pending 1 h load test): group RSS <= 600 MB, <= 70% of one core.
+MemoryHigh=320M
+MemoryMax=450M
+CPUQuota=70%
+TasksMax=64
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+# Separate data dir per instance so settings/telemetry never collide.
+StateDirectory=dynmagic/%i
+Environment=XDG_DATA_HOME=/var/lib/dynmagic/%i
+
+[Install]
+WantedBy=multi-user.target

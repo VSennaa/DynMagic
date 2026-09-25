@@ -53,10 +53,15 @@ func _refresh() -> void:
 	_ready_button.visible = not Net.spectating
 	if ids.size() < 2:
 		_players.add_child(UiKit.label("Aguardando oponente...", 18))
-	_rules.text = "Overtime: %s   Arena: %s" % [String(Lobby.overtime_setting), String(Lobby.arena_setting)]
+	_rules.text = "Prorrogação: %s   Arena: %s" % [Glossary.overtime(Lobby.overtime_setting), Glossary.arena(Lobby.arena_setting)]
+	if Net.is_host():
+		_rules.text += "\nSeu IP na rede: %s" % Net.local_ip()
+	elif Net.host_address != "":
+		_rules.text += "\nConectado a %s" % Net.host_address
 	_start_button.disabled = not Lobby.can_start()
 	if Lobby.dedicated:
 		_rules.text += "\n\nServidor dedicado: a partida começa sozinha quando os dois estiverem prontos."
+	_rules.text += "\nO anfitrião grava telemetria local da partida (user://telemetry), sem envio à internet."
 
 
 func _toggle_ready() -> void:

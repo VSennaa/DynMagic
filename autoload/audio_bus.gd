@@ -57,6 +57,8 @@ func _ready() -> void:
 ## Plays the cast sound of a spell at a world position.
 func play_spell(spell: ResolvedSpell, position: Vector3, parent: Node) -> void:
 	spell_played.emit(spell, position)
+	if Net.dedicated:
+		return  # C15: no audio synthesis on the dedicated server.
 	var key: String = "%s_%s" % [spell.element, spell.key]
 	if not _cache.has(key):
 		_cache[key] = _synth(spell.element, spell.form, spell.effect)
@@ -65,6 +67,8 @@ func play_spell(spell: ResolvedSpell, position: Vector3, parent: Node) -> void:
 
 ## Low boom for explosions and Mark detonations.
 func play_impact(element: StringName, position: Vector3, parent: Node) -> void:
+	if Net.dedicated:
+		return
 	var key: String = "%s_impact" % element
 	if not _cache.has(key):
 		_cache[key] = _synth(element, &"area", &"burst", true)
@@ -73,7 +77,7 @@ func play_impact(element: StringName, position: Vector3, parent: Node) -> void:
 
 
 func _play_at(stream: AudioStream, position: Vector3, parent: Node, volume_db: float) -> void:
-	if parent == null or not parent.is_inside_tree():
+	if Net.dedicated or parent == null or not parent.is_inside_tree():
 		return
 	var player: AudioStreamPlayer3D = AudioStreamPlayer3D.new()
 	player.stream = stream
@@ -89,6 +93,8 @@ func _play_at(stream: AudioStream, position: Vector3, parent: Node, volume_db: f
 
 ## 2D sample on the UI bus (menus, own hits, round events).
 func play_ui(group: String, volume_db: float = -4.0) -> void:
+	if Net.dedicated:
+		return
 	var stream: AudioStream = _pick(group)
 	if stream == null:
 		return

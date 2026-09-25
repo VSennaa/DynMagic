@@ -38,6 +38,13 @@ var sim_jitter_ms: float = 0.0
 var sim_loss: float = 0.0
 var lobby_name: String = ""
 var port: int = DEFAULT_PORT
+## C13: where we connected (shown in the lobby); "" on the host.
+var host_address: String = ""
+## C13: why the last connection ended, shown once on the main menu.
+var disconnect_reason: String = ""
+## D3: server flags `--overtime` / `--arena` override the lobby defaults.
+var cli_overtime: StringName = &""
+var cli_arena: StringName = &""
 ## peer id -> player name, host included (id 1). Only complete after the handshake.
 var players: Dictionary[int, String] = {}
 ## "ip:port" -> {info..., "ip", "seen"} for lobbies heard on the LAN.
@@ -93,6 +100,7 @@ func host(p_port: int = DEFAULT_PORT, p_lobby_name: String = "", p_dedicated: bo
 	lobby_name = p_lobby_name if p_lobby_name != "" else "Sala de %s" % player_name
 	multiplayer.multiplayer_peer = peer
 	dedicated = p_dedicated
+	host_address = ""
 	players.clear()
 	session_tokens.clear()
 	if not dedicated:
@@ -117,6 +125,7 @@ func join(address: String, p_port: int = DEFAULT_PORT, as_spectator: bool = fals
 		return err
 	port = p_port
 	multiplayer.multiplayer_peer = peer
+	host_address = destination
 	_log("joining %s:%d" % [address, p_port])
 	return OK
 
@@ -207,6 +216,7 @@ func _rpc_welcome(all_players: Dictionary, reconnecting: bool = false, all_spect
 @rpc("authority", "call_remote", "reliable", CHANNEL_RELIABLE)
 func _rpc_reject(reason: String) -> void:
 	_log("rejected: %s" % reason)
+	disconnect_reason = reason
 	connection_failed.emit(reason)
 	close.call_deferred()
 
@@ -242,13 +252,23 @@ func _on_peer_disconnected(peer_id: int) -> void:
 
 func _on_connection_failed() -> void:
 	close()
-	connection_failed.emit("Não foi possível conectar")
+	disconnect_reason = "Não foi possível conectar"
+	connection_failed.emit(disconnect_reason)
 
 
 func _on_server_disconnected() -> void:
 	_log("host closed the connection")
 	close()
+	disconnect_reason = "O host encerrou a conexão"
 	disconnected.emit()
+
+
+## C13: first non-loopback IPv4, to show the host what address players should type.
+func local_ip() -> String:
+	for address: String in IP.get_local_addresses():
+		if address.is_valid_ip_address() and not address.contains(":") and not address.begins_with("127."):
+			return address
+	return "127.0.0.1"
 
 
 ## Sends through the simulator: may drop, or delay by latency ± jitter. Used for inputs and snapshots.
@@ -381,10 +401,22 @@ func _parse_cli() -> void:
 				if i + 1 < args.size():
 					sim_loss = float(args[i + 1])
 					i += 1
+			"--overtime":
+				if i + 1 < args.size():
+					cli_overtime = StringName(args[i + 1])
+					i += 1
+			"--arena":
+				if i + 1 < args.size():
+					cli_arena = StringName(args[i + 1])
+					i += 1
 			"--discover":
 				start_discovery()
 				lobbies_changed.connect(func() -> void: _log("lobbies %s" % [lobbies.keys()]))
 		i += 1
+	if cli_overtime != &"":
+		Lobby.overtime_setting = cli_overtime
+	if cli_arena != &"":
+		Lobby.arena_setting = cli_arena
 	if action == "host":
 		if host(port) == OK:
 			get_tree().change_scene_to_file(NET_MATCH_SCENE)

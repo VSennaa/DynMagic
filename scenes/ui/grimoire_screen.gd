@@ -57,4 +57,4 @@ func _refresh() -> void:
 		FORM_NAMES[_form], EFFECT_NAMES[_effect],
 		"rápida (dispara na tecla)" if spell.is_quick() else "confirmada (mira + LMB)",
 		spell.damage, roundi(spell.mana_cost), spell.cooldown,
-		String(spell.status_id), spell.status_duration, "\n".join(extras)]
+		Glossary.status(spell.status_id), spell.status_duration, "\n".join(extras)]

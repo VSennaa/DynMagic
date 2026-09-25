@@ -164,35 +164,35 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (write th
 ## M10 — Alfa 1.0 (reviews 2026-09-25, see docs/reviews/SYNTHESIS.md)
 
 Phase 1 — integrity
-- [ ] C1 enemy nameplate hidden behind walls; HP bars of both players on top of the HUD (D5)
-- [ ] C6 Overcharge decremented for remote players
-- [ ] C7 simultaneous death uses the tie rule (resolve at end of tick)
-- [ ] C8 loser rune window is not closed by side B's pick; fixed windows, early close only when both confirm (D4, 15 s in round 1)
-- [ ] C9 full round reset; no damage between phases; ready flags cleared when a match starts
-- [ ] C10 server validates cast targets, finite numbers, recast and lockout
-- [ ] C11 snapshots carry statuses/cooldowns/death; wall destruction is authoritative
-- [ ] C12 reconnect remaps the player on the remaining client; session token instead of name
-- [ ] C16 first pick drawn at match start
-- [ ] C17 cast_rejected feedback and local cooldown rollback
+- [x] C1 enemy nameplate hidden behind walls; HP bars of both players on top of the HUD (D5)
+- [x] C6 Overcharge decremented for remote players
+- [x] C7 simultaneous death uses the tie rule (resolve at end of tick)
+- [x] C8 loser rune window is not closed by side B's pick; fixed windows, early close only when both confirm (D4, 15 s in round 1)
+- [x] C9 full round reset; no damage between phases; ready flags cleared when a match starts
+- [x] C10 server validates cast targets, finite numbers, recast and lockout
+- [x] C11 snapshots carry statuses/cooldowns/death; wall destruction is authoritative
+- [x] C12 reconnect remaps the player on the remaining client; session token instead of name
+- [x] C16 first pick drawn at match start
+- [x] C17 cast_rejected feedback and local cooldown rollback
 
 Phase 2 — readability
-- [ ] C2 damage_applied event (aggregated 100 ms): hitmarker, sound, numbers
-- [ ] C3 death / round / match banners with winner and reason; death cam + damage card (D8, no replay)
-- [ ] C4 + D10 glossary: Raio, Leque, Prorrogação, Escolha, Round; no raw ids on screen; rune and element descriptions
-- [ ] C5 draft panel updated in place
-- [ ] C14 "Como jogar" screen, guided training, Tab 3×3 card
-- [ ] D6 wheel as Q-E-R arc with quick/confirm mark; D7 local cast sound + flash
+- [x] C2 damage_applied event (aggregated 100 ms): hitmarker, sound, numbers
+- [x] C3 death / round / match banners with winner and reason; death card (D8, no replay; death cam = frozen last view for now)
+- [x] C4 + D10 glossary: Raio, Leque, Prorrogação, Escolha, Round; no raw ids on screen; rune and element descriptions
+- [x] C5 draft panel updated in place
+- [x] C14 "Como jogar" screen, guided training, Tab 3×3 card
+- [x] D6 wheel as Q-E-R arc with quick/confirm mark; D7 local cast flash (sound plays on spawn)
 
 Phase 3 — server
-- [ ] C13 join by IP:port, show host IP, disconnect reason
-- [ ] C15 lean headless server (no HUD/anim/audio, fixed 60 Hz physics)
-- [ ] D13 `dynmagic@.service` template, 3 instances with MemoryMax; 1 h load test (VPS upgraded to 2 GB by the user)
-- [ ] Queue on the VPS (user 2026-09-25): 3 rooms per session with a waiting queue until the 4 GB upgrade; writes `/var/www/dynmagic/status.json` for the site (rooms, players, state, queue length)
-- [ ] Website `web/` (brief `docs/briefs/website.md`), served by nginx at a second DuckDNS name
-- [ ] D3 overtime default Colapso; Aleatório in lobby and `--overtime`/`--arena` server flags
+- [x] C13 join by IP:port, show host IP, disconnect reason
+- [x] C15 lean headless server (no HUD/anim/audio, fixed 60 Hz physics)
+- [~] D13 `dynmagic@.service` template + 3 instances with MemoryMax/CPUQuota written; the 1 h load test still needs VPS access
+- [!] Queue on the VPS (user 2026-09-25): 3 rooms per session with a waiting queue until the 4 GB upgrade; writes `/var/www/dynmagic/status.json` for the site — no VPS/network access this round
+- [!] Website `web/` (brief `docs/briefs/website.md`), served by nginx at a second DuckDNS name — not started; no VPS access
+- [x] D3 overtime default Colapso; Aleatório in lobby and `--overtime`/`--arena` server flags
 
 Phase 4 — balance (user decisions D1, D2)
-- [ ] D1 Seta 3 charges (1 per 1.2 s); RMB recast only for confirmed spells
-- [ ] D2 element multipliers Fogo 1.05 / Gelo 0.95 / Raio 1.0 / Vento 0.95
-- [ ] D12 local telemetry JSON with lobby notice; remove headshot from spec (D9)
-- [ ] C18 docs aligned; release v1.0.0-alpha
+- [x] D1 Seta 3 charges (1 per 1.2 s); RMB recast only for confirmed spells
+- [x] D2 element multipliers Fogo 1.05 / Gelo 0.95 / Raio 1.0 / Vento 0.95
+- [x] D12 local telemetry JSON with lobby notice; remove headshot from spec (D9)
+- [x] C18 docs aligned; release v1.0.0-alpha

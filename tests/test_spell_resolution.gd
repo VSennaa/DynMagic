@@ -17,12 +17,12 @@ const EXPECTED_BASES: Dictionary = {
 	&"area_lingering": [0.0, 30.0, 10.0, SpellBase.CastMode.CONFIRM],
 }
 
-## element id -> damage multiplier
+## element id -> damage multiplier (D2: 1.05/0.95/1.0/0.95)
 const EXPECTED_MULTS: Dictionary = {
-	&"fire": 1.15,
-	&"frost": 0.9,
+	&"fire": 1.05,
+	&"frost": 0.95,
 	&"storm": 1.0,
-	&"wind": 0.85,
+	&"wind": 0.95,
 }
 
 var db: Node

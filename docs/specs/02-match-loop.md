@@ -71,7 +71,7 @@ Como os lados trocam a cada round, a primeira escolha alterna entre os jogadores
 
 ## 5. Overtime (relógio chega a 0:00 com os dois vivos)
 
-O host sorteia 1 regra. No lobby, o host pode fixar uma regra ou deixar "Aleatório" (padrão). O nome da regra aparece em destaque por 2 s.
+O padrão do alfa é **Colapso** (D3). No lobby, o host pode fixar Colapso, Morte Súbita ou Maré de Mana, ou escolher "Aleatório". O nome da regra aparece em destaque por 2 s.
 
 | Regra | Comportamento | Fim |
 |---|---|---|

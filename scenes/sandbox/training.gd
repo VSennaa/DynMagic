@@ -19,6 +19,18 @@ func _ready() -> void:
 	var hud: Hud = Hud.new()
 	add_child(hud)
 	hud.bind(player)
+	# C14: guided training — a persistent hint line so the sandbox explains itself.
+	var hint: Label = Label.new()
+	hint.text = "Treino · 1-4 troca o elemento · Q/E/R monta a magia · LMB confirma a mira · RMB repete · Tab placar"
+	hint.add_theme_font_size_override(&"font_size", 18)
+	hint.add_theme_color_override(&"font_color", Color(1, 1, 1, 0.75))
+	hint.add_theme_color_override(&"font_outline_color", Color.BLACK)
+	hint.add_theme_constant_override(&"outline_size", 6)
+	hint.set_anchors_preset(Control.PRESET_CENTER_BOTTOM)
+	hint.position = Vector2(-380, -40)
+	hint.custom_minimum_size = Vector2(760, 0)
+	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hud.add_child(hint)
 	add_child(PauseMenu.new())
 	player.add_child(Footsteps.new())
 	_spawn_dummies()

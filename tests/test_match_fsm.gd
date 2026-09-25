@@ -271,3 +271,13 @@ func test_first_pick_varies_with_seed() -> void:
 		fsm.start([A, B] as Array[int])
 		seen[fsm.north_id] = true
 	assert_eq(seen.size(), 2)
+
+
+func test_default_overtime_is_collapse() -> void:
+	fsm = MatchFsm.new()
+	fsm.rng.seed = 7
+	fsm.start([A, B] as Array[int])
+	_load_both()
+	_to_combat()
+	fsm.tick(MatchFsm.COMBAT_TIME + 0.01)
+	assert_eq(fsm.overtime_rule, &"collapse", "D3: Colapso is the alpha default")

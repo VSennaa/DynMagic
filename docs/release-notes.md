@@ -1,3 +1,38 @@
+# DynMagic v1.0.0-alpha — alfa 1.0
+
+A primeira alfa pública do DynMagic: o jogo se explica sozinho, o placar é confiável e o servidor aguenta três salas.
+
+## Regras mais justas
+
+- **Escolha com confirmação**: depois de escolher o elemento (e a runa, para quem perdeu), clique em **Confirmar** (ou Enter). O round só começa quando os dois confirmam; o primeiro round dá **15 s** para o primeiro jogador.
+- **Primeira escolha sorteada**: quem abre o draft é sorteado no início da partida, e os lados trocam a cada round.
+- **Morte simultânea**: se os dois caírem no mesmo instante, vence quem tinha mais vida antes do golpe.
+- **Seta com 3 cargas** (1 a cada 1,2 s), em vez de recarga por tiro. O **botão direito** agora repete apenas magias confirmadas — as rápidas saem no próprio atalho.
+- **Elementos achatados**: Fogo 1,05 · Gelo 0,95 · Raio 1,00 · Vento 0,95. A identidade fica nos status e nas variantes.
+- **Prorrogação padrão: Colapso**. No lobby o anfitrião pode fixar Colapso, Morte Súbita, Maré de Mana ou Aleatório.
+- Sem **tiro na cabeça**: todo acerto no corpo causa o dano da magia.
+
+## Combate legível
+
+- **Hitmarker e número de dano** confirmam cada acerto; som de impacto próprio.
+- **Banners** de vitória, derrota e fim de round com o motivo (abate, Núcleo, mais vida, empate...), e **cartão de dano** ao morrer.
+- **Glossário único**: nomes em português em todo lugar (Raio, Leque, Prorrogação, Escolha, Round), com descrição de runas e elementos. Fim dos ids crus na tela.
+- **Roda de magias** em arco Q-E-R, com marca de **rápida** (ponto) e **confirmada** (anel).
+- **Painel da escolha** atualizado no lugar: os cliques nunca são engolidos.
+- Tela **Como jogar**, dica no treino e cartão 3×3 no Tab.
+- As **barras de vida dos dois** ficam no topo; o nome do oponente some atrás das paredes.
+
+## Rede e servidor
+
+- Reconexão por **token de sessão** (não mais pelo nome) e o jogador é remapeado no cliente que ficou.
+- O servidor valida alvo, números finitos, recarga e lockout; snapshots levam status, cooldowns e morte; a destruição da muralha é autoritativa.
+- **Servidor dedicado enxuto**: sem HUD, modelo, animação e áudio, física fixa em 60 Hz.
+- **Entrar por IP:porta**, IP do anfitrião visível no lobby e motivo da queda ao voltar ao menu.
+- **Telemetria local** (JSON em `user://telemetry`), avisada no lobby, sem envio para a internet.
+- Template `dynmagic@.service` com `MemoryMax` para **três salas** (UDP 7777/7779/7780) na VPS de 2 GB.
+
+---
+
 # DynMagic v0.3.1 — símbolos de magia
 
 ## Novidades na 0.3.1
@@ -56,21 +91,22 @@ Arena 1v1 de magia dinâmica em primeira pessoa, multiplayer por LAN.
 | Overlay de rede | F3 |
 | Pausa | Esc |
 
-No draft (0:00) escolha o elemento pelas cartas (ou teclas 1–4) e, se perdeu o round anterior, uma runa (teclas 5–7).
+Na Escolha (draft) selecione o elemento pelas cartas (ou teclas 1–4) e, se perdeu o round anterior, uma runa (teclas 5–7); confirme com **Enter**. O round só começa quando os dois confirmam.
 
 ## O que tem nesta versão
 
 - 4 elementos × 9 magias (36 combinações) com variações por elemento e status.
-- Partida melhor de 7 com draft alternado, runas, Núcleo Arcano, overtime aleatório (Colapso, Morte Súbita, Maré de Mana) e round decisivo.
+- Partida melhor de 7 com escolha de elemento (com confirmação), runas, Núcleo Arcano, Prorrogação com Colapso no padrão (ou Morte Súbita, Maré de Mana e Aleatório no lobby) e round decisivo.
 - 3 arenas (Claustro, Pátio Partido, Espinha) em rotação.
 - Menus, lobby, configurações (vídeo, áudio, teclas, acessibilidade), grimório, resultados.
 - Visual toon com contorno de tinta; modelos estilizados gerados no Blender.
 
 ## Limitações conhecidas
 
-- Personagens sem animação; braços em primeira pessoa ainda não aparecem.
-- Som sintetizado provisório, sem música.
-- Apenas LAN (sem internet/relay).
+- A câmera de morte é a última visão congelada (sem replay); o cartão de dano está presente.
+- Música provisória (loop sintetizado), sem trilha licenciada.
+- Conexão por LAN ou IP direto; sem relay/matchmaking pela internet.
+- O servidor de três salas na VPS ainda não passou pelo teste de carga de 1 h; a fila de espera e o site público ficam para a próxima rodada.
 
 ## Linha de comando (testes)
 

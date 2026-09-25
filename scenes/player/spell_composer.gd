@@ -135,13 +135,13 @@ func press_cast() -> void:
 		_fire(pending)
 
 
-## RMB: cancels aiming, otherwise repeats the last spell.
+## RMB: cancels aiming, otherwise repeats the last confirmed spell (D1; never a quick one).
 func press_recast() -> void:
 	match state:
 		State.AIMING:
 			clear()
 		State.IDLE:
-			if last_spell != null:
+			if last_spell != null and not last_spell.is_quick():
 				is_recasting = true
 				_begin(last_spell)
 				is_recasting = state == State.AIMING
