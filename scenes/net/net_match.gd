@@ -12,6 +12,7 @@ const MAX_ORIGIN_ERROR: float = 1.5
 
 var _snapshot_timer: float = 0.0
 var _tick: int = 0
+var _cast_id: int = 0
 var _hud: Hud
 ## --bot: scripted input for headless smoke tests (walks, strafes and casts Bolt).
 var _bot: bool = false
@@ -100,7 +101,7 @@ func _physics_process(delta: float) -> void:
 func _sync_players() -> void:
 	for child: Node in _players_root.get_children():
 		if not Net.players.has(int(String(child.name))):
-			if Net.is_host() and MatchState.active and MatchState.fsm != null and MatchState.fsm.players.has(int(String(child.name))):
+			if MatchState.active:
 				continue
 			child.queue_free()
 	var ids: Array = Net.players.keys()
@@ -145,6 +146,8 @@ func _player(id: int) -> Player:
 
 func reassign_player(old_id: int, new_id: int) -> void:
 	var player: Player = _player(old_id)
+	if player == null:
+		return
 	player.name = str(new_id)
 	(player.get_node(^"NetSync") as NetSync).reset_transport(new_id)
 	if _core != null:
@@ -208,9 +211,9 @@ func _receive_snapshot(data: PackedByteArray) -> void:
 		var player: Player = _player(int(entry["id"]))
 		if player == null:
 			continue
-		player.stats.hp = float(entry["hp"])
-		player.stats.mana = float(entry["mana"])
-		player.stats.shield = float(entry["shield"])
+		var gameplay: Dictionary = entry["gameplay"]
+		player.stats.import_state(gameplay["stats"])
+		ReconnectState.restore_player(player, gameplay["runtime"])
 		var sync: NetSync = player.get_node(^"NetSync") as NetSync
 		if int(entry["id"]) == me:
 			sync.reconcile(entry)
@@ -242,8 +245,22 @@ func _request_cast(form: StringName, effect: StringName, origin: Vector3, direct
 	var cost: float = player.mana_cost_for(spell, is_recast)
 	var reason: StringName = _validate(player, spell, origin, cost)
 	if reason != &"":
-		_cast_rejected.rpc_id(caster_id, spell.key, reason)
+		_cast_rejected.rpc_id(caster_id, spell.key, reason, player.stats.export_state())
 		return
+	if not origin.is_finite() or not direction.is_finite() or not target.is_finite() or direction.length_squared() < 0.01 or not is_finite(compose_seconds):
+		_cast_rejected.rpc_id(caster_id, spell.key, &"invalid", player.stats.export_state())
+		return
+	if player.cast_lockout > 0.0 or (is_recast and (player.composer.last_spell == null or player.composer.last_spell.key != spell.key)):
+		_cast_rejected.rpc_id(caster_id, spell.key, &"lockout", player.stats.export_state())
+		return
+	player.set_look(atan2(-direction.x, -direction.z), asin(clampf(direction.normalized().y, -1.0, 1.0)))
+	var params: Array = (player.get_node(^"SpellCaster") as SpellCaster).cast_params(spell)
+	origin = params[0]
+	direction = params[1]
+	target = params[2]
+	player.cast_lockout = SpellComposer.CAST_LOCKOUT
+	if player.has_overcharge():
+		player.overcharge_casts -= 1
 	player.stats.spend_mana(cost)
 	player.stats.start_cooldown(spell.key, player.cooldown_for(spell))
 	player.composer.last_spell = spell
@@ -259,22 +276,24 @@ func _validate(player: Player, spell: ResolvedSpell, origin: Vector3, cost: floa
 		return &"cooldown"
 	if not player.stats.can_afford(cost):
 		return &"no_mana"
-	if origin.distance_to(player.cast_origin.global_position) > MAX_ORIGIN_ERROR:
+	if not origin.is_finite() or origin.distance_to(player.cast_origin.global_position) > MAX_ORIGIN_ERROR:
 		return &"bad_origin"
 	return &""
 
 
 func _broadcast_spawn(caster_id: int, spell: ResolvedSpell, origin: Vector3, direction: Vector3, target: Vector3, compose_seconds: float = -1.0) -> void:
 	MatchState.report_cast(caster_id, spell.form, compose_seconds)
-	_spawn_spell.rpc(caster_id, spell.element, spell.form, spell.effect, origin, direction, target)
+	_cast_id += 1
+	_spawn_spell.rpc(caster_id, spell.element, spell.form, spell.effect, origin, direction, target, _cast_id)
 
 
 @rpc("authority", "call_local", "reliable", Net.CHANNEL_RELIABLE)
-func _spawn_spell(caster_id: int, element: StringName, form: StringName, effect: StringName, origin: Vector3, direction: Vector3, target: Vector3) -> void:
+func _spawn_spell(caster_id: int, element: StringName, form: StringName, effect: StringName, origin: Vector3, direction: Vector3, target: Vector3, cast_id: int) -> void:
 	var player: Player = _player(caster_id)
 	var spell: ResolvedSpell = SpellDB.resolve(element, form, effect)
 	if player == null or spell == null:
 		return
+	spell = spell.with_params({&"network_id": cast_id})
 	# Cone is instant: the host rewinds targets to what the remote caster saw (spec 04 §6).
 	var rewind: float = 0.0
 	if Net.is_host() and caster_id != multiplayer.get_unique_id() and spell.key == &"area_direct":
@@ -283,8 +302,11 @@ func _spawn_spell(caster_id: int, element: StringName, form: StringName, effect:
 
 
 @rpc("authority", "call_remote", "reliable", Net.CHANNEL_RELIABLE)
-func _cast_rejected(spell_key: StringName, reason: StringName) -> void:
-	push_warning("cast %s rejected by host: %s" % [spell_key, reason])
+func _cast_rejected(spell_key: StringName, reason: StringName, state: Dictionary) -> void:
+	var player: Player = _player(multiplayer.get_unique_id())
+	if player != null:
+		player.stats.import_state(state)
+		player.composer.cast_rejected.emit(SpellDB.resolve(player.composer.element_id, StringName(spell_key.get_slice("_", 0)), StringName(spell_key.get_slice("_", 1))), reason)
 
 
 # --- Debug ---------------------------------------------------------------------
@@ -303,6 +325,8 @@ func _bot_step(delta: float) -> void:
 			Input.action_press(&"move_right")
 	var me: Player = _player(multiplayer.get_unique_id())
 	_bot_draft()
+	if MatchState.phase() == MatchFsm.Phase.DRAFT:
+		MatchState.confirm_draft()
 	_bot_aim(me)
 	if me != null and not me.frozen and fmod(_bot_clock, 2.0) < delta:
 		me.composer.press_slot(0)
@@ -387,6 +411,10 @@ func _on_match_changed() -> void:
 
 ## Round start: sides swap (north picks first), everyone respawns fresh.
 func _start_round(north_id: int) -> void:
+	for object: Node in get_children():
+		if object is SpellNode or object is Wall:
+			remove_child(object)
+			object.queue_free()
 	for child: Node in _players_root.get_children():
 		var player: Player = child as Player
 		if player == null:
@@ -394,11 +422,8 @@ func _start_round(north_id: int) -> void:
 		var id: int = int(String(player.name))
 		var spawn: Marker3D = _arena.get_node(^"Layout/SpawnNorth" if id == north_id else ^"Layout/SpawnSouth") as Marker3D
 		player.global_transform = spawn.global_transform
-		player.velocity = Vector3.ZERO
-		player.stats.reset()
-		player.composer.reset()
-		player.active_aura = null
-		player.active_guard = null
+		player.reset_round()
+		(player.get_node(^"NetSync") as NetSync).reset_transport(id)
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
@@ -406,6 +431,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 	var key: InputEventKey = event as InputEventKey
 	if key == null or not key.pressed or key.echo or MatchState.phase() != MatchFsm.Phase.DRAFT:
 		return
+	if key.keycode == KEY_ENTER:
+		MatchState.confirm_draft()
 	var element_keys: Array[Key] = [KEY_1, KEY_2, KEY_3, KEY_4]
 	var rune_keys: Array[Key] = [KEY_5, KEY_6, KEY_7]
 	if element_keys.has(key.keycode):
@@ -685,3 +712,16 @@ func _players_in_order() -> Array:
 			list.append(child)
 	list.sort_custom(func(a: Node, b: Node) -> bool: return int(String(a.name)) < int(String(b.name)))
 	return list
+
+
+func destroy_wall(wall_name: String) -> void:
+	if Net.is_host():
+		_destroy_wall.rpc(wall_name)
+
+
+@rpc("authority", "call_local", "reliable", Net.CHANNEL_RELIABLE)
+func _destroy_wall(wall_name: String) -> void:
+	var wall: Wall = get_node_or_null(NodePath(wall_name)) as Wall
+	if wall != null:
+		wall.collision_layer = 0
+		wall.queue_free()

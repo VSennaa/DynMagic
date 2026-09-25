@@ -15,6 +15,7 @@ var dedicated: bool = false
 
 const AUTO_START_DELAY: float = 2.0
 var _auto_start_pending: bool = false
+var _starting: bool = false
 
 
 func _ready() -> void:
@@ -26,6 +27,7 @@ func _ready() -> void:
 
 
 func reset() -> void:
+	_starting = false
 	ready_flags.clear()
 	overtime_setting = &"random"
 	arena_setting = &"rotation"
@@ -47,7 +49,7 @@ func set_rules(overtime: StringName, arena: StringName) -> void:
 
 
 func can_start() -> bool:
-	if not Net.is_host() or Net.players.size() < 2:
+	if not Net.is_host() or _starting or MatchState.active or Net.players.size() < 2:
 		return false
 	for id: int in Net.players:
 		if not ready_flags.get(id, false):
@@ -66,7 +68,10 @@ func _request_ready(value: bool) -> void:
 	if not Net.is_host():
 		return
 	var id: int = multiplayer.get_remote_sender_id()
-	ready_flags[id if id != 0 else 1] = value
+	id = id if id != 0 else 1
+	if _starting or MatchState.active or not Net.players.has(id):
+		return
+	ready_flags[id] = value
 	_push()
 
 
@@ -102,6 +107,8 @@ func _sync(flags: Dictionary, overtime: StringName, arena: StringName, is_dedica
 
 @rpc("authority", "call_local", "reliable", Net.CHANNEL_RELIABLE)
 func _begin() -> void:
+	_starting = true
+	ready_flags.clear()
 	match_starting.emit()
 	SceneRouter.go_to(SceneRouter.MATCH)
 
@@ -114,6 +121,7 @@ func return_to_lobby() -> void:
 
 @rpc("authority", "call_local", "reliable", Net.CHANNEL_RELIABLE)
 func _return() -> void:
+	_starting = false
 	ready_flags.clear()
 	MatchState.reset_for_lobby()
 	SceneRouter.go_to(Net.SERVER_SCENE if Net.dedicated else SceneRouter.LOBBY)

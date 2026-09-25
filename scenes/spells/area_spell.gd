@@ -103,6 +103,7 @@ func _place_wall() -> void:
 	var xform: Transform3D = Transform3D(Basis.looking_at(forward if forward.length() > 0.01 else Vector3.FORWARD, Vector3.UP), target_point)
 	var wall: Wall = WALL_SCENE.instantiate() as Wall
 	wall.setup(spell, caster, xform.origin, direction, target_point)
+	wall.name = "Wall_%s" % str(spell.param(&"network_id", 0))
 	get_parent().add_child(wall)
 	wall.global_basis = xform.basis
 	queue_free()

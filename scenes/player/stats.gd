@@ -55,6 +55,7 @@ func export_state() -> Dictionary:
 
 
 func import_state(state: Dictionary) -> void:
+	var was_dead: bool = is_dead
 	hp = state["hp"]
 	max_hp = state["max_hp"]
 	mana = state["mana"]
@@ -65,6 +66,8 @@ func import_state(state: Dictionary) -> void:
 	_regen_pause_left = state["regen_pause"]
 	_statuses.assign(state["statuses"])
 	_cooldowns.assign(state["cooldowns"])
+	if is_dead and not was_dead:
+		died.emit()
 	hp_changed.emit(hp, max_hp)
 	mana_changed.emit(mana, max_mana)
 	shield_changed.emit(shield)

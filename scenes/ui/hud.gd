@@ -12,6 +12,7 @@ var _wheel: CrosshairWheel
 ## Bars and cooldown grid: hidden when no player is bound (spectators).
 var _player_widgets: Array[Control] = []
 var _hint: Label
+var _enemy_hp: ProgressBar
 var _hp_bar: ProgressBar
 var _shield_bar: ProgressBar
 var _mana_bar: ProgressBar
@@ -54,6 +55,9 @@ func _process(delta: float) -> void:
 	_fps_label.text = "%d FPS" % Engine.get_frames_per_second()
 	_hp_bar.max_value = stats.max_hp
 	_hp_bar.value = stats.hp
+	_enemy_hp.visible = is_instance_valid(threat) and threat is Player
+	if _enemy_hp.visible:
+		_enemy_hp.value = (threat as Player).stats.hp
 	_shield_bar.max_value = stats.max_hp
 	_shield_bar.value = stats.shield
 	_hp_label.text = "HP %d%s" % [roundi(stats.hp), "  +%d" % roundi(stats.shield) if stats.shield > 0.0 else ""]
@@ -129,10 +133,14 @@ func _build() -> void:
 
 	var bars: VBoxContainer = VBoxContainer.new()
 	_player_widgets.append(bars)
-	bars.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	bars.position = Vector2(32, -150)
+	bars.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	bars.position = Vector2(32, 24)
 	bars.custom_minimum_size = Vector2(320, 0)
 	root.add_child(bars)
+	_enemy_hp = _bar(Color(0.85, 0.25, 0.25))
+	_enemy_hp.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	_enemy_hp.position = Vector2(-352, 55)
+	root.add_child(_enemy_hp)
 	_hp_label = _label("HP", 18)
 	bars.add_child(_hp_label)
 	_hp_bar = _bar(Color(0.85, 0.25, 0.25))

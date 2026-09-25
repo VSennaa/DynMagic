@@ -4,7 +4,7 @@ Last update: 2026-09-25. Written so any AI agent (Claude, Codex, Gemini, etc.) c
 
 ## 0. Active agent
 
-Active agent: Codex (round 7 — ROADMAP M10 alpha 1.0, started 2026-09-25)
+Active agent: none (Codex round 7 PARTIAL — hit usage limit 2026-09-25, resets 23:06; phase 1 started: first pick draw, draft confirm + rune window, both_died, walls/area authority, lobby/net/match_state changes; 75/75 tests; committed by Claude. Resume the round 7 brief below from phase 1 — check each M10 item against the code, tick done ones.)
 
 ### Handoff brief for Codex (round 7 — alpha 1.0, ROADMAP M10; 2026-09-25)
 User asked: skip further review, Codex implements M10, Claude commits afterwards. Read `docs/reviews/SYNTHESIS.md` (consensus C1–C18, decisions D1–D13, user decisions in §5) and the four reports in `docs/reviews/` for evidence (file:line). Work through ROADMAP M10 phases 1 → 4 in order, ticking `[x]` as you go.

@@ -52,6 +52,8 @@ var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 ## Debug: multiplies the clock (e.g. --match-speed 8 for automated full-match runs).
 var speed: float = 1.0
 
+var confirmed: Array[int] = []
+var _draft_elapsed: float = 0.0
 var _loaded: Array[int] = []
 var _paused_phase: Phase = Phase.LOBBY
 var _paused_time: float = 0.0
@@ -64,7 +66,7 @@ func start(p_players: Array[int], p_overtime_setting: StringName = &"random") ->
 	for id: int in players:
 		score[id] = 0
 	round_number = 0
-	north_id = players[0]
+	north_id = players[rng.randi_range(0, players.size() - 1)]
 	last_round_loser = 0
 	_loaded.clear()
 	_set_phase(Phase.LOADING, 0.0)
@@ -98,35 +100,40 @@ func pick_element(id: int, element: StringName) -> bool:
 	if draft_step == DraftStep.SIDE_B and elements.get(north_id, &"") == element:
 		return false
 	elements[id] = element
-	_advance_draft()
+	confirmed.erase(id)
+	if draft_step == DraftStep.SIDE_A:
+		draft_step = DraftStep.SIDE_B
+	phase_changed.emit(phase)
 	return true
 
 
 func pick_rune(id: int, rune: StringName) -> bool:
 	if phase != Phase.DRAFT or not rune_offers.has(id) or not (rune_offers[id] as Array).has(rune):
 		return false
+	confirmed.erase(id)
 	runes[id] = rune
 	return true
 
 
-func _advance_draft() -> void:
-	if draft_step == DraftStep.SIDE_A:
-		draft_step = DraftStep.SIDE_B
-		time_left = DRAFT_PICK_TIME
-		phase_changed.emit(phase)
-	elif draft_step == DraftStep.SIDE_B:
-		draft_step = DraftStep.DONE
-		_auto_pick_runes()
-		_set_phase(Phase.COUNTDOWN, COUNTDOWN_TIME)
+func confirm_draft(id: int) -> bool:
+	if phase != Phase.DRAFT or not elements.has(id) or (rune_offers.has(id) and not runes.has(id)):
+		return false
+	if not confirmed.has(id):
+		confirmed.append(id)
+	if confirmed.size() == players.size():
+		_finish_draft()
+	return true
 
 
-## Timeout: the host picks a random legal element for whoever is late.
-func _auto_pick_element() -> void:
-	var id: int = north_id if draft_step == DraftStep.SIDE_A else south_id()
-	var options: Array[StringName] = ELEMENTS.duplicate()
-	if draft_step == DraftStep.SIDE_B:
-		options.erase(elements.get(north_id, &""))
-	pick_element(id, options[rng.randi_range(0, options.size() - 1)])
+func _finish_draft() -> void:
+	for id: int in [north_id, south_id()]:
+		if not elements.has(id):
+			var options: Array[StringName] = ELEMENTS.duplicate()
+			options.erase(elements.get(other(id), &""))
+			elements[id] = options[rng.randi_range(0, options.size() - 1)]
+	_auto_pick_runes()
+	draft_step = DraftStep.DONE
+	_set_phase(Phase.COUNTDOWN, COUNTDOWN_TIME)
 
 
 func _auto_pick_runes() -> void:
@@ -221,8 +228,12 @@ func tick(delta: float, hp: Dictionary = {}) -> void:
 	match phase:
 		Phase.DRAFT:
 			time_left -= delta
+			_draft_elapsed += delta
+			if draft_step == DraftStep.SIDE_A and _draft_elapsed >= (15.0 if round_number == 1 else DRAFT_PICK_TIME):
+				var options: Array[StringName] = ELEMENTS.duplicate()
+				pick_element(north_id, options[rng.randi_range(0, options.size() - 1)])
 			if time_left <= 0.0:
-				_auto_pick_element()
+				_finish_draft()
 		Phase.COUNTDOWN:
 			time_left -= delta
 			if time_left <= 0.0:
@@ -290,8 +301,10 @@ func _begin_round() -> void:
 		for i: int in 3:
 			offer.append(pool.pop_at(rng.randi_range(0, pool.size() - 1)))
 		rune_offers[id] = offer
+	confirmed.clear()
+	_draft_elapsed = 0.0
 	draft_step = DraftStep.SIDE_A
-	_set_phase(Phase.DRAFT, DRAFT_PICK_TIME)
+	_set_phase(Phase.DRAFT, 30.0 if round_number == 1 else 20.0)
 
 
 func _end_round(winner_id: int, reason: StringName) -> void:

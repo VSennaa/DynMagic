@@ -222,6 +222,7 @@ func snapshot_entry() -> Dictionary:
 		"mana": player.stats.mana,
 		"shield": player.stats.shield,
 		"statuses": NetCodec.status_mask(statuses),
+		"gameplay": {"stats": player.stats.export_state(), "runtime": ReconnectState.player_state(player)},
 		"composer": remote_composer_bits if role == Role.HOST_REMOTE else _composer_bits(),
 	}
 

@@ -9,7 +9,7 @@ signal peer_left(peer_id: int)
 signal disconnected
 signal lobbies_changed
 
-const PROTOCOL_VERSION: int = 2
+const PROTOCOL_VERSION: int = 3
 const GAME_TAG: String = "dynmagic"
 const DEFAULT_PORT: int = 7777
 const DISCOVERY_PORT: int = 7778
@@ -48,6 +48,9 @@ var _listener: PacketPeerUDP
 var _broadcast_timer: float = 0.0
 var _clock: float = 0.0
 var _session: int = 0
+var resume_token: String = ""
+var session_tokens: Dictionary[int, String] = {}
+var _resume_address: String = ""
 
 
 func _ready() -> void:
@@ -91,6 +94,7 @@ func host(p_port: int = DEFAULT_PORT, p_lobby_name: String = "", p_dedicated: bo
 	multiplayer.multiplayer_peer = peer
 	dedicated = p_dedicated
 	players.clear()
+	session_tokens.clear()
 	if not dedicated:
 		players[1] = player_name
 	_start_broadcast()
@@ -101,6 +105,10 @@ func host(p_port: int = DEFAULT_PORT, p_lobby_name: String = "", p_dedicated: bo
 
 func join(address: String, p_port: int = DEFAULT_PORT, as_spectator: bool = false) -> Error:
 	close()
+	var destination: String = "%s:%d" % [address, p_port]
+	if destination != _resume_address:
+		resume_token = ""
+	_resume_address = destination
 	spectating = as_spectator
 	var peer: ENetMultiplayerPeer = ENetMultiplayerPeer.new()
 	var err: Error = peer.create_client(address, p_port, 3)
@@ -128,15 +136,15 @@ func close() -> void:
 # --- Handshake (spec 04 §3) -------------------------------------------------
 
 func _on_connected_to_server() -> void:
-	_rpc_hello.rpc_id(1, PROTOCOL_VERSION, player_name, spectating)
+	_rpc_hello.rpc_id(1, PROTOCOL_VERSION, player_name, spectating, resume_token)
 
 
 @rpc("any_peer", "call_remote", "reliable", CHANNEL_RELIABLE)
-func _rpc_hello(version: int, name: String, as_spectator: bool = false) -> void:
+func _rpc_hello(version: int, name: String, as_spectator: bool = false, token: String = "") -> void:
 	if not multiplayer.is_server():
 		return
 	var peer_id: int = multiplayer.get_remote_sender_id()
-	if players.has(peer_id):
+	if players.has(peer_id) or spectators.has(peer_id):
 		return
 	if version != PROTOCOL_VERSION:
 		_rpc_reject.rpc_id(peer_id, "Versão diferente (host %d, você %d)" % [PROTOCOL_VERSION, version])
@@ -152,7 +160,7 @@ func _rpc_hello(version: int, name: String, as_spectator: bool = false) -> void:
 		_kick_later(peer_id)
 		return
 	var clean_name: String = name.strip_edges().left(24) if name.strip_edges() != "" else "Mago %d" % peer_id
-	var old_id: int = MatchState.reconnect_slot(clean_name)
+	var old_id: int = MatchState.reconnect_slot(token)
 	if MatchState.active and old_id == 0:
 		_rpc_reject.rpc_id(peer_id, "Partida em andamento; vaga reservada ao jogador desconectado")
 		_kick_later(peer_id)
@@ -161,6 +169,13 @@ func _rpc_hello(version: int, name: String, as_spectator: bool = false) -> void:
 		_rpc_reject.rpc_id(peer_id, "Prazo de reconexão encerrado")
 		_kick_later(peer_id)
 		return
+	if old_id != 0:
+		session_tokens[peer_id] = session_tokens[old_id]
+		session_tokens.erase(old_id)
+		_rpc_remap.rpc(old_id, peer_id)
+	else:
+		session_tokens[peer_id] = Crypto.new().generate_random_bytes(32).hex_encode()
+	_rpc_token.rpc_id(peer_id, session_tokens[peer_id])
 	players[peer_id] = clean_name
 	_log("peer %d joined as '%s'" % [peer_id, players[peer_id]])
 	_rpc_welcome.rpc(players, old_id != 0, spectators, _in_match())
@@ -385,3 +400,15 @@ func _parse_cli() -> void:
 
 func _log(message: String) -> void:
 	print("[net] %s" % message)
+
+
+@rpc("authority", "call_remote", "reliable", CHANNEL_RELIABLE)
+func _rpc_token(token: String) -> void:
+	resume_token = token
+
+
+@rpc("authority", "call_remote", "reliable", CHANNEL_RELIABLE)
+func _rpc_remap(old_id: int, new_id: int) -> void:
+	var arena: Node = get_tree().get_first_node_in_group(&"net_match")
+	if arena != null:
+		arena.call(&"reassign_player", old_id, new_id)

@@ -24,6 +24,8 @@ static func pack_inputs(frames: Array[Dictionary]) -> PackedByteArray:
 
 
 static func unpack_inputs(data: PackedByteArray) -> Array[Dictionary]:
+	if data.is_empty() or data[0] < 1 or data[0] > 3 or data.size() != 1 + int(data[0]) * 16:
+		return []
 	var buf: StreamPeerBuffer = StreamPeerBuffer.new()
 	buf.data_array = data
 	var frames: Array[Dictionary] = []
@@ -37,6 +39,9 @@ static func unpack_inputs(data: PackedByteArray) -> Array[Dictionary]:
 			"buttons": buf.get_u8(),
 			"composer": buf.get_u8(),
 		})
+	for frame: Dictionary in frames:
+		if not is_finite(float(frame["yaw"])) or not is_finite(float(frame["pitch"])) or int(frame["buttons"]) > 7:
+			return []
 	return frames
 
 
@@ -58,6 +63,7 @@ static func pack_snapshot(snapshot: Dictionary) -> PackedByteArray:
 		buf.put_half(float(entry["shield"]))
 		buf.put_u8(int(entry["statuses"]))
 		buf.put_u8(int(entry["composer"]))
+		buf.put_var(entry.get("gameplay", {}), false)
 	return buf.data_array
 
 
@@ -80,6 +86,7 @@ static func unpack_snapshot(data: PackedByteArray) -> Dictionary:
 			"shield": buf.get_half(),
 			"statuses": buf.get_u8(),
 			"composer": buf.get_u8(),
+			"gameplay": buf.get_var(false),
 		})
 	return {"tick": tick, "players": entries}
 

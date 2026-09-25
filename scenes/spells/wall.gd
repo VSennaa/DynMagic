@@ -63,7 +63,7 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	_life -= delta
 	if _life <= 0.0:
-		queue_free()
+		_destroy()
 		return
 	_contact_timer += delta
 	if _contact_timer >= CONTACT_TICK:
@@ -74,7 +74,7 @@ func _process(delta: float) -> void:
 func receive_hit(amount: float, _spell: ResolvedSpell, _source: Node) -> void:
 	hp -= amount
 	if hp <= 0.0:
-		queue_free()
+		_destroy()
 
 
 ## Fire burns and storm shocks-and-damages anyone touching or standing inside the wall.
@@ -99,3 +99,11 @@ func _contact_tick() -> void:
 			target.call(&"receive_hit", dps * CONTACT_TICK, spell, caster)
 		if burns and target.has_method(&"receive_status"):
 			target.call(&"receive_status", spell, caster)
+
+
+func _destroy() -> void:
+	if Net.is_online():
+		if Net.is_host():
+			get_parent().call(&"destroy_wall", String(name))
+	else:
+		queue_free()

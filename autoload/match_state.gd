@@ -15,6 +15,8 @@ var stats: Dictionary = {}
 var participant_names: Dictionary = {}
 var disconnected_id: int = 0
 var reconnecting_id: int = 0
+var _pending_deaths: Array[int] = []
+var _hp_before: Dictionary = {}
 
 
 func start_match(overtime_setting: StringName = &"random", arena_setting: StringName = &"rotation") -> void:
@@ -54,10 +56,10 @@ func _on_peer_left(id: int) -> void:
 	fsm.player_disconnected(id)
 
 
-func reconnect_slot(player_name: String) -> int:
+func reconnect_slot(token: String) -> int:
 	if not Net.is_host() or not active or fsm == null or fsm.phase != MatchFsm.Phase.PAUSED or fsm.time_left <= 0.0 or reconnecting_id != 0:
 		return 0
-	return disconnected_id if participant_names.get(disconnected_id, "") == player_name else 0
+	return disconnected_id if not token.is_empty() and Net.session_tokens.get(disconnected_id, "") == token else 0
 
 
 func begin_reconnect(old_id: int, new_id: int) -> bool:
@@ -77,6 +79,7 @@ func begin_reconnect(old_id: int, new_id: int) -> bool:
 func _physics_process(delta: float) -> void:
 	if not active or fsm == null or not Net.is_host():
 		return
+	_hp_before = _hp_by_player()
 	var before: int = int(fsm.time_left)
 	fsm.tick(delta, _hp_by_player())
 	if fsm.phase == MatchFsm.Phase.PAUSED and fsm.time_left <= 0.0:
@@ -139,7 +142,10 @@ func _request_rune(rune: StringName) -> void:
 ## Host game events.
 func report_death(id: int) -> void:
 	if fsm != null and Net.is_host():
-		fsm.player_died(id)
+		if _pending_deaths.is_empty():
+			_resolve_deaths.call_deferred()
+		if not _pending_deaths.has(id):
+			_pending_deaths.append(id)
 
 
 func report_core(id: int) -> void:
@@ -239,3 +245,22 @@ func reset_for_lobby() -> void:
 	fsm = null
 	view = {}
 	active = false
+
+
+func _resolve_deaths() -> void:
+	if fsm != null:
+		if _pending_deaths.size() == 2:
+			fsm.both_died(_hp_before)
+		elif _pending_deaths.size() == 1:
+			fsm.player_died(_pending_deaths[0])
+	_pending_deaths.clear()
+
+
+func confirm_draft() -> void:
+	_request_confirm.rpc_id(1)
+
+
+@rpc("any_peer", "call_local", "reliable", Net.CHANNEL_RELIABLE)
+func _request_confirm() -> void:
+	if Net.is_host() and fsm != null and fsm.confirm_draft(_sender()):
+		_broadcast()

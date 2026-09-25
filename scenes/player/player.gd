@@ -65,6 +65,7 @@ var _dash_time: float = 0.0
 var _coyote_timer: float = 0.0
 var _current_height: float = 1.8
 var _pitch: float = 0.0
+var cast_lockout: float = 0.0
 
 @onready var stats: Stats = $Stats
 @onready var composer: SpellComposer = $SpellComposer
@@ -154,6 +155,10 @@ static func _buttons(jump: bool, crouch: bool, sprint: bool) -> int:
 
 ## One movement tick. Kept free of Input reads so the host can replay client inputs (M3).
 func simulate(delta: float, input_dir: Vector2, want_jump: bool, want_crouch: bool, want_sprint: bool) -> void:
+	cast_lockout = maxf(0.0, cast_lockout - delta)
+	if frozen or stats.is_dead:
+		velocity = Vector3.ZERO
+		return
 	if frozen:
 		input_dir = Vector2.ZERO
 		want_jump = false
@@ -277,7 +282,7 @@ func get_aim_camera() -> Camera3D:
 
 ## Entry point for spell damage (group "damageable"). Host-only in multiplayer.
 func receive_hit(amount: float, spell: ResolvedSpell, source: Node) -> void:
-	if invulnerable_time > 0.0:
+	if invulnerable_time > 0.0 or stats.is_dead or (MatchState.active and MatchState.is_frozen()) or (Net.is_online() and not Net.is_host()):
 		return
 	# Shock: the next damage taken is increased, then the shock is consumed.
 	if stats.has_status(&"shock") and amount > 0.0:
@@ -302,7 +307,7 @@ func receive_hit(amount: float, spell: ResolvedSpell, source: Node) -> void:
 
 ## Applies the element status carried by a spell (spec 01 §3). Zones call this directly.
 func receive_status(spell: ResolvedSpell, source: Node = null) -> void:
-	if invulnerable_time > 0.0 or spell == null:
+	if invulnerable_time > 0.0 or spell == null or stats.is_dead or (MatchState.active and MatchState.is_frozen()) or (Net.is_online() and not Net.is_host()):
 		return
 	match spell.status_id:
 		&"burn":
@@ -360,7 +365,7 @@ func apply_knockback(impulse: Vector3) -> void:
 
 
 func _update_statuses(delta: float) -> void:
-	if stats.has_status(&"burn") and not sudden_death:
+	if stats.has_status(&"burn") and not sudden_death and (not Net.is_online() or Net.is_host()):
 		_burn_tick += delta
 		if _burn_tick >= BURN_TICK:
 			_burn_tick -= BURN_TICK
@@ -371,6 +376,8 @@ func _update_statuses(delta: float) -> void:
 		_slow_strength = 0.0
 
 func _validate_cast(spell: ResolvedSpell) -> StringName:
+	if cast_lockout > 0.0:
+		return &"lockout"
 	if stats.is_dead:
 		return &"dead"
 	if frozen:
@@ -383,6 +390,7 @@ func _validate_cast(spell: ResolvedSpell) -> StringName:
 
 
 func _on_cast_requested(spell: ResolvedSpell) -> void:
+	cast_lockout = SpellComposer.CAST_LOCKOUT
 	stats.spend_mana(mana_cost_for(spell, composer.is_recasting))
 	stats.start_cooldown(spell.key, cooldown_for(spell))
 	if has_overcharge():
@@ -421,7 +429,7 @@ func speed_mult() -> float:
 func _add_nameplate() -> void:
 	_nameplate = Label3D.new()
 	_nameplate.billboard = BaseMaterial3D.BILLBOARD_ENABLED
-	_nameplate.no_depth_test = true
+	_nameplate.no_depth_test = false
 	_nameplate.font_size = 36
 	_nameplate.outline_size = 8
 	_nameplate.position = Vector3(0.0, 2.3, 0.0)
@@ -441,7 +449,12 @@ func _process(_delta: float) -> void:
 	var parts: PackedStringArray = PackedStringArray()
 	for id: StringName in stats.active_statuses():
 		parts.append(String(id))
-	_nameplate.text = "HP %d%s\n%s" % [roundi(stats.hp), " +%d" % roundi(stats.shield) if stats.shield > 0.0 else "", " ".join(parts)]
+	_nameplate.text = " ".join(parts)
+	var camera: Camera3D = get_viewport().get_camera_3d()
+	if camera != null:
+		var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(camera.global_position, global_position + Vector3.UP * 1.5, 1)
+		var hit: Dictionary = get_world_3d().direct_space_state.intersect_ray(query)
+		_nameplate.visible = hit.is_empty() or hit.get("collider") == self
 
 ## Applies a round's rune (spec 02 §3). Called after Stats.reset() at round start.
 func apply_rune(p_rune: StringName) -> void:
@@ -475,3 +488,34 @@ func cooldown_for(spell: ResolvedSpell) -> float:
 	if mana_surge:
 		cdr = 1.0 - (1.0 - cdr) * 0.5
 	return spell.cooldown * (1.0 - cdr)
+
+
+func reset_round() -> void:
+	stats.max_mana = 100.0
+	stats.reset()
+	composer.reset()
+	active_aura = null
+	active_guard = null
+	rune = &""
+	velocity = Vector3.ZERO
+	move_input = Vector2.ZERO
+	_dash_velocity = Vector3.ZERO
+	_knockback = Vector3.ZERO
+	_dash_time = 0.0
+	invulnerable_time = 0.0
+	glide_time = 0.0
+	overcharge_time = 0.0
+	overcharge_casts = 0
+	cast_lockout = 0.0
+	_burn_dps = 0.0
+	_burn_tick = 0.0
+	_slow_strength = 0.0
+	_coyote_timer = 0.0
+	_air_jumps_used = 0
+	_jump_held = false
+	sudden_death = false
+	mana_surge = false
+	is_sprinting = false
+	is_crouching = false
+	_current_height = tuning.stand_height
+	_apply_height(_current_height)

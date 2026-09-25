@@ -22,6 +22,7 @@ func setup() -> void:
 	fsm.round_ended.connect(func(w: int, _r: StringName) -> void: round_winners.append(w))
 	fsm.match_ended.connect(func(w: int, _r: StringName) -> void: match_winner = w)
 	fsm.start([A, B] as Array[int], &"random")
+	fsm.north_id = A
 
 
 func _load_both() -> void:
@@ -35,6 +36,10 @@ func _to_combat() -> void:
 	var second: int = fsm.south_id()
 	assert_true(fsm.pick_element(first, &"fire"))
 	assert_true(fsm.pick_element(second, &"frost"))
+	for id: int in fsm.rune_offers:
+		fsm.pick_rune(id, fsm.rune_offers[id][0])
+	fsm.confirm_draft(first)
+	fsm.confirm_draft(second)
 	fsm.tick(MatchFsm.COUNTDOWN_TIME + 0.01)
 	assert_eq(fsm.phase, MatchFsm.Phase.COMBAT)
 
@@ -59,13 +64,16 @@ func test_draft_order_and_no_duplicates() -> void:
 	assert_true(fsm.pick_element(A, &"storm"))
 	assert_false(fsm.pick_element(B, &"storm"), "no duplicate element")
 	assert_true(fsm.pick_element(B, &"wind"))
+	assert_eq(fsm.phase, MatchFsm.Phase.DRAFT)
+	fsm.confirm_draft(A)
+	fsm.confirm_draft(B)
 	assert_eq(fsm.phase, MatchFsm.Phase.COUNTDOWN)
 
 
 func test_draft_timeout_auto_picks_legal_elements() -> void:
 	_load_both()
-	fsm.tick(MatchFsm.DRAFT_PICK_TIME + 0.01)
-	fsm.tick(MatchFsm.DRAFT_PICK_TIME + 0.01)
+	fsm.tick(15.01)
+	fsm.tick(15.01)
 	assert_eq(fsm.phase, MatchFsm.Phase.COUNTDOWN)
 	assert_ne(fsm.elements[A], fsm.elements[B])
 
@@ -239,3 +247,27 @@ func test_expired_slot_cannot_resume_and_unknown_loading_is_ignored() -> void:
 	assert_eq(fsm.phase, MatchFsm.Phase.PAUSED)
 	fsm.forfeit(B)
 	assert_eq(match_winner, A)
+
+
+func test_rune_window_survives_second_pick() -> void:
+	_load_both()
+	_to_combat()
+	fsm.player_died(B)
+	_finish_round_end()
+	fsm.pick_element(fsm.north_id, &"fire")
+	fsm.pick_element(fsm.south_id(), &"wind")
+	assert_eq(fsm.phase, MatchFsm.Phase.DRAFT)
+	assert_false(fsm.confirm_draft(B))
+	assert_true(fsm.pick_rune(B, fsm.rune_offers[B][0]))
+	fsm.confirm_draft(A)
+	fsm.confirm_draft(B)
+	assert_eq(fsm.phase, MatchFsm.Phase.COUNTDOWN)
+
+
+func test_first_pick_varies_with_seed() -> void:
+	var seen: Dictionary = {}
+	for seed_value: int in 32:
+		fsm.rng.seed = seed_value
+		fsm.start([A, B] as Array[int])
+		seen[fsm.north_id] = true
+	assert_eq(seen.size(), 2)
