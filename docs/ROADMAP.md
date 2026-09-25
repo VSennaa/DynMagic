@@ -116,7 +116,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (write th
 
 - [x] Main menu with animated 3D background (spec 06 §1); now the project main scene
 - [x] Host/Join screens + lobby screen (`play_lan`, `lobby_screen`, `Lobby` autoload with ready flags and rules). UI-driven two-instance run not yet tested; CLI `--host/--join` still skips the lobby
-- [ ] Draft screen
+- [x] Draft screen: element cards (disabled when taken or not your turn) + rune offer + timer, in `NetMatch._update_draft_panel`; headless run clean. Keys 1-7 still work
 - [ ] Final HUD (spec 06 §2)
 - [x] Pause menu + forfeit (Esc in the match; online match keeps running)
 - [x] Results screen + rematch (panel with score, damage, accuracy, Cores; "Voltar ao lobby" = rematch path)

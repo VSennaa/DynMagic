@@ -304,6 +304,7 @@ func _on_match_changed() -> void:
 				p.apply_rune(runes.get(int(String(p.name)), &""))
 	_update_core(view, round_number)
 	_update_overtime(view, round_number)
+	_update_draft_panel(view)
 	var frozen: bool = MatchState.is_frozen()
 	for child: Node in _players_root.get_children():
 		var player: Player = child as Player
@@ -519,3 +520,49 @@ func _panel(heading: String) -> Control:
 	column.add_child(UiKit.title(heading, 40))
 	_hud.add_child(panel)
 	return panel
+
+# --- Draft screen (spec 06 §1) --------------------------------------------------------------
+
+var _draft_panel: Control
+
+
+## Four element cards (taken/other-turn cards disabled) plus the rune offer, over the frozen arena.
+func _update_draft_panel(view: Dictionary) -> void:
+	var drafting: bool = MatchState.phase() == MatchFsm.Phase.DRAFT
+	if not drafting:
+		if _draft_panel != null:
+			_draft_panel.queue_free()
+			_draft_panel = null
+			if _menu == null:
+				Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+		return
+	if _draft_panel != null:
+		_draft_panel.queue_free()
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	var me: int = multiplayer.get_unique_id()
+	var my_turn: bool = (int(view["draft_step"]) == MatchFsm.DraftStep.SIDE_A and int(view["north"]) == me) \
+			or (int(view["draft_step"]) == MatchFsm.DraftStep.SIDE_B and int(view["north"]) != me)
+	var elements: Dictionary = view.get("elements", {})
+	var taken: Array = elements.values()
+	_draft_panel = _panel("Escolha seu elemento" if my_turn else "Oponente escolhendo...")
+	var column: VBoxContainer = _draft_panel.get_node(^"Column") as VBoxContainer
+	var cards: Array[Control] = []
+	for element_id: StringName in MatchFsm.ELEMENTS:
+		var element: ElementDef = SpellDB.elements.get(element_id)
+		var card: Button = UiKit.button(element.display_name if element != null else String(element_id), MatchState.pick_element.bind(element_id))
+		card.custom_minimum_size = Vector2(130, 110)
+		if element != null:
+			card.add_theme_color_override(&"font_color", element.color)
+		card.disabled = not my_turn or taken.has(element_id) or elements.has(me)
+		cards.append(card)
+	column.add_child(UiKit.row(cards))
+	if elements.has(me):
+		column.add_child(UiKit.label("Seu elemento: %s" % String(elements[me]), 18))
+	var offers: Array = (view.get("rune_offers", {}) as Dictionary).get(me, [])
+	if not offers.is_empty():
+		column.add_child(UiKit.label("Runa do round (perdeu o anterior):", 18))
+		var rune_buttons: Array[Control] = []
+		for rune: Variant in offers:
+			rune_buttons.append(UiKit.button(String(rune), MatchState.pick_rune.bind(StringName(rune))))
+		column.add_child(UiKit.row(rune_buttons))
+	column.add_child(UiKit.label("Tempo: %d s" % ceili(float(view.get("time_left", 0.0))), 18))
