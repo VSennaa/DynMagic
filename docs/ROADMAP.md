@@ -160,3 +160,37 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (write th
 - [x] (Claude) Linux x86_64 server export preset + CI artifact (`DynMagic-server-linux-x64.tar.gz`) with a systemd unit and README (ports UDP 7777/7778, firewall, `--port`, `--name`)
 - [x] (Claude) Headless test: dedicated server + two bot clients play a full match, return to the lobby and auto-start the next one; LAN discovery finds the dedicated server
 - [ ] Milestone review with user
+
+## M10 — Alfa 1.0 (reviews 2026-09-25, see docs/reviews/SYNTHESIS.md)
+
+Phase 1 — integrity
+- [ ] C1 enemy nameplate hidden behind walls; HP bars of both players on top of the HUD (D5)
+- [ ] C6 Overcharge decremented for remote players
+- [ ] C7 simultaneous death uses the tie rule (resolve at end of tick)
+- [ ] C8 loser rune window is not closed by side B's pick; fixed windows, early close only when both confirm (D4, 15 s in round 1)
+- [ ] C9 full round reset; no damage between phases; ready flags cleared when a match starts
+- [ ] C10 server validates cast targets, finite numbers, recast and lockout
+- [ ] C11 snapshots carry statuses/cooldowns/death; wall destruction is authoritative
+- [ ] C12 reconnect remaps the player on the remaining client; session token instead of name
+- [ ] C16 first pick drawn at match start
+- [ ] C17 cast_rejected feedback and local cooldown rollback
+
+Phase 2 — readability
+- [ ] C2 damage_applied event (aggregated 100 ms): hitmarker, sound, numbers
+- [ ] C3 death / round / match banners with winner and reason; death cam + damage card (D8, no replay)
+- [ ] C4 + D10 glossary: Raio, Leque, Prorrogação, Escolha, Round; no raw ids on screen; rune and element descriptions
+- [ ] C5 draft panel updated in place
+- [ ] C14 "Como jogar" screen, guided training, Tab 3×3 card
+- [ ] D6 wheel as Q-E-R arc with quick/confirm mark; D7 local cast sound + flash
+
+Phase 3 — server
+- [ ] C13 join by IP:port, show host IP, disconnect reason
+- [ ] C15 lean headless server (no HUD/anim/audio, fixed 60 Hz physics)
+- [ ] D13 `dynmagic@.service` template, 3 instances with MemoryMax; 1 h load test (VPS upgraded to 2 GB by the user)
+- [ ] D3 overtime default Colapso; Aleatório in lobby and `--overtime`/`--arena` server flags
+
+Phase 4 — balance (user decisions D1, D2)
+- [ ] D1 Seta 3 charges (1 per 1.2 s); RMB recast only for confirmed spells
+- [ ] D2 element multipliers Fogo 1.05 / Gelo 0.95 / Raio 1.0 / Vento 0.95
+- [ ] D12 local telemetry JSON with lobby notice; remove headshot from spec (D9)
+- [ ] C18 docs aligned; release v1.0.0-alpha

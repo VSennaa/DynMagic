@@ -58,3 +58,11 @@ Fontes: `claude-gdd.md` (design/GDD), `claude-ux.md` (UX e sensação), `codex-t
 - Partida com 2 bots remotos (daqui → VPS): **~14% CPU** por duelo, 0 erros de rede, 2 rounds completos.
 - Conclusão: CPU cabe (3 duelos ≈ 45%). **Memória é o gargalo.**
 - Caminho: (1) C15 — servidor sem apresentação e 60 Hz fixo, medir de novo; (2) 3 processos com `MemoryMax` via `dynmagic@.service` (menor mudança, isola crash); (3) se não couber: plano de 2 GB ou mover hermes/python. Multi-sala num processo só se a medição exigir (esforço L).
+
+## 5. Decisões do usuário (2026-09-25)
+
+- **D1 Seta:** 3 cargas (1 a cada 1,2 s) + recast (RMB) só em magias confirmadas.
+- **D2 Elementos:** achatar já — Fogo 1,05 / Gelo 0,95 / Raio 1,0 / Vento 0,95; identidade por status e variantes.
+- **D3 Overtime:** Colapso padrão no alfa; Aleatório como opção do lobby (e flag do servidor).
+- **D13 VPS:** upgrade para 2 GB (usuário contrata). Três processos `dynmagic@.service` com `MemoryMax`; C15 (servidor enxuto) continua desejável.
+- Demais conflitos (D4–D12): seguir a recomendação da tabela, salvo veto.
