@@ -3,6 +3,9 @@ extends CharacterBody3D
 ## First-person player body: movement, crouch, jump and mouse look.
 ## See docs/specs/05-player-controller.md.
 
+## Emitted after mana and cooldown are paid. Spell scenes subscribe here.
+signal spell_cast(spell: ResolvedSpell)
+
 const PITCH_LIMIT: float = deg_to_rad(89.0)
 
 @export var tuning: PlayerTuning = preload("res://data/player_tuning.tres")
@@ -18,6 +21,9 @@ var _coyote_timer: float = 0.0
 var _current_height: float = 1.8
 var _pitch: float = 0.0
 
+@onready var stats: Stats = $Stats
+@onready var composer: SpellComposer = $SpellComposer
+@onready var cast_origin: Marker3D = $Head/Camera3D/CastOrigin
 @onready var _collision: CollisionShape3D = $CollisionShape3D
 @onready var _head: Node3D = $Head
 @onready var _camera: Camera3D = $Head/Camera3D
@@ -32,6 +38,11 @@ func _ready() -> void:
 	_camera.current = is_local
 	_camera.fov = Settings.fov
 	Settings.changed.connect(_on_settings_changed)
+	composer.read_input = is_local
+	composer.validator = _validate_cast
+	composer.cast_requested.connect(_on_cast_requested)
+	composer.state_changed.connect(func(_s: SpellComposer.State) -> void: sprint_blocked = composer.is_composing())
+	stats.died.connect(composer.reset)
 	if is_local:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 
@@ -148,3 +159,20 @@ func _on_settings_changed(key: StringName) -> void:
 
 func get_aim_camera() -> Camera3D:
 	return _camera
+
+
+
+func _validate_cast(spell: ResolvedSpell) -> StringName:
+	if stats.is_dead:
+		return &"dead"
+	if stats.is_on_cooldown(spell.key):
+		return &"cooldown"
+	if not stats.can_afford(spell.mana_cost):
+		return &"no_mana"
+	return &""
+
+
+func _on_cast_requested(spell: ResolvedSpell) -> void:
+	stats.spend_mana(spell.mana_cost)
+	stats.start_cooldown(spell.key, spell.cooldown)
+	spell_cast.emit(spell)

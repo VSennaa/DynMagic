@@ -39,8 +39,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (write th
 - [x] `Stats` node: HP, mana, regen pause, shield, status stacking, cooldowns (spec 05 §3)
 - [x] Data classes: `ElementDef`, `SpellBase` with `cast_mode`, `ResolvedSpell`; 9 bases in `data/spells/`, `fire.tres` (spec 01 §4). `FormDef`/`EffectDef` deferred to M2 rune circle (they only carry glyphs; ids live in `SpellDB.FORMS`/`EFFECTS`)
 - [x] `SpellDB.resolve()` pure function + test for one element
-- [ ] `SpellComposer` FSM: IDLE, SLOT_EFFECT, AIMING, CASTING, timeout, cancel, 150 ms buffer (spec 01 §1)
-- [ ] `test_spell_composer.gd`: quick vs confirm, timeout, cancel, recast
+- [x] `SpellComposer` FSM: IDLE, SLOT_EFFECT, AIMING, CASTING, timeout, cancel, 150 ms buffer (spec 01 §1). Wired to `Player` (validator checks Stats; `Player.spell_cast` fires after paying mana/cooldown)
+- [x] `test_spell_composer.gd`: quick vs confirm, timeout, cancel, recast
 - [ ] Spell: Bolt (projectile/direct)
 - [ ] Spell: Orb (projectile/burst) + aim preview
 - [ ] Spell: Seed (projectile/lingering) + arc preview + zone

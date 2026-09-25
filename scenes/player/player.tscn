@@ -1,7 +1,8 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=5 format=3]
 
 [ext_resource type="Script" path="res://scenes/player/player.gd" id="1_player"]
 [ext_resource type="Script" path="res://scenes/player/stats.gd" id="2_stats"]
+[ext_resource type="Script" path="res://scenes/player/spell_composer.gd" id="3_composer"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_body"]
 resource_local_to_scene = true
@@ -28,3 +29,6 @@ transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, -0.3)
 
 [node name="Stats" type="Node" parent="."]
 script = ExtResource("2_stats")
+
+[node name="SpellComposer" type="Node" parent="."]
+script = ExtResource("3_composer")
