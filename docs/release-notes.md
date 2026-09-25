@@ -1,0 +1,46 @@
+# DynMagic v0.1.0 — primeira build testável (Windows x64)
+
+Arena 1v1 de magia dinâmica em primeira pessoa, multiplayer por LAN.
+
+## Como jogar
+
+1. Extraia o zip e abra `DynMagic.exe`. O Windows pode mostrar o aviso do SmartScreen porque o executável não é assinado: clique em **Mais informações → Executar assim mesmo**.
+2. **Jogar LAN**
+   - Um jogador clica em **Criar sala** (porta UDP 7777; descoberta na LAN pela porta UDP 7778).
+   - O outro escolhe a sala na lista ou digita o IP do host e clica em **Entrar**.
+   - Os dois clicam em **Pronto**; o host clica em **Iniciar partida**.
+   - O firewall do Windows pode pedir permissão na primeira vez: permita em redes privadas.
+3. **Treino**: arena com boneco e alvo; teclas 1–4 trocam o elemento.
+
+## Controles
+
+| Ação | Tecla |
+|---|---|
+| Mover / pular / agachar / correr | WASD / Espaço / Ctrl / Shift |
+| Compor magia (forma, depois efeito) | Q / E / R |
+| Confirmar magia de mira | Botão esquerdo |
+| Repetir última magia / cancelar mira | Botão direito |
+| Cancelar composição | F |
+| Placar | Tab |
+| Overlay de rede | F3 |
+| Pausa | Esc |
+
+No draft (0:00) escolha o elemento pelas cartas (ou teclas 1–4) e, se perdeu o round anterior, uma runa (teclas 5–7).
+
+## O que tem nesta versão
+
+- 4 elementos × 9 magias (36 combinações) com variações por elemento e status.
+- Partida melhor de 7 com draft alternado, runas, Núcleo Arcano, overtime aleatório (Colapso, Morte Súbita, Maré de Mana) e round decisivo.
+- 3 arenas (Claustro, Pátio Partido, Espinha) em rotação.
+- Menus, lobby, configurações (vídeo, áudio, teclas, acessibilidade), grimório, resultados.
+- Visual toon com contorno de tinta; modelos estilizados gerados no Blender.
+
+## Limitações conhecidas
+
+- Personagens sem animação; braços em primeira pessoa ainda não aparecem.
+- Som sintetizado provisório, sem música.
+- Apenas LAN (sem internet/relay).
+
+## Linha de comando (testes)
+
+`DynMagic.exe -- --host` ou `DynMagic.exe -- --join 192.168.x.x` entram direto na partida; `--lobby` entra no lobby; `--sim-latency 40 --sim-loss 0.02` simula rede ruim.

@@ -130,7 +130,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (write th
 - [!] Música: nenhum asset CC0 no repositório. Autorização para busca/download perguntada ao usuário em 2026-09-24; aguardando resposta.
 - [ ] Screen transitions (ink brush)
 - [~] Performance pass: `F8` no treino alterna carga sustentada de 20 zonas + 20 projéteis reais dos quatro elementos. Medido 2026-09-24, shader corrigido: 351–352 FPS sob carga (10 s), baseline 413–414 FPS (6 s), 1920×1080, Vulkan Forward+, AMD Radeon RX 580 2048SP, VSync off/sem limite. Contador/captura verificados; toggle limpa a carga. Logs/captura em `build/stress-final.log` e `build/stress.png`. Pendente teste prolongado e na GTX 1660-alvo a 144 FPS.
-- [!] Windows export preset + build: needs the Godot 4.7.2 export templates (download ~1 GB) — ask the user before downloading
+- [x] Windows export preset + build (user asked 2026-09-25): templates 4.7.2 installed (SHA-512 verified), `export_presets.cfg` "Windows Desktop" → `build/windows/DynMagic.exe` (106 MB, embedded pck). LAN verified with two exe instances. Release: `.github/workflows/release.yml` builds and publishes on tags `v*`
 - [ ] Milestone review with user
 
 ## M7 — Arte final

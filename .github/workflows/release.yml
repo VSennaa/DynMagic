@@ -1,0 +1,52 @@
+name: Release
+
+# Pushing a tag like v0.1.0 builds the Windows executable and publishes it as a GitHub release.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    runs-on: ubuntu-latest
+    env:
+      GODOT_VERSION: "4.7.2"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Godot and export templates (checksum verified)
+        run: |
+          base="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
+          editor="Godot_v${GODOT_VERSION}-stable_linux.x86_64.zip"
+          templates="Godot_v${GODOT_VERSION}-stable_export_templates.tpz"
+          curl -fsSL -o "$editor" "$base/$editor"
+          curl -fsSL -o "$templates" "$base/$templates"
+          curl -fsSL -o SHA512-SUMS.txt "$base/SHA512-SUMS.txt"
+          grep -E "  ($editor|$templates)$" SHA512-SUMS.txt | sha512sum -c -
+          unzip -q "$editor"
+          mv "Godot_v${GODOT_VERSION}-stable_linux.x86_64" godot
+          dest="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          mkdir -p "$dest"
+          unzip -q "$templates" -d tpl
+          mv tpl/templates/* "$dest/"
+
+      - name: Import and export
+        run: |
+          ./godot --headless --path . --import || true
+          mkdir -p build/windows
+          ./godot --headless --path . --export-release "Windows Desktop" build/windows/DynMagic.exe
+          test -s build/windows/DynMagic.exe
+
+      - name: Package
+        run: |
+          cp docs/release-notes.md build/windows/LEIA-ME.md
+          cd build/windows && zip -r "../../DynMagic-${GITHUB_REF_NAME}-windows-x64.zip" .
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" "DynMagic-${GITHUB_REF_NAME}-windows-x64.zip" \
+            --title "DynMagic ${GITHUB_REF_NAME}" --notes-file docs/release-notes.md
