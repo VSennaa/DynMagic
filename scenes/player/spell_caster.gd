@@ -24,6 +24,33 @@ func aim_point() -> Vector3:
 	return result["position"] if not result.is_empty() else to
 
 
+## Crosshair point dropped to the ground below it, clamped to max_range from the player (Mark).
+func ground_target(max_range: float) -> Vector3:
+	var aim: Vector3 = aim_point()
+	var flat: Vector3 = aim - player.global_position
+	flat.y = 0.0
+	if flat.length() > max_range:
+		aim = player.global_position + flat.normalized() * max_range + Vector3.UP * aim.y
+	var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(aim + Vector3.UP * 0.5, aim + Vector3.DOWN * 20.0)
+	query.exclude = [player.get_rid()]
+	var result: Dictionary = player.get_world_3d().direct_space_state.intersect_ray(query)
+	return result["position"] if not result.is_empty() else Vector3(aim.x, player.global_position.y, aim.z)
+
+
+## Placement for Wall: `distance` ahead of the player on the floor, facing the aim direction.
+func wall_transform(distance: float) -> Transform3D:
+	var forward: Vector3 = -player.get_aim_camera().global_basis.z
+	forward.y = 0.0
+	forward = forward.normalized() if forward.length() > 0.01 else -player.global_basis.z
+	var center: Vector3 = player.global_position + forward * distance
+	var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(center + Vector3.UP * 1.0, center + Vector3.DOWN * 20.0)
+	query.exclude = [player.get_rid()]
+	var result: Dictionary = player.get_world_3d().direct_space_state.intersect_ray(query)
+	if not result.is_empty():
+		center = result["position"]
+	return Transform3D(Basis.looking_at(forward, Vector3.UP), center)
+
+
 func _on_spell_cast(spell: ResolvedSpell) -> void:
 	if spell.scene == null:
 		push_warning("SpellCaster: %s has no scene yet" % spell.key)

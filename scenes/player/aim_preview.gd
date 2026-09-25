@@ -11,6 +11,7 @@ var _normal: Vector3 = Vector3.UP
 
 @onready var _ring: MeshInstance3D = $Ring
 @onready var _arc: MeshInstance3D = $Arc
+@onready var _ghost: MeshInstance3D = $Ghost
 
 
 func _ready() -> void:
@@ -37,11 +38,24 @@ func _physics_process(_delta: float) -> void:
 			_normal = Vector3.UP
 			_show_ring(landing, float(_spell.param(&"zone_radius", 3.5)))
 		&"area_burst":
-			_show_ring(_ground_point(float(_spell.param(&"range", 25.0))), float(_spell.param(&"radius", 2.5)))
+			_normal = Vector3.UP
+			_show_ring(_caster().call(&"ground_target", float(_spell.param(&"range", 25.0))), float(_spell.param(&"radius", 2.5)))
+		&"area_lingering":
+			_ring.visible = false
+			var xform: Transform3D = _caster().call(&"wall_transform", float(_spell.param(&"distance", 4.0)))
+			var height: float = float(_spell.param(&"height", 3.0))
+			_ghost.visible = true
+			_ghost.global_transform = Transform3D(xform.basis.scaled_local(Vector3(float(_spell.param(&"width", 6.0)), height, 0.5)), xform.origin + Vector3.UP * height * 0.5)
 		_:
 			_ring.visible = false
 	if _spell.key != &"projectile_lingering":
 		_arc.visible = false
+	if _spell.key != &"area_lingering":
+		_ghost.visible = false
+
+
+func _caster() -> Node:
+	return player.get_node(^"SpellCaster")
 
 
 ## Simulates the Seed's ballistic path, draws it and returns the landing point.
@@ -84,16 +98,6 @@ func _projectile_impact(max_range: float) -> Vector3:
 	return _ray(origin, origin + dir * max_range)
 
 
-## Crosshair point projected to the ground below it, clamped to range.
-func _ground_point(max_range: float) -> Vector3:
-	var aim: Vector3 = player.get_node(^"SpellCaster").call(&"aim_point")
-	var flat: Vector3 = aim - player.global_position
-	flat.y = 0.0
-	if flat.length() > max_range:
-		aim = player.global_position + flat.normalized() * max_range + Vector3.UP * aim.y
-	return _ray(aim + Vector3.UP * 0.5, aim + Vector3.DOWN * 20.0)
-
-
 func _ray(from: Vector3, to: Vector3) -> Vector3:
 	var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(from, to)
 	query.exclude = [player.get_rid()]
@@ -114,7 +118,7 @@ func _show_ring(point: Vector3, radius: float) -> void:
 func _on_aim_started(spell: ResolvedSpell) -> void:
 	_spell = spell
 	visible = true
-	for mesh_node: MeshInstance3D in [_ring, _arc]:
+	for mesh_node: MeshInstance3D in [_ring, _arc, _ghost]:
 		var mat: StandardMaterial3D = mesh_node.material_override as StandardMaterial3D
 		if mat != null:
 			mat.albedo_color = Color(spell.color, 0.45)

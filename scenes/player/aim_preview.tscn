@@ -1,4 +1,4 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scenes/player/aim_preview.gd" id="1_preview"]
 
@@ -23,6 +23,14 @@ transparency = 1
 shading_mode = 0
 albedo_color = Color(1, 1, 1, 0.45)
 
+[sub_resource type="BoxMesh" id="Ghost_mesh"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_ghost"]
+resource_local_to_scene = true
+transparency = 1
+shading_mode = 0
+albedo_color = Color(1, 1, 1, 0.3)
+
 [node name="AimPreview" type="Node3D"]
 script = ExtResource("1_preview")
 
@@ -33,3 +41,7 @@ material_override = SubResource("Mat_ring")
 [node name="Arc" type="MeshInstance3D" parent="."]
 mesh = SubResource("Arc_mesh")
 material_override = SubResource("Mat_arc")
+
+[node name="Ghost" type="MeshInstance3D" parent="."]
+mesh = SubResource("Ghost_mesh")
+material_override = SubResource("Mat_ghost")

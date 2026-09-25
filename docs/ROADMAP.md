@@ -47,9 +47,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (write th
 - [x] Spell: Guard (self/direct) — `SelfSpell` shared by the 3 self spells
 - [x] Spell: Impulse (self/burst) with i-frames (`Player.start_dash`; verified in game)
 - [x] Spell: Aura (self/lingering) — status `aura` + `Player.active_aura`; `damage_mult()`/`speed_mult()` read element bonuses. Guard/Aura not yet checked in game (no HUD); verify with the HUD task
-- [ ] Spell: Cone (area/direct)
-- [ ] Spell: Mark (area/burst) + ground preview
-- [ ] Spell: Wall (area/lingering) + ghost preview
+- [x] Spell: Cone (area/direct) — `AreaSpell` shared by the 3 area spells; line-of-sight checked; lag compensation in M3
+- [x] Spell: Mark (area/burst) + ground preview (`SpellCaster.ground_target`)
+- [x] Spell: Wall (area/lingering) + ghost preview (`Wall` StaticBody with HP; `SpellCaster.wall_transform`). All 3 verified in game: Cone 23, Mark 44 + burn, Wall blocked a Bolt
 - [x] Training dummy: infinite HP, damage numbers, DPS counter
 - [ ] Greybox Arena A (spec 03 §3) for testing
 - [ ] Temporary HUD: HP, mana, composition trail, 3×3 cooldown grid
