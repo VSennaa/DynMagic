@@ -146,7 +146,8 @@ $g = "$env:USERPROFILE\Downloads\Godot_v4.7.2-stable_win64.exe\Godot_v4.7.2-stab
 - Update this file at the end of every work session: status table, next steps, any new decision.
 - Record every new user decision in SDD §2 and in the relevant spec.
 - Keep GDScript statically typed (untyped declarations are errors in `project.godot`).
-- Commits are authorized (2026-09-24): commit after each finished roadmap task. Do not push (no remote yet), and do not install paid services without asking the user.
+- Commits are authorized (2026-09-24): commit after each finished roadmap task. Remote (2026-09-25): `origin` = `git@github.com:VSennaa/DynMagic.git` (public), pushed over SSH with the repo-only deploy key `~/.ssh/dynmagic_github` (set in repo-local `core.sshCommand`). Pushing `main` is authorized. Do not install paid services without asking the user.
+- Releases: push an annotated tag `vX.Y.Z`; `.github/workflows/release.yml` exports Windows x64 on GitHub Actions and publishes `DynMagic-vX.Y.Z-windows-x64.zip` with `docs/release-notes.md`. v0.1.0 published 2026-09-25 and its exe was re-tested over LAN. Local build: `godot --headless --path D:\DynMagic --export-release "Windows Desktop" build/windows/DynMagic.exe` (templates 4.7.2 installed in %APPDATA%\Godot\export_templates).
 - Quota handoff: the user wants work handed to Codex CLI (skill `handoff-codex`) when the Claude 5-hour limit reaches 90%. Codex CLI 0.156.1 is installed at `C:\Users\vinic\AppData\Local\Programs\OpenAI\Codex\bin\codex.exe` (2026-09-24).
 - Standing goal (2026-09-24): keep working through milestones without stopping at reviews until the Claude 5-hour quota nears its limit; at 90% hand off to Codex (`handoff-codex`) and schedule a resume after the reset (no later than 05:30).
 - Loop mode: the user runs `/loop Siga docs/ROADMAP.md (protocolo de loop no topo)`. Under the standing goal, milestone reviews are recorded as pending instead of stopping.
