@@ -2,6 +2,22 @@
 
 Last update: 2026-09-24. Written so any AI agent (Claude, Codex, Gemini, etc.) can continue work without the original conversation.
 
+## 0. Active agent
+
+Active agent: Claude (2026-09-24 ~23:55). Codex session 1 finished: toon specular fix (white blobs), directional sound captions (`SoundCaption`, Settings toggle, test), F8 stress load in training (351–352 FPS at 1080p on the RX 580). Codex cannot commit (its sandbox makes `.git` read-only); Claude reviewed and committed its work.
+
+### Handoff brief for Codex
+- Current milestone: M6 Polimento (see ROADMAP M6). M0–M5 are done; milestone reviews are pending with the user (do not stop for them).
+- Progresso desta sessão: formas brancas corrigidas no especular toon; legendas implementadas; carga de 20 zonas + 20 projéteis medida. Detalhes e evidências na seção 10.
+- Próximos passos:
+  1. Corrigir RPCs de `NetSync` após desconexão do host, reproduzidos no teste do draft (seção 10).
+  2. Implementar transição de pincelada de tinta (spec 06 §4; atualmente há apenas fade).
+  3. Revisão visual/áudio com o usuário, teste com duas janelas e performance na GTX 1660. Exportação depende de autorização para baixar templates.
+  4. Música: pasta `audio/` sem assets; pergunta sobre download CC0 enviada, sem resposta até este registro. Manter bloqueada até autorização.
+- Tools: Godot console binary at `C:\Users\vinic\Downloads\Godot_v4.7.2-stable_win64.exe\Godot_v4.7.2-stable_win64_console.exe`. Without the Godot AI MCP, check scripts with `--headless --path D:\DynMagic --import` and run tests by opening the editor only if needed; multiplayer smoke tests are headless (see §5 notes).
+- Do not touch: `addons/godot_ai/` (vendored plugin), `project.godot` autoload/plugin sections, `.claude/`.
+- Do not download export templates or install paid services. Commit per finished task (Conventional Commits). Update this file and set `Active agent: Claude (2026-09-24 ~23:55). Codex session 1 finished: toon specular fix (white blobs), directional sound captions (`SoundCaption`, Settings toggle, test), F8 stress load in training (351–352 FPS at 1080p on the RX 580). Codex cannot commit (its sandbox makes `.git` read-only); Claude reviewed and committed its work.` before stopping.
+
 ## 1. What this project is
 
 1v1 first-person dynamic-magic arena in Godot 4.7, LAN multiplayer. Players compose each spell by pressing 2 hotkeys (Form, Effect) on top of the element they drafted for the round. Full game loop: menu, lobby, draft, rounds, overtime, results, settings.
@@ -36,7 +52,7 @@ Source of truth: [`docs/SDD.md`](SDD.md) and [`docs/specs/01..08`](specs/). Task
 
 | Item | Location / version |
 |---|---|
-| Project | `D:\DynMagic` (git initialized, no commits yet) |
+| Project | `D:\DynMagic` (Git com histórico; nesta sessão `.git` é somente leitura e novos commits foram bloqueados) |
 | Godot | 4.7.2 stable. `C:\Users\vinic\Downloads\Godot_v4.7.2-stable_win64.exe\` (this is a folder). GUI: `Godot_v4.7.2-stable_win64.exe`; console: `Godot_v4.7.2-stable_win64_console.exe`. Not on PATH |
 | Node | 24.20.0 |
 | Python | 3.14.7 |
@@ -74,14 +90,14 @@ Chosen: **Godot AI** by hi-godot (https://github.com/hi-godot/godot-ai), plugin 
 | M3 Rede | Done 2026-09-24 (review pending): ENet host/join, LAN discovery, codec, prediction/reconciliation, interpolation, host-validated casts, lag compensation, simulator, F3 overlay, 5-min soak OK |
 | M4 Loop | Done 2026-09-24 (review pending): full MD7 bot run OK, stats, Core capture + overtime tie-break seen live. Runes not yet seen live |
 | M5 Arenas | Done: A/B/C via ArenaBuilder, symmetry + sight-line tests, per-round rotation |
-| M6 Polimento | In progress: main menu (main scene), LAN host/join + lobby, settings + remap + colour-blind palettes, grimório, draft panel, pause, results, HUD (damage arrow, Core bar, Tab scoreboard), toon + ink outline, synthesised spell audio. Pending: UI-driven two-instance lobby test, music, sound captions, perf pass, Windows export (needs export templates download = user approval) |
+| M6 Polimento | Em progresso: menus/LAN/lobby, configurações/remap/paletas, grimório, draft/pausa/resultados/HUD, toon + outline, áudio sintetizado e legendas. Fluxo de UI com host renderizado + cliente headless validado; carga local validada. Pendentes: RPC ao desconectar, pincelada de transição, revisão com duas janelas/áudio, música, performance na GPU-alvo e exportação Windows (download de templates precisa de autorização) |
 | M7 | Not started (needs user approval for Blender/Tripo) |
 
 ## 7. Next steps
 
 Follow `docs/ROADMAP.md`: take the first unchecked task. Summary:
 
-1. Finish M6 open items (see ROADMAP M6): test the UI flow Menu → Jogar LAN → Lobby → match with two windowed instances; performance pass; then ask the user about export templates (download) for the Windows build.
+1. Concluir M6: corrigir RPC pós-desconexão, transição de tinta, revisão com duas janelas e áudio, performance na GPU-alvo; música e templates de exportação aguardam autorização para download. Os três primeiros itens do handoff anterior foram concluídos (seção 10).
 2. Milestone reviews M1–M5 are pending with the user; collect feedback before M7.
 3. M7 (art) needs user approval for Blender + mcp-blender + Tripo (paid).
 
@@ -105,3 +121,13 @@ $g = "$env:USERPROFILE\Downloads\Godot_v4.7.2-stable_win64.exe\Godot_v4.7.2-stab
 - Standing goal (2026-09-24): keep working through milestones without stopping at reviews until the Claude 5-hour quota nears its limit; at 90% hand off to Codex (`handoff-codex`) and schedule a resume after the reset (no later than 05:30).
 - Loop mode: the user runs `/loop Siga docs/ROADMAP.md (protocolo de loop no topo)`. Under the standing goal, milestone reviews are recorded as pending instead of stopping.
 - Key code map: `scenes/player/` (Player, Stats, SpellComposer, SpellCaster, NetSync, AimPreview, RuneCircle), `scenes/spells/` (SpellNode base, Projectile/Burst/Lingering, SelfSpell, AreaSpell, Zone, Wall), `scenes/match/` (MatchFsm, ArcaneCore, CollapseZone), `scenes/net/net_match.gd` (networked match, draft panel, results, scoreboard), `scenes/ui/` (menus, UiKit, Hud), `autoload/` (Net, NetCodec, MatchState, Lobby, SpellDB, Settings, AudioBus, SceneRouter).
+
+## 10. Codex session progress (2026-09-24)
+
+- **Formas brancas:** reproduzidas pelo fluxo real de botões Menu → Jogar LAN → Criar sala → Pronto → Iniciar, com cliente `--join 127.0.0.1 --lobby --bot`. Ocultar remoto e outline não altera as manchas. Desativar somente `SPECULAR_LIGHT` elimina ambas; desativar o especular ambiental não elimina. Causa: especular toon amplo/saturado sobre piso e paredes. Ajuste mínimo em `shaders/toon.gdshader`: limiar 0.96 → 0.995, intensidade 0.25 → 0.035, preservando o brilho em blocos. Capturas: `build/draft_original.png`, `draft_no_remote.png`, `draft_no_outline.png`, `shading_original.png` (esta última já contém a correção, mesma câmera norte).
+- **Legendas:** opção persistida em Settings, evento de conjuração de AudioBus e texto no HUD. Alcance 30 m, direção relativa à câmera, até três mensagens por 2,5 s; desligadas por padrão, funcionam com volume zerado. `tests/test_sound_caption.gd` cobre direções/rotação/alcance. Asserções de integração áudio/HUD, expiração, limite e toggle passaram; captura 1280×720 inspecionada em `build/captions.png`. Gravação real de `user://settings.cfg` entre sessões não foi exercitada devido ao sandbox.
+- **Carga:** `F8` no treino (debug) liga/desliga `TrainingStress`: 20 zonas reais + 20 projéteis reais dos quatro elementos, reposição automática, velocidades normais. Logs a cada 2 s; `--fps` mostra contador. Após a correção do shader: **351–352 FPS** sob carga de 10 s, baseline **413–414 FPS** por 6 s; 1920×1080, Vulkan Forward+, VSync off, sem limite, AMD Radeon RX 580 2048SP. Captura `build/stress.png`, log `build/stress-final.log`. Toggle e remoção da carga verificados. Não substitui teste prolongado/GTX 1660.
+- **Validação:** import final sem erros de scripts do projeto; 63 testes, 0 falhas pelo `McpTestRunner` via CLI (`build/check_suites.tscn`). Harnesses e capturas em `build/` são locais/ignorados pelo Git. Há avisos de certificados, cache/configuração sem permissão e recursos retidos ao sair; não representam uma execução totalmente sem avisos.
+- **Ferramentas:** MCP `editor_state` exige aprovação, indisponível com política `never`. CLI renderiza normalmente. Use `--log-file D:\DynMagic\build\<name>.log`; não alterar plugins/autoloads. `.git` somente leitura: `git add` falhou ao criar `index.lock`; **nenhum commit desta sessão**. Mudanças prontas no workspace; separar commits de legendas, carga e shader quando permitido, preservando o handoff preexistente.
+- **Pendência encontrada:** ao fechar o host, o cliente emite `RPC 'receive_inputs' on yourself is not allowed` durante o fade para menu. `NetSync._on_input_sampled` continua enviando após `Net.close`; conferir também callbacks atrasados de `simulate_send`. Reprodução/log em `build/draft-client.log`. Nenhum ajuste fora do escopo foi feito.
+- **Música:** nenhum asset CC0 no repositório. Download perguntado ao usuário, ainda sem resposta; nada baixado. Templates de exportação e Blender/Tripo também não foram instalados.

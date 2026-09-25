@@ -115,7 +115,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (write th
 ## M6 — Polimento
 
 - [x] Main menu with animated 3D background (spec 06 §1); now the project main scene
-- [x] Host/Join screens + lobby screen (`play_lan`, `lobby_screen`, `Lobby` autoload with ready flags and rules). UI flow verified 2026-09-24: menu → Jogar LAN → Criar sala → headless client `--join <ip> --lobby --bot` → both ready → Iniciar → draft panel. Fixed a host-side aliasing bug that wiped ready flags. Open: unexplained large white shapes near the host camera during the draft (screenshot), investigate
+- [x] Host/Join screens + lobby screen (`play_lan`, `lobby_screen`, `Lobby` autoload with ready flags and rules). UI flow verified 2026-09-24: menu → Jogar LAN → Criar sala → headless client `--join <ip> --lobby --bot` → both ready → Iniciar → draft panel. Fixed a host-side aliasing bug that wiped ready flags. Formas brancas reproduzidas e corrigidas: especular toon amplo/saturado, não cápsula/outline. Limiar/intensidade ajustados; capturas A/B no handoff §10.
+- [ ] Corrigir envio de inputs após desconexão do host: `NetSync._on_input_sampled` emite RPC para si mesmo durante o fade para menu (reproduzido 2026-09-24; `build/draft-client.log`).
 - [x] Draft screen: element cards (disabled when taken or not your turn) + rune offer + timer, in `NetMatch._update_draft_panel`; headless run clean. Keys 1-7 still work
 - [~] Final HUD (spec 06 §2): temporary HUD + match line + rune/Overcharge/status line. directional damage arrow (points at the opponent), Core capture bar (1 Hz from host), Tab scoreboard added. Pending: final art
 - [x] Pause menu + forfeit (Esc in the match; online match keeps running)
@@ -123,11 +124,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (write th
 - [x] Grimório screen (36-spell reference; text only, no preview video)
 - [x] Settings screens + `user://settings.cfg` persistence (spec 06 §3): video (fullscreen, vsync, FOV, FPS cap), audio buses, sensitivity, invert Y, name, damage numbers. Resolution/render scale/shadows/AA not exposed yet
 - [x] Input remapping with conflict detection (conflicting action loses the key and the player is told)
-- [~] Accessibility: colour-blind palettes done (Okabe-Ito based, recolours elements live; glyph shapes already encode form/effect). No camera shake exists yet; sound captions pending
+- [~] Accessibility: colour-blind palettes done (Okabe-Ito based, recolours elements live; glyph shapes already encode form/effect). No camera shake exists yet; sound captions implemented 2026-09-24 (persisted toggle, camera-relative direction, 30 m range, 3 messages/2.5 s). CLI integration tests and rendered 1280×720 capture passed; persistência em disco entre sessões ainda não exercitada no sandbox.
 - [x] Toon + outline shaders on everything (spec 07 §2): `shaders/toon.gdshader` (3 bands, rim, block specular, painted noise) on arena geometry and remote bodies; screen-space ink outline (`shaders/outline.gdshader`) on the local camera and menu camera via `Toon`. Spell VFX stay unshaded by design
 - [~] Audio: 3-layer spell sounds synthesised in `AudioBus` (element timbre, form attack, effect tail; impact boom), buses Music/SFX/UI created at runtime. Not listened to by a human yet. Music missing (needs CC0 assets)
+- [!] Música: nenhum asset CC0 no repositório. Autorização para busca/download perguntada ao usuário em 2026-09-24; aguardando resposta.
 - [ ] Screen transitions (ink brush)
-- [~] Performance pass: 367 FPS uncapped at 1080p in Arena A with toon + outline on this PC (GPU unknown; target is GTX 1660 at 144). Optional FPS counter in settings. Needs a check with many particles/zones and on the target GPU
+- [~] Performance pass: `F8` no treino alterna carga sustentada de 20 zonas + 20 projéteis reais dos quatro elementos. Medido 2026-09-24, shader corrigido: 351–352 FPS sob carga (10 s), baseline 413–414 FPS (6 s), 1920×1080, Vulkan Forward+, AMD Radeon RX 580 2048SP, VSync off/sem limite. Contador/captura verificados; toggle limpa a carga. Logs/captura em `build/stress-final.log` e `build/stress.png`. Pendente teste prolongado e na GTX 1660-alvo a 144 FPS.
 - [!] Windows export preset + build: needs the Godot 4.7.2 export templates (download ~1 GB) — ask the user before downloading
 - [ ] Milestone review with user
 
