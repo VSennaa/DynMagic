@@ -71,7 +71,9 @@ Chosen: **Godot AI** by hi-godot (https://github.com/hi-godot/godot-ai), plugin 
 | M0 Setup | Done 2026-09-24: MCP verified, folder skeleton, 7 empty autoloads, 16 input actions, smoke suite 4/4 passing, first commit |
 | M1 Sandbox | Done 2026-09-24 (review pending with user): FPS controller, Stats, SpellDB, SpellComposer, all 9 fire spells, dummy, Arena A greybox, temporary HUD |
 | M2 Grimório | Done 2026-09-24 (review pending): 4 elements, 36 spells with element variants, status effects, rune circle, element VFX |
-| M3–M7 | Not started |
+| M3 Rede | Done 2026-09-24 (review pending): ENet host/join, LAN discovery, codec, prediction/reconciliation, interpolation, host-validated casts, lag compensation, simulator, F3 overlay, 5-min soak OK |
+| M4 Loop | In progress: `MatchFsm` + `MatchState` wired into `NetMatch` (sides, draft keys, runes, Core, overtime rules). Pending: live verification of runes/Core/overtime, match stats, full MD7 run |
+| M5–M7 | Not started |
 
 ## 7. Next steps
 

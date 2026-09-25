@@ -81,22 +81,22 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (write th
 - [x] Deterministic projectile simulation on both sides; host-only hit detection (`SpellNode.has_authority()`). remote rune circle driven by composer bits from inputs/snapshots
 - [x] Lag compensation for Cone (host keeps 250 ms of positions per player; rewind = RTT/2 + interpolation delay + simulated latency)
 - [x] Network simulator (latency/jitter/loss) + F3 overlay (`--sim-latency/--sim-jitter/--sim-loss` on unreliable streams). Headless bot at 80 ms RTT + 2% loss: corrections 0.06-0.11 m only at direction changes; host repeats the last input when one is late
-- [ ] Two local instances play 5 min without visible desync
-- [ ] Milestone review with user
+- [x] Two local instances play 5 min without visible desync (headless bot soak, 80 ms RTT + 2% loss: 0 errors, reconciliation avg 0.08 m / max 0.11 m)
+- [~] Milestone review with user — M3 done 2026-09-24 except Echo-rune recast flag not sent to host (host charges full cost). Review pending
 
 ## M4 — Loop de partida
 
 - [x] `MatchState` FSM on host (spec 02 §2) + `test_match_fsm.gd`: pure `MatchFsm` (draft order, rune offers, Core timer, overtime choice and timeout rules, decisive round, disconnect pause/forfeit), 13 tests. Wiring into NetMatch is the next tasks
-- [ ] Side swap every round, spawn barriers during countdown
-- [ ] Sequential draft: side A then side B, no duplicate element (spec 02 §3)
-- [ ] Runes: 7 resources + loser pick of 3 random (spec 02 §3)
-- [ ] Arcane Core: spawn at 30 s, capture rules, Overcharge (spec 02 §4)
-- [ ] Overtime: Collapse (spec 02 §5)
-- [ ] Overtime: Sudden Death
-- [ ] Overtime: Mana Surge
-- [ ] Overtime timeout + tie-break rules
-- [ ] Decisive round at 3-3 (spec 02 §6)
-- [ ] Disconnect pause 30 s + forfeit
+- [x] Side swap every round, spawn barriers during countdown (`Player.frozen` during draft/countdown/round end; respawn in `NetMatch._start_round`)
+- [x] Sequential draft: side A then side B, no duplicate element (spec 02 §3): keys 1-4 in the net match (draft screen UI in M6); bots auto-pick
+- [x] Runes: 7 runes + loser pick of 3 random (spec 02 §3): ids in `MatchFsm.RUNES`, effects in `Player.apply_rune`/`mana_cost_for`/`damage_mult`/`speed_mult`, keys 5-7 to pick. Not yet seen in a live match
+- [x] Arcane Core: spawn at 30 s, capture rules, Overcharge (spec 02 §4): `ArcaneCore` (host counts progress, damage resets it) + `Player.grant_overcharge`. Not yet captured in a live test
+- [x] Overtime: Collapse (spec 02 §5): `CollapseZone` 24→5 m in 20 s, 12 dps outside
+- [x] Overtime: Sudden Death (HP 1, shields off, burn off, Collapse after 30 s)
+- [x] Overtime: Mana Surge (free spells, cooldowns -50% for 20 s, then Collapse)
+- [x] Overtime timeout + tie-break rules (in `MatchFsm`, tested)
+- [x] Decisive round at 3-3 (spec 02 §6) in `MatchFsm` (tested). Random arena for it waits for arenas B/C (M5)
+- [x] Disconnect pause 30 s + forfeit (`MatchState._on_peer_left`). Rejoin into the same slot not implemented yet
 - [ ] Match stats collection (spec 02 §7)
 - [ ] Full best-of-7 LAN match end to end
 - [ ] Milestone review with user

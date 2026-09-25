@@ -35,6 +35,8 @@ var state: State = State.IDLE
 var form: StringName = &""
 var pending: ResolvedSpell
 var last_spell: ResolvedSpell
+## True while the spell being validated or cast came from RMB (Echo rune discount).
+var is_recasting: bool = false
 
 var _timer: float = 0.0
 var _buffered_slot: int = -1
@@ -133,7 +135,9 @@ func press_recast() -> void:
 			clear()
 		State.IDLE:
 			if last_spell != null:
+				is_recasting = true
 				_begin(last_spell)
+				is_recasting = state == State.AIMING
 
 
 func press_cancel() -> void:
@@ -143,6 +147,7 @@ func press_cancel() -> void:
 
 ## Drops the sequence and any aim. Called on F, timeouts, death and round end.
 func clear() -> void:
+	is_recasting = false
 	var was_aiming: bool = state == State.AIMING
 	form = &""
 	pending = null
@@ -188,12 +193,14 @@ func _fire(spell: ResolvedSpell) -> void:
 		return
 	last_spell = spell
 	pending = null
+	# A recast that went through aiming still counts as a recast when confirmed.
 	form = &""
 	_timer = CAST_LOCKOUT
 	_set_state(State.CASTING)
 	if was_aiming:
 		aim_ended.emit()
 	cast_requested.emit(spell)
+	is_recasting = false
 
 
 func _resolve(form_id: StringName, effect_id: StringName) -> ResolvedSpell:

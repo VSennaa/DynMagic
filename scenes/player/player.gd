@@ -18,6 +18,14 @@ const GLIDE_GRAVITY_SCALE: float = 0.25
 @export var is_local: bool = true
 ## When true, NetSync moves this body (host replaying client inputs, or client interpolating).
 var net_driven: bool = false
+## Draft, countdown and round end: no walking or casting (spawn barriers, spec 02 §2).
+var frozen: bool = false:
+	set(value):
+		frozen = value
+		if composer != null:
+			composer.read_input = is_local and not value
+			if value:
+				composer.clear()
 
 ## Set by the spell composer: sprint is blocked while composing a spell.
 var sprint_blocked: bool = false
@@ -34,6 +42,14 @@ var active_aura: ResolvedSpell
 var active_guard: ResolvedSpell
 ## Seconds of reduced gravity left (wind Impulse).
 var glide_time: float = 0.0
+## Rune picked in the draft for this round (spec 02 §3), or empty.
+var rune: StringName = &""
+## Overcharge from the Arcane Core: free spells with +20% damage for 10 s or 3 casts.
+var overcharge_time: float = 0.0
+var overcharge_casts: int = 0
+## Overtime modifiers (spec 02 §5).
+var sudden_death: bool = false
+var mana_surge: bool = false
 
 var _dash_velocity: Vector3 = Vector3.ZERO
 ## Knockback added on top of walking velocity; decays over time.
@@ -135,7 +151,12 @@ static func _buttons(jump: bool, crouch: bool, sprint: bool) -> int:
 
 ## One movement tick. Kept free of Input reads so the host can replay client inputs (M3).
 func simulate(delta: float, input_dir: Vector2, want_jump: bool, want_crouch: bool, want_sprint: bool) -> void:
+	if frozen:
+		input_dir = Vector2.ZERO
+		want_jump = false
+		want_sprint = false
 	move_input = input_dir
+	overcharge_time = maxf(overcharge_time - delta, 0.0)
 	invulnerable_time = maxf(invulnerable_time - delta, 0.0)
 	if active_aura != null and not stats.has_status(&"aura"):
 		active_aura = null
@@ -334,7 +355,7 @@ func apply_knockback(impulse: Vector3) -> void:
 
 
 func _update_statuses(delta: float) -> void:
-	if stats.has_status(&"burn"):
+	if stats.has_status(&"burn") and not sudden_death:
 		_burn_tick += delta
 		if _burn_tick >= BURN_TICK:
 			_burn_tick -= BURN_TICK
@@ -349,15 +370,21 @@ func _validate_cast(spell: ResolvedSpell) -> StringName:
 		return &"dead"
 	if stats.is_on_cooldown(spell.key):
 		return &"cooldown"
-	if not stats.can_afford(spell.mana_cost):
+	if not stats.can_afford(mana_cost_for(spell, composer.is_recasting)):
 		return &"no_mana"
 	return &""
 
 
 func _on_cast_requested(spell: ResolvedSpell) -> void:
-	stats.spend_mana(spell.mana_cost)
+	stats.spend_mana(mana_cost_for(spell, composer.is_recasting))
 	var cdr: float = float(active_aura.param(&"cooldown_reduction", 0.0)) if active_aura != null else 0.0
+	if rune == &"haste":
+		cdr = 1.0 - (1.0 - cdr) * 0.8
+	if mana_surge:
+		cdr = 1.0 - (1.0 - cdr) * 0.5
 	stats.start_cooldown(spell.key, spell.cooldown * (1.0 - cdr))
+	if has_overcharge():
+		overcharge_casts -= 1
 	spell_cast.emit(spell)
 
 
@@ -373,13 +400,19 @@ func start_dash(distance: float, duration: float, iframes: float, lift: float = 
 
 ## Outgoing damage multiplier (Aura, runes later).
 func damage_mult() -> float:
-	return 1.0 + (float(active_aura.param(&"damage_bonus", 0.0)) if active_aura != null else 0.0)
+	var mult: float = 1.0 + (float(active_aura.param(&"damage_bonus", 0.0)) if active_aura != null else 0.0)
+	if rune == &"cold_blood" and stats.hp < 30.0:
+		mult *= 1.2
+	if has_overcharge():
+		mult *= 1.2
+	return mult
 
 
 ## Movement speed multiplier (Aura, status effects later).
 func speed_mult() -> float:
 	var bonus: float = float(active_aura.param(&"move_speed_bonus", 0.0)) if active_aura != null else 0.0
-	return (1.0 + bonus) * (1.0 - _slow_strength)
+	var rune_bonus: float = 0.12 if rune == &"light_step" else 0.0
+	return (1.0 + bonus + rune_bonus) * (1.0 - _slow_strength)
 
 
 ## Debug nameplate over non-local players: HP, shield and statuses. Replaced by the final HUD in M6.
@@ -408,3 +441,27 @@ func _process(_delta: float) -> void:
 	for id: StringName in stats.active_statuses():
 		parts.append(String(id))
 	_nameplate.text = "HP %d%s\n%s" % [roundi(stats.hp), " +%d" % roundi(stats.shield) if stats.shield > 0.0 else "", " ".join(parts)]
+
+## Applies a round's rune (spec 02 §3). Called after Stats.reset() at round start.
+func apply_rune(p_rune: StringName) -> void:
+	rune = p_rune
+	stats.max_mana = 130.0 if rune == &"breath" else 100.0
+	stats.mana = stats.max_mana
+	if rune == &"husk":
+		stats.add_shield(25.0, 999.0)
+
+
+## Mana cost after runes (Echo makes recasts cheaper).
+func mana_cost_for(spell: ResolvedSpell, is_recast: bool) -> float:
+	if has_overcharge() or mana_surge:
+		return 0.0
+	return spell.mana_cost * (0.7 if is_recast and rune == &"echo" else 1.0)
+
+
+func grant_overcharge() -> void:
+	overcharge_time = 10.0
+	overcharge_casts = 3
+
+
+func has_overcharge() -> bool:
+	return overcharge_time > 0.0 and overcharge_casts > 0

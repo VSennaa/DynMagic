@@ -16,6 +16,15 @@ var _bot: bool = false
 var _bot_clock: float = 0.0
 var _log_timer: float = 0.0
 var _overlay: Label
+var _match_label: Label
+var _last_round: int = 0
+var _runes_applied_round: int = 0
+var _core: ArcaneCore
+var _core_granted_round: int = 0
+var _collapse: CollapseZone
+## Which overtime effects were applied this round: "rule", "collapse".
+var _overtime_applied: Dictionary = {}
+var _loaded_sent: bool = false
 
 @onready var _players_root: Node3D = $Players
 @onready var _arena: Node3D = $Arena
@@ -30,6 +39,16 @@ func _ready() -> void:
 	_bot = OS.get_cmdline_user_args().has("--bot")
 	_hud = Hud.new()
 	add_child(_hud)
+	_match_label = Label.new()
+	_match_label.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	_match_label.position = Vector2(-300, 12)
+	_match_label.custom_minimum_size = Vector2(600, 0)
+	_match_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_match_label.add_theme_font_size_override(&"font_size", 22)
+	_match_label.add_theme_color_override(&"font_outline_color", Color.BLACK)
+	_match_label.add_theme_constant_override(&"outline_size", 6)
+	_hud.add_child(_match_label)
+	MatchState.changed.connect(_on_match_changed)
 	_overlay = Label.new()
 	_overlay.position = Vector2(16, 16)
 	_overlay.add_theme_color_override(&"font_outline_color", Color.BLACK)
@@ -46,6 +65,17 @@ func _physics_process(delta: float) -> void:
 	if _log_timer <= 0.0:
 		_log_timer = 2.0
 		_log_state()
+	if Net.is_host() and _core != null:
+		var by_id: Dictionary = {}
+		for id: int in Net.players:
+			by_id[id] = _player(id)
+		_core.host_tick(delta, by_id)
+	if Net.is_host() and _collapse != null:
+		var alive: Array[Player] = []
+		for child: Node in _players_root.get_children():
+			if child is Player:
+				alive.append(child as Player)
+		_collapse.host_tick(delta, alive)
 	if not Net.is_host():
 		return
 	_tick += 1
@@ -78,6 +108,17 @@ func _sync_players() -> void:
 		player.global_transform = spawn.global_transform
 		if player.is_local:
 			_hud.bind(player)
+		if Net.is_host():
+			player.stats.died.connect(MatchState.report_death.bind(id))
+	if Net.players.size() >= 2 and not _loaded_sent and _players_root.get_child_count() >= 2:
+		_loaded_sent = true
+		if Net.is_host() and not MatchState.active:
+			MatchState.start_match()
+		MatchState.mark_loaded()
+
+
+func get_player(id: int) -> Player:
+	return _player(id)
 
 
 func _player(id: int) -> Player:
@@ -193,7 +234,8 @@ func _bot_step(delta: float) -> void:
 		2:
 			Input.action_press(&"move_right")
 	var me: Player = _player(multiplayer.get_unique_id())
-	if me != null and fmod(_bot_clock, 2.0) < delta:
+	_bot_draft()
+	if me != null and not me.frozen and fmod(_bot_clock, 2.0) < delta:
 		me.composer.press_slot(0)
 		me.composer.press_slot(0)
 
@@ -214,6 +256,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _process(_delta: float) -> void:
+	_match_label.text = _match_text()
 	if not _overlay.visible:
 		return
 	var me: Player = _player(multiplayer.get_unique_id())
@@ -229,3 +272,170 @@ func _process(_delta: float) -> void:
 		"HOST" if Net.is_host() else "CLIENTE", roundi(ping), _tick,
 		roundi(Net.sim_latency_ms), roundi(Net.sim_jitter_ms), roundi(Net.sim_loss * 100.0),
 		sync.last_correction if sync != null else 0.0, Net.players.size()]
+
+# --- Match flow (M4) ------------------------------------------------------------------
+
+func _on_match_changed() -> void:
+	var view: Dictionary = MatchState.view
+	var round_number: int = int(view.get("round", 0))
+	if round_number != _last_round and MatchState.phase() == MatchFsm.Phase.DRAFT:
+		_last_round = round_number
+		_start_round(int(view.get("north", 1)))
+	var elements: Dictionary = view.get("elements", {})
+	for id: Variant in elements:
+		var player: Player = _player(int(id))
+		if player != null:
+			player.composer.element_id = elements[id]
+	# Runes are revealed when the draft ends; apply them once per round at the countdown.
+	if MatchState.phase() == MatchFsm.Phase.COUNTDOWN and _runes_applied_round != round_number:
+		_runes_applied_round = round_number
+		var runes: Dictionary = view.get("runes", {})
+		for child: Node in _players_root.get_children():
+			var p: Player = child as Player
+			if p != null:
+				p.apply_rune(runes.get(int(String(p.name)), &""))
+	_update_core(view, round_number)
+	_update_overtime(view, round_number)
+	var frozen: bool = MatchState.is_frozen()
+	for child: Node in _players_root.get_children():
+		var player: Player = child as Player
+		if player != null:
+			player.frozen = frozen
+
+
+## Round start: sides swap (north picks first), everyone respawns fresh.
+func _start_round(north_id: int) -> void:
+	for child: Node in _players_root.get_children():
+		var player: Player = child as Player
+		if player == null:
+			continue
+		var id: int = int(String(player.name))
+		var spawn: Marker3D = _arena.get_node(^"Layout/SpawnNorth" if id == north_id else ^"Layout/SpawnSouth") as Marker3D
+		player.global_transform = spawn.global_transform
+		player.velocity = Vector3.ZERO
+		player.stats.reset()
+		player.composer.reset()
+		player.active_aura = null
+		player.active_guard = null
+
+
+func _unhandled_key_input(event: InputEvent) -> void:
+	var key: InputEventKey = event as InputEventKey
+	if key == null or not key.pressed or key.echo or MatchState.phase() != MatchFsm.Phase.DRAFT:
+		return
+	var element_keys: Array[Key] = [KEY_1, KEY_2, KEY_3, KEY_4]
+	var rune_keys: Array[Key] = [KEY_5, KEY_6, KEY_7]
+	if element_keys.has(key.keycode):
+		MatchState.pick_element(MatchFsm.ELEMENTS[element_keys.find(key.keycode)])
+	elif rune_keys.has(key.keycode):
+		var offers: Array = (MatchState.view.get("rune_offers", {}) as Dictionary).get(multiplayer.get_unique_id(), [])
+		var index: int = rune_keys.find(key.keycode)
+		if index < offers.size():
+			MatchState.pick_rune(offers[index])
+
+
+func _match_text() -> String:
+	var view: Dictionary = MatchState.view
+	if view.is_empty():
+		return "Aguardando oponente..."
+	var me: int = multiplayer.get_unique_id()
+	var score: Dictionary = view.get("score", {})
+	var other: int = 0
+	for id: Variant in score:
+		if int(id) != me:
+			other = int(id)
+	var clock: String = "%d:%02d" % [int(view["time_left"]) / 60, int(view["time_left"]) % 60]
+	var head: String = "Round %d   Você %d × %d Oponente   %s" % [int(view["round"]), int(score.get(me, 0)), int(score.get(other, 0)), clock]
+	match MatchState.phase():
+		MatchFsm.Phase.DRAFT:
+			var my_turn: bool = (int(view["draft_step"]) == MatchFsm.DraftStep.SIDE_A and int(view["north"]) == me) or (int(view["draft_step"]) == MatchFsm.DraftStep.SIDE_B and int(view["north"]) != me)
+			var taken: String = ", ".join(PackedStringArray((view.get("elements", {}) as Dictionary).values().map(func(e: Variant) -> String: return String(e))))
+			var runes: Array = (view.get("rune_offers", {}) as Dictionary).get(me, [])
+			var rune_line: String = "" if runes.is_empty() else "\nRuna (5-7): %s" % ", ".join(PackedStringArray(runes.map(func(r: Variant) -> String: return String(r))))
+			return "%s\nDRAFT 0:00 — %s  [escolhidos: %s]%s" % [head, "SUA VEZ: 1 Fogo · 2 Gelo · 3 Raio · 4 Vento" if my_turn else "oponente escolhendo...", taken, rune_line]
+		MatchFsm.Phase.COUNTDOWN:
+			return "%s\nPrepare-se..." % head
+		MatchFsm.Phase.OVERTIME:
+			return "%s\nOVERTIME: %s" % [head, String(view.get("overtime_rule", ""))]
+		MatchFsm.Phase.ROUND_END:
+			return "%s\nFim do round" % head
+		MatchFsm.Phase.MATCH_END:
+			return "%s\nFIM DE PARTIDA" % head
+		MatchFsm.Phase.PAUSED:
+			return "%s\nPAUSADO — oponente desconectado" % head
+	return head
+
+## Bot: pick the first free element when it is our turn in the draft.
+func _bot_draft() -> void:
+	var view: Dictionary = MatchState.view
+	if MatchState.phase() != MatchFsm.Phase.DRAFT or view.is_empty():
+		return
+	var me: int = multiplayer.get_unique_id()
+	var my_turn: bool = (int(view["draft_step"]) == MatchFsm.DraftStep.SIDE_A and int(view["north"]) == me) or (int(view["draft_step"]) == MatchFsm.DraftStep.SIDE_B and int(view["north"]) != me)
+	if not my_turn or (view.get("elements", {}) as Dictionary).has(me):
+		return
+	var taken: Array = (view.get("elements", {}) as Dictionary).values()
+	for element: StringName in MatchFsm.ELEMENTS:
+		if not taken.has(element):
+			MatchState.pick_element(element)
+			return
+
+## Spawns the Arcane Core at the arena centre when the host says so; grants Overcharge on capture.
+func _update_core(view: Dictionary, round_number: int) -> void:
+	var holder: int = int(view.get("core_holder", 0))
+	var should_exist: bool = bool(view.get("core_spawned", false)) and holder == 0 \
+			and (MatchState.phase() == MatchFsm.Phase.COMBAT or MatchState.phase() == MatchFsm.Phase.OVERTIME)
+	if should_exist and _core == null:
+		_core = ArcaneCore.create()
+		add_child(_core)
+		_core.global_position = Vector3(0, 3.0, 0)  # on top of Arena A's central pillar
+		_core.captured.connect(MatchState.report_core)
+	elif not should_exist and _core != null:
+		_core.queue_free()
+		_core = null
+	if holder != 0 and _core_granted_round != round_number:
+		_core_granted_round = round_number
+		var player: Player = _player(holder)
+		if player != null:
+			player.grant_overcharge()
+
+## Overtime rules (spec 02 §5). Sudden Death and Mana Surge fall back to Collapse after 30 s / 20 s.
+func _update_overtime(view: Dictionary, round_number: int) -> void:
+	var in_overtime: bool = MatchState.phase() == MatchFsm.Phase.OVERTIME
+	if not in_overtime:
+		if _collapse != null:
+			_collapse.queue_free()
+			_collapse = null
+		if not _overtime_applied.is_empty():
+			_overtime_applied.clear()
+			_set_overtime_flags(false, false)
+		return
+	var rule: StringName = view.get("overtime_rule", &"")
+	var elapsed: float = MatchFsm.OVERTIME_LIMIT - float(view.get("time_left", 0.0))
+	if _overtime_applied.get("rule", -1) != round_number:
+		_overtime_applied["rule"] = round_number
+		if rule == &"sudden_death":
+			for child: Node in _players_root.get_children():
+				var player: Player = child as Player
+				if player != null:
+					player.stats.hp = 1.0
+					player.stats.clear_shield()
+			_set_overtime_flags(true, false)
+		elif rule == &"mana_surge":
+			_set_overtime_flags(false, true)
+	var collapse_now: bool = rule == &"collapse" \
+			or (rule == &"sudden_death" and elapsed >= 30.0) \
+			or (rule == &"mana_surge" and elapsed >= 20.0)
+	if rule == &"mana_surge" and elapsed >= 20.0:
+		_set_overtime_flags(false, false)
+	if collapse_now and _collapse == null:
+		_collapse = CollapseZone.new()
+		add_child(_collapse)
+
+
+func _set_overtime_flags(sudden: bool, surge: bool) -> void:
+	for child: Node in _players_root.get_children():
+		var player: Player = child as Player
+		if player != null:
+			player.sudden_death = sudden
+			player.mana_surge = surge
