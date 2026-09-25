@@ -91,5 +91,5 @@ $g = "$env:USERPROFILE\Downloads\Godot_v4.7.2-stable_win64.exe\Godot_v4.7.2-stab
 - Record every new user decision in SDD §2 and in the relevant spec.
 - Keep GDScript statically typed (untyped declarations are errors in `project.godot`).
 - Commits are authorized (2026-09-24): commit after each finished roadmap task. Do not push (no remote yet), and do not install paid services without asking the user.
-- Quota handoff: the user wants work handed to Codex CLI (skill `handoff-codex`) when the Claude 5-hour limit reaches 90%. Codex CLI was not installed on 2026-09-24; installing it needs user approval.
+- Quota handoff: the user wants work handed to Codex CLI (skill `handoff-codex`) when the Claude 5-hour limit reaches 90%. Codex CLI 0.156.1 is installed at `C:\Users\vinic\AppData\Local\Programs\OpenAI\Codex\bin\codex.exe` (2026-09-24).
 - Loop mode: the user runs `/loop Siga docs/ROADMAP.md (protocolo de loop no topo)`. Stop at milestone reviews.
