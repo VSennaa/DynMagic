@@ -57,12 +57,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (write th
 
 ## M2 — Grimório (4 elements)
 
-- [ ] `fire.tres`, `frost.tres`, `storm.tres`, `wind.tres` with colors and multipliers (spec 01 §3)
+- [x] `fire.tres`, `frost.tres`, `storm.tres`, `wind.tres` with colors and multipliers (spec 01 §3); variant params encoded, behaviors land in the variant tasks
 - [ ] Status effects: burn, slow, shock, knockback
 - [ ] Element variants for Projectile row (spec 01 §3 table)
 - [ ] Element variants for Self row
 - [ ] Element variants for Area row
-- [ ] `test_spell_resolution.gd`: all 36 combinations vs expected table
+- [x] `test_spell_resolution.gd`: all 36 combinations vs expected table
 - [ ] Rune circle shader + glyph per form + ring per effect (spec 01 §5, spec 07 §2)
 - [ ] Placeholder VFX per element (GPUParticles3D)
 - [ ] Training mode: pick element from a menu

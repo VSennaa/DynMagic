@@ -20,6 +20,9 @@ const EXPECTED_BASES: Dictionary = {
 ## element id -> damage multiplier
 const EXPECTED_MULTS: Dictionary = {
 	&"fire": 1.15,
+	&"frost": 0.9,
+	&"storm": 1.0,
+	&"wind": 0.85,
 }
 
 var db: Node
@@ -69,6 +72,25 @@ func test_fire_variants_merge_into_params() -> void:
 	var seed: ResolvedSpell = db.call(&"resolve", &"fire", &"projectile", &"lingering")
 	assert_eq(seed.param(&"zone_dps"), 8.0)
 	assert_eq(seed.status_id, &"burn")
+
+
+func test_four_elements_loaded() -> void:
+	var elements: Dictionary = db.get(&"elements")
+	assert_eq(elements.size(), 4)
+
+
+func test_element_variants_from_spec() -> void:
+	var storm_bolt: ResolvedSpell = db.call(&"resolve", &"storm", &"projectile", &"direct")
+	assert_eq(storm_bolt.param(&"speed"), 70.0, "storm bolt is faster")
+	var frost_impulse: ResolvedSpell = db.call(&"resolve", &"frost", &"self", &"burst")
+	assert_eq(frost_impulse.param(&"distance"), 11.0, "frost dash slides farther")
+	var storm_cone: ResolvedSpell = db.call(&"resolve", &"storm", &"area", &"direct")
+	assert_eq(storm_cone.param(&"angle_deg"), 30.0)
+	assert_eq(storm_cone.param(&"range"), 9.0)
+	var frost_wall: ResolvedSpell = db.call(&"resolve", &"frost", &"area", &"lingering")
+	assert_eq(frost_wall.param(&"hp"), 180.0)
+	var wind_bolt: ResolvedSpell = db.call(&"resolve", &"wind", &"projectile", &"direct")
+	assert_eq(wind_bolt.status_id, &"knockback")
 
 
 func test_resolution_does_not_mutate_base() -> void:

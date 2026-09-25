@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="ElementDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/element_def.gd" id="1_element"]
+
+[resource]
+script = ExtResource("1_element")
+id = &"frost"
+display_name = "Gelo"
+color = Color(0.435294, 0.827451, 1, 1)
+damage_mult = 0.9
+status_id = &"slow"
+status_duration = 1.5
+status_params = {"slow": 0.3}
+variants = {
+"area_burst": {"applies_status": true, "root_duration": 0.6},
+"area_direct": {"applies_status": true, "slow_override": 0.5},
+"area_lingering": {"hp": 180.0, "opaque": true},
+"projectile_burst": {"frozen_ground_duration": 3.0},
+"projectile_direct": {"applies_status": true},
+"projectile_lingering": {"zone_applies_status": true, "slow_override": 0.5},
+"self_burst": {"distance": 11.0, "slide": true},
+"self_direct": {"shield": 45.0, "no_sprint": true},
+"self_lingering": {"slow_immune": true, "shield_regen": 15.0}
+}

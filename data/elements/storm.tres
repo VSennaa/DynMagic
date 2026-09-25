@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="ElementDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/element_def.gd" id="1_element"]
+
+[resource]
+script = ExtResource("1_element")
+id = &"storm"
+display_name = "Raio"
+color = Color(0.788235, 0.545098, 1, 1)
+damage_mult = 1.0
+status_id = &"shock"
+status_duration = 3.0
+status_params = {"bonus": 0.2}
+variants = {
+"area_burst": {"delay": 0.6},
+"area_direct": {"angle_deg": 30.0, "range": 9.0},
+"area_lingering": {"contact_dps": 10.0, "transparent": true},
+"projectile_burst": {"chain_damage": 8.0},
+"projectile_direct": {"speed": 70.0},
+"projectile_lingering": {"zone_applies_status": true},
+"self_burst": {"teleport": true},
+"self_direct": {"shock_on_break": true},
+"self_lingering": {"projectile_speed_bonus": 0.25, "cooldown_reduction": 0.15}
+}
