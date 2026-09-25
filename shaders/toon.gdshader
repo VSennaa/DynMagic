@@ -43,5 +43,7 @@ void light() {
 	float rim = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 4.0);
 	DIFFUSE_LIGHT += rim_color.rgb * step(0.5, rim) * rim_strength * LIGHT_COLOR / PI * max(ndotl, 0.2);
 	vec3 half_vec = normalize(LIGHT + VIEW);
-	SPECULAR_LIGHT += step(0.96, dot(NORMAL, half_vec)) * LIGHT_COLOR * 0.25 * ATTENUATION;
+	// Keep block highlights tight and subdued on large planar arena surfaces.
+	// LIGHT_COLOR includes light energy; broad 0.25 highlights clipped to white.
+	SPECULAR_LIGHT += step(0.995, dot(NORMAL, half_vec)) * LIGHT_COLOR * 0.035 * ATTENUATION;
 }
