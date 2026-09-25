@@ -43,7 +43,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (write th
 - [x] `test_spell_composer.gd`: quick vs confirm, timeout, cancel, recast
 - [x] Spell: Bolt (projectile/direct). Shared pieces: `SpellNode` base, ray-stepped `Projectile`, `SpellCaster` (aims at crosshair point), `receive_hit()` on group "damageable". Headshot ×1.5 still pending (needs hurtboxes)
 - [x] Spell: Orb (projectile/burst) + aim preview (`AimPreview` ring aligned to the hit surface; also serves Mark). Fire burning ground variant pending (M2)
-- [ ] Spell: Seed (projectile/lingering) + arc preview + zone
+- [x] Spell: Seed (projectile/lingering) + arc preview + zone (`Zone` ticks every 0.5 s; reused later by other lingering effects)
 - [ ] Spell: Guard (self/direct)
 - [ ] Spell: Impulse (self/burst) with i-frames
 - [ ] Spell: Aura (self/lingering)

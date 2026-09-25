@@ -1,4 +1,4 @@
-[gd_scene load_steps=4 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scenes/player/aim_preview.gd" id="1_preview"]
 
@@ -15,9 +15,21 @@ shading_mode = 0
 albedo_color = Color(1, 1, 1, 0.45)
 no_depth_test = true
 
+[sub_resource type="ImmediateMesh" id="Arc_mesh"]
+
+[sub_resource type="StandardMaterial3D" id="Mat_arc"]
+resource_local_to_scene = true
+transparency = 1
+shading_mode = 0
+albedo_color = Color(1, 1, 1, 0.45)
+
 [node name="AimPreview" type="Node3D"]
 script = ExtResource("1_preview")
 
 [node name="Ring" type="MeshInstance3D" parent="."]
 mesh = SubResource("Torus_ring")
 material_override = SubResource("Mat_ring")
+
+[node name="Arc" type="MeshInstance3D" parent="."]
+mesh = SubResource("Arc_mesh")
+material_override = SubResource("Mat_arc")
