@@ -72,16 +72,18 @@ Chosen: **Godot AI** by hi-godot (https://github.com/hi-godot/godot-ai), plugin 
 | M1 Sandbox | Done 2026-09-24 (review pending with user): FPS controller, Stats, SpellDB, SpellComposer, all 9 fire spells, dummy, Arena A greybox, temporary HUD |
 | M2 Grimório | Done 2026-09-24 (review pending): 4 elements, 36 spells with element variants, status effects, rune circle, element VFX |
 | M3 Rede | Done 2026-09-24 (review pending): ENet host/join, LAN discovery, codec, prediction/reconciliation, interpolation, host-validated casts, lag compensation, simulator, F3 overlay, 5-min soak OK |
-| M4 Loop | Done 2026-09-24 (review pending): full MD7 bot run OK, stats. Runes/Core/overtime implemented, not observed live |
+| M4 Loop | Done 2026-09-24 (review pending): full MD7 bot run OK, stats, Core capture + overtime tie-break seen live. Runes not yet seen live |
 | M5 Arenas | Done: A/B/C via ArenaBuilder, symmetry + sight-line tests, per-round rotation |
-| M6 Polimento | In progress: menus, LAN/lobby, settings + remap, grimório, pause, results done. Pending: draft screen, final HUD, accessibility, toon/outline shaders, audio, perf, export |
+| M6 Polimento | In progress: main menu (main scene), LAN host/join + lobby, settings + remap + colour-blind palettes, grimório, draft panel, pause, results, HUD (damage arrow, Core bar, Tab scoreboard), toon + ink outline, synthesised spell audio. Pending: UI-driven two-instance lobby test, music, sound captions, perf pass, Windows export (needs export templates download = user approval) |
 | M7 | Not started (needs user approval for Blender/Tripo) |
 
 ## 7. Next steps
 
 Follow `docs/ROADMAP.md`: take the first unchecked task. Summary:
 
-1. M1: `PlayerTuning.tres`, first-person `Player` scene (spec 05), `SpellComposer` state machine (spec 01 §1), `SpellDB.resolve()` + data resources, one element with all 9 spells, training dummy, greybox of Arena A.
+1. Finish M6 open items (see ROADMAP M6): test the UI flow Menu → Jogar LAN → Lobby → match with two windowed instances; performance pass; then ask the user about export templates (download) for the Windows build.
+2. Milestone reviews M1–M5 are pending with the user; collect feedback before M7.
+3. M7 (art) needs user approval for Blender + mcp-blender + Tripo (paid).
 
 ## 8. Useful commands
 
@@ -89,8 +91,8 @@ Follow `docs/ROADMAP.md`: take the first unchecked task. Summary:
 $g = "$env:USERPROFILE\Downloads\Godot_v4.7.2-stable_win64.exe\Godot_v4.7.2-stable_win64_console.exe"
 & $g --headless --path D:\DynMagic --import            # reimport / check script errors
 & $g -e --path D:\DynMagic                              # open editor
-& $g --path D:\DynMagic -- --host                       # run as host (after M3)
-& $g --path D:\DynMagic -- --join 127.0.0.1             # run as client (after M3)
+& $g --path D:\DynMagic -- --host [--bot] [--match-speed 10] [--sim-latency 40 --sim-jitter 10 --sim-loss 0.02]
+& $g --path D:\DynMagic -- --join 127.0.0.1 [--bot]     # CLI skips menu/lobby and loads net_match directly
 ```
 
 ## 9. Rules for the next agent
@@ -101,4 +103,5 @@ $g = "$env:USERPROFILE\Downloads\Godot_v4.7.2-stable_win64.exe\Godot_v4.7.2-stab
 - Commits are authorized (2026-09-24): commit after each finished roadmap task. Do not push (no remote yet), and do not install paid services without asking the user.
 - Quota handoff: the user wants work handed to Codex CLI (skill `handoff-codex`) when the Claude 5-hour limit reaches 90%. Codex CLI 0.156.1 is installed at `C:\Users\vinic\AppData\Local\Programs\OpenAI\Codex\bin\codex.exe` (2026-09-24).
 - Standing goal (2026-09-24): keep working through milestones without stopping at reviews until the Claude 5-hour quota nears its limit; at 90% hand off to Codex (`handoff-codex`) and schedule a resume after the reset (no later than 05:30).
-- Loop mode: the user runs `/loop Siga docs/ROADMAP.md (protocolo de loop no topo)`. Stop at milestone reviews.
+- Loop mode: the user runs `/loop Siga docs/ROADMAP.md (protocolo de loop no topo)`. Under the standing goal, milestone reviews are recorded as pending instead of stopping.
+- Key code map: `scenes/player/` (Player, Stats, SpellComposer, SpellCaster, NetSync, AimPreview, RuneCircle), `scenes/spells/` (SpellNode base, Projectile/Burst/Lingering, SelfSpell, AreaSpell, Zone, Wall), `scenes/match/` (MatchFsm, ArcaneCore, CollapseZone), `scenes/net/net_match.gd` (networked match, draft panel, results, scoreboard), `scenes/ui/` (menus, UiKit, Hud), `autoload/` (Net, NetCodec, MatchState, Lobby, SpellDB, Settings, AudioBus, SceneRouter).
