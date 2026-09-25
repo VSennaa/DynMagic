@@ -42,5 +42,5 @@ func _apply_tick() -> void:
 	for target: Node in overlap_damageables(global_position + Vector3.UP * 0.9, radius):
 		if dps > 0.0:
 			hit_amount(target, dps * TICK)
-		elif applies_status and target.has_method(&"receive_status"):
-			target.call(&"receive_status", spell.status_id, spell.status_duration)
+		elif applies_status and target != caster and target.has_method(&"receive_status"):
+			target.call(&"receive_status", spell, caster)

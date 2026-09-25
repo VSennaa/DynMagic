@@ -8,6 +8,8 @@ extends SpellNode
 const EXPLOSION_SCENE: PackedScene = preload("res://scenes/spells/explosion_fx.tscn")
 const WALL_SCENE: PackedScene = preload("res://scenes/spells/wall.tscn")
 const CONE_FX_TIME: float = 0.2
+## Range is measured to the target's centre; this margin covers its body radius.
+const CONE_REACH_MARGIN: float = 0.5
 
 var _timer: float = 0.0
 var _radius: float = 2.5
@@ -48,9 +50,9 @@ func _cast_cone() -> void:
 	var half_angle: float = deg_to_rad(float(spell.param(&"angle_deg", 50.0)) * 0.5)
 	var origin: Vector3 = caster.global_position + Vector3.UP * 0.9 if caster != null else global_position
 	var forward: Vector3 = direction
-	for target: Node in overlap_damageables(origin, reach):
+	for target: Node in overlap_damageables(origin, reach + CONE_REACH_MARGIN):
 		var to_target: Vector3 = (target as Node3D).global_position + Vector3.UP * 0.9 - origin
-		if to_target.length() > reach + 0.5 or forward.angle_to(to_target) > half_angle:
+		if to_target.length() > reach + CONE_REACH_MARGIN or forward.angle_to(to_target) > half_angle:
 			continue
 		if _has_line_of_sight(origin, target as Node3D):
 			hit(target)

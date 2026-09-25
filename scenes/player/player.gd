@@ -7,6 +7,8 @@ extends CharacterBody3D
 signal spell_cast(spell: ResolvedSpell)
 
 const PITCH_LIMIT: float = deg_to_rad(89.0)
+const KNOCKBACK_DECAY: float = 18.0
+const BURN_TICK: float = 0.5
 
 @export var tuning: PlayerTuning = preload("res://data/player_tuning.tres")
 ## Only the local player reads input. Remote players are driven by NetSync (M3).
@@ -25,6 +27,13 @@ var invulnerable_time: float = 0.0
 var active_aura: ResolvedSpell
 
 var _dash_velocity: Vector3 = Vector3.ZERO
+## Knockback added on top of walking velocity; decays over time.
+var _knockback: Vector3 = Vector3.ZERO
+var _burn_dps: float = 0.0
+var _burn_tick: float = 0.0
+var _slow_strength: float = 0.0
+var _nameplate: Label3D
+var _shock_bonus: float = 0.2
 var _dash_time: float = 0.0
 var _coyote_timer: float = 0.0
 var _current_height: float = 1.8
@@ -55,6 +64,8 @@ func _ready() -> void:
 	stats.died.connect(composer.reset)
 	if is_local:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+	else:
+		_add_nameplate()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -75,6 +86,8 @@ func _unhandled_input(event: InputEvent) -> void:
 
 func _physics_process(delta: float) -> void:
 	if not is_local:
+		# Offline stand-in until NetSync (M3) drives remote players: idle but still ticks statuses and knockback.
+		simulate(delta, Vector2.ZERO, false, false, false)
 		return
 	var input_dir: Vector2 = Input.get_vector(&"move_left", &"move_right", &"move_forward", &"move_back")
 	simulate(delta, input_dir, Input.is_action_pressed(&"jump"), Input.is_action_pressed(&"crouch"), Input.is_action_pressed(&"sprint"))
@@ -86,6 +99,7 @@ func simulate(delta: float, input_dir: Vector2, want_jump: bool, want_crouch: bo
 	invulnerable_time = maxf(invulnerable_time - delta, 0.0)
 	if active_aura != null and not stats.has_status(&"aura"):
 		active_aura = null
+	_update_statuses(delta)
 	_update_crouch(delta, want_crouch)
 	if _dash_time > 0.0:
 		_dash_time -= delta
@@ -124,7 +138,10 @@ func simulate(delta: float, input_dir: Vector2, want_jump: bool, want_crouch: bo
 	var was_on_floor: bool = is_on_floor()
 	var pre_move: Transform3D = global_transform
 	var pre_velocity: Vector3 = velocity
+	velocity += _knockback
 	move_and_slide()
+	velocity -= _knockback
+	_knockback = _knockback.move_toward(Vector3.ZERO, KNOCKBACK_DECAY * delta)
 	if was_on_floor and is_on_wall() and horizontal.length() > 0.1:
 		_try_step_up(pre_move, pre_velocity, delta)
 
@@ -184,13 +201,59 @@ func get_aim_camera() -> Camera3D:
 
 
 ## Entry point for spell damage (group "damageable"). Host-only in multiplayer.
-func receive_hit(amount: float, spell: ResolvedSpell, _source: Node) -> void:
+func receive_hit(amount: float, spell: ResolvedSpell, source: Node) -> void:
 	if invulnerable_time > 0.0:
 		return
+	# Shock: the next damage taken is increased, then the shock is consumed.
+	if stats.has_status(&"shock") and amount > 0.0:
+		amount *= 1.0 + _shock_bonus
+		stats.clear_status(&"shock")
 	stats.take_damage(amount)
-	if spell != null and spell.status_id != &"" and bool(spell.param(&"applies_status", false)):
-		stats.apply_status(spell.status_id, spell.status_duration)
+	if spell != null and bool(spell.param(&"applies_status", false)):
+		receive_status(spell, source)
 
+
+## Applies the element status carried by a spell (spec 01 §3). Zones call this directly.
+func receive_status(spell: ResolvedSpell, source: Node = null) -> void:
+	if invulnerable_time > 0.0 or spell == null:
+		return
+	match spell.status_id:
+		&"burn":
+			_burn_dps = float(spell.status_params.get("dps", 4.0))
+			stats.apply_status(&"burn", spell.status_duration)
+		&"slow":
+			if active_aura != null and bool(active_aura.param(&"slow_immune", false)):
+				return
+			var strength: float = float(spell.param(&"slow_override", spell.status_params.get("slow", 0.3)))
+			_slow_strength = strength if not stats.has_status(&"slow") else maxf(_slow_strength, strength)
+			stats.apply_status(&"slow", spell.status_duration)
+		&"shock":
+			_shock_bonus = float(spell.status_params.get("bonus", 0.2))
+			stats.apply_status(&"shock", spell.status_duration)
+		&"knockback":
+			var force: float = float(spell.param(&"knockback_override", spell.status_params.get("force", 5.0)))
+			var from: Vector3 = (source as Node3D).global_position if source is Node3D else global_position - global_basis.z
+			var away: Vector3 = global_position - from
+			away.y = 0.0
+			apply_knockback(away.normalized() * force if away.length() > 0.01 else Vector3.ZERO)
+
+
+func apply_knockback(impulse: Vector3) -> void:
+	_knockback += Vector3(impulse.x, 0.0, impulse.z)
+	if impulse.y > 0.0:
+		velocity.y = maxf(velocity.y, impulse.y)
+
+
+func _update_statuses(delta: float) -> void:
+	if stats.has_status(&"burn"):
+		_burn_tick += delta
+		if _burn_tick >= BURN_TICK:
+			_burn_tick -= BURN_TICK
+			stats.take_damage(_burn_dps * BURN_TICK)
+	else:
+		_burn_tick = 0.0
+	if not stats.has_status(&"slow"):
+		_slow_strength = 0.0
 
 func _validate_cast(spell: ResolvedSpell) -> StringName:
 	if stats.is_dead:
@@ -225,4 +288,33 @@ func damage_mult() -> float:
 
 ## Movement speed multiplier (Aura, status effects later).
 func speed_mult() -> float:
-	return 1.0 + (float(active_aura.param(&"move_speed_bonus", 0.0)) if active_aura != null else 0.0)
+	var bonus: float = float(active_aura.param(&"move_speed_bonus", 0.0)) if active_aura != null else 0.0
+	return (1.0 + bonus) * (1.0 - _slow_strength)
+
+
+## Debug nameplate over non-local players: HP, shield and statuses. Replaced by the final HUD in M6.
+func _add_nameplate() -> void:
+	_nameplate = Label3D.new()
+	_nameplate.billboard = BaseMaterial3D.BILLBOARD_ENABLED
+	_nameplate.no_depth_test = true
+	_nameplate.font_size = 36
+	_nameplate.outline_size = 8
+	_nameplate.position = Vector3(0.0, 2.3, 0.0)
+	add_child(_nameplate)
+	# Remote players need a visible body until the character model exists (M7).
+	var body: MeshInstance3D = MeshInstance3D.new()
+	var capsule: CapsuleMesh = CapsuleMesh.new()
+	capsule.radius = tuning.capsule_radius
+	capsule.height = tuning.stand_height
+	body.mesh = capsule
+	body.position.y = tuning.stand_height * 0.5
+	add_child(body)
+
+
+func _process(_delta: float) -> void:
+	if _nameplate == null:
+		return
+	var parts: PackedStringArray = PackedStringArray()
+	for id: StringName in stats.active_statuses():
+		parts.append(String(id))
+	_nameplate.text = "HP %d%s\n%s" % [roundi(stats.hp), " +%d" % roundi(stats.shield) if stats.shield > 0.0 else "", " ".join(parts)]

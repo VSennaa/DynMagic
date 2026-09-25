@@ -41,6 +41,11 @@ func receive_hit(amount: float, spell: ResolvedSpell, _source: Node) -> void:
 	_spawn_number(amount, spell.color if spell != null else Color.WHITE)
 
 
+func receive_status(spell: ResolvedSpell, _source: Node = null) -> void:
+	if spell != null and spell.status_id != &"":
+		statuses[spell.status_id] = maxf(spell.status_duration, 0.3)
+
+
 func dps() -> float:
 	var sum: float = 0.0
 	for entry: Vector2 in _recent:
