@@ -121,6 +121,12 @@ func add_shield(amount: float, duration: float) -> void:
 		shield_changed.emit(shield)
 
 
+func clear_shield() -> void:
+	shield = 0.0
+	shield_time_left = 0.0
+	shield_changed.emit(shield)
+
+
 func can_afford(cost: float) -> bool:
 	return mana >= cost
 

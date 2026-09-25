@@ -20,6 +20,10 @@ var _deflected_by: Array[Node] = []
 
 func _ready() -> void:
 	velocity = direction * float(spell.param(&"speed", 30.0))
+	# Storm Aura: faster projectiles.
+	var caster_player: Player = caster as Player
+	if caster_player != null and caster_player.active_aura != null:
+		velocity *= 1.0 + float(caster_player.active_aura.param(&"projectile_speed_bonus", 0.0))
 	_lifetime = float(spell.param(&"lifetime", 5.0))
 	_max_range = float(spell.param(&"max_range", INF))
 	_gravity = float(spell.param(&"gravity", 0.0))

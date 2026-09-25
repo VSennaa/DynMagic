@@ -60,7 +60,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (write th
 - [x] `fire.tres`, `frost.tres`, `storm.tres`, `wind.tres` with colors and multipliers (spec 01 §3); variant params encoded, behaviors land in the variant tasks
 - [x] Status effects: burn, slow, shock, knockback (`Player.receive_status`; verified burn and knockback in game on the offline `Target` player)
 - [x] Element variants for Projectile row (spec 01 §3 table): fire/frost Bolt status, storm speed, wind homing; Orb burning/frozen ground, storm chain (verified), wind pull; Seed zones incl. wind deflect. Frozen ground uses slow (low friction not modelled)
-- [ ] Element variants for Self row
+- [x] Element variants for Self row: Guard reflect/no-sprint/shock-on-break/deflect-next (`Player.active_guard`), Impulse fire trail/frost slide/storm teleport (verified)/wind lift+glide, Aura damage/slow-immune+shield/cooldown+projectile speed/move speed+double jump
 - [ ] Element variants for Area row
 - [x] `test_spell_resolution.gd`: all 36 combinations vs expected table
 - [ ] Rune circle shader + glyph per form + ring per effect (spec 01 §5, spec 07 §2)

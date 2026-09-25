@@ -9,6 +9,7 @@ signal spell_cast(spell: ResolvedSpell)
 const PITCH_LIMIT: float = deg_to_rad(89.0)
 const KNOCKBACK_DECAY: float = 18.0
 const BURN_TICK: float = 0.5
+const GLIDE_GRAVITY_SCALE: float = 0.25
 
 @export var tuning: PlayerTuning = preload("res://data/player_tuning.tres")
 ## Only the local player reads input. Remote players are driven by NetSync (M3).
@@ -25,6 +26,10 @@ var move_input: Vector2 = Vector2.ZERO
 var invulnerable_time: float = 0.0
 ## Active Aura spell (self/lingering) while its status lasts.
 var active_aura: ResolvedSpell
+## Active Guard spell (self/direct) while its shield lasts.
+var active_guard: ResolvedSpell
+## Seconds of reduced gravity left (wind Impulse).
+var glide_time: float = 0.0
 
 var _dash_velocity: Vector3 = Vector3.ZERO
 ## Knockback added on top of walking velocity; decays over time.
@@ -33,6 +38,8 @@ var _burn_dps: float = 0.0
 var _burn_tick: float = 0.0
 var _slow_strength: float = 0.0
 var _nameplate: Label3D
+var _jump_held: bool = false
+var _air_jumps_used: int = 0
 var _shock_bonus: float = 0.2
 var _dash_time: float = 0.0
 var _coyote_timer: float = 0.0
@@ -113,14 +120,25 @@ func simulate(delta: float, input_dir: Vector2, want_jump: bool, want_crouch: bo
 		_coyote_timer = tuning.coyote_time
 	else:
 		_coyote_timer = maxf(_coyote_timer - delta, 0.0)
-		velocity.y -= tuning.gravity * delta
+		# Wind Impulse glide: reduced gravity while falling.
+		var gravity_scale: float = GLIDE_GRAVITY_SCALE if glide_time > 0.0 and velocity.y < 0.0 else 1.0
+		velocity.y -= tuning.gravity * gravity_scale * delta
+	glide_time = maxf(glide_time - delta, 0.0)
+	if is_on_floor():
+		_air_jumps_used = 0
 
+	var jump_edge: bool = want_jump and not _jump_held
+	_jump_held = want_jump
 	if want_jump and _coyote_timer > 0.0 and not is_crouching:
 		velocity.y = tuning.jump_velocity()
 		_coyote_timer = 0.0
+	elif jump_edge and not is_on_floor() and _air_jumps_used == 0 and active_aura != null and bool(active_aura.param(&"double_jump", false)):
+		# Wind Aura: one extra jump in the air.
+		velocity.y = tuning.jump_velocity()
+		_air_jumps_used = 1
 
 	# Sprint only while moving forward, standing, and not composing a spell.
-	is_sprinting = want_sprint and not sprint_blocked and not is_crouching and input_dir.y < -0.1
+	is_sprinting = want_sprint and not sprint_blocked and not _guard_blocks_sprint() and not is_crouching and input_dir.y < -0.1
 	var speed: float = tuning.walk_speed
 	if is_crouching:
 		speed = tuning.crouch_speed
@@ -208,7 +226,17 @@ func receive_hit(amount: float, spell: ResolvedSpell, source: Node) -> void:
 	if stats.has_status(&"shock") and amount > 0.0:
 		amount *= 1.0 + _shock_bonus
 		stats.clear_status(&"shock")
+	if active_guard != null and stats.shield <= 0.0:
+		active_guard = null
+	if active_guard != null and spell != null and spell.form == &"projectile" and bool(active_guard.param(&"deflect_next", false)):
+		# Wind Guard: the next projectile is deflected entirely, once.
+		active_guard = null
+		stats.clear_shield()
+		return
+	var had_shield: bool = stats.shield > 0.0
 	stats.take_damage(amount)
+	if active_guard != null:
+		_guard_reactions(amount, source, had_shield)
 	if spell != null and bool(spell.param(&"applies_status", false)):
 		receive_status(spell, source)
 
@@ -236,6 +264,34 @@ func receive_status(spell: ResolvedSpell, source: Node = null) -> void:
 			var away: Vector3 = global_position - from
 			away.y = 0.0
 			apply_knockback(away.normalized() * force if away.length() > 0.01 else Vector3.ZERO)
+
+
+## Fire Guard reflects part of the damage; storm Guard shocks the attacker when it breaks.
+func _guard_reactions(amount: float, source: Node, had_shield: bool) -> void:
+	var guard: ResolvedSpell = active_guard
+	var reflect: float = float(guard.param(&"reflect_ratio", 0.0))
+	if reflect > 0.0 and source != null and source != self and source.has_method(&"receive_hit"):
+		source.call(&"receive_hit", amount * reflect, null, self)
+	if had_shield and stats.shield <= 0.0:
+		active_guard = null
+		if bool(guard.param(&"shock_on_break", false)) and source != null and source != self and source.has_method(&"receive_status"):
+			source.call(&"receive_status", guard, self)
+
+
+func _guard_blocks_sprint() -> bool:
+	return active_guard != null and stats.shield > 0.0 and bool(active_guard.param(&"no_sprint", false))
+
+
+## Storm Impulse: instant blink up to distance along the movement input, stopping at walls.
+func teleport(distance: float) -> void:
+	var input: Vector2 = move_input if move_input.length() > 0.1 else Vector2(0.0, -1.0)
+	var dir: Vector3 = transform.basis * Vector3(input.x, 0.0, input.y)
+	dir.y = 0.0
+	var motion: Vector3 = dir.normalized() * distance
+	var collision: KinematicCollision3D = KinematicCollision3D.new()
+	if test_move(global_transform, motion, collision):
+		motion = collision.get_travel()
+	global_position += motion
 
 
 func apply_knockback(impulse: Vector3) -> void:
@@ -267,7 +323,8 @@ func _validate_cast(spell: ResolvedSpell) -> StringName:
 
 func _on_cast_requested(spell: ResolvedSpell) -> void:
 	stats.spend_mana(spell.mana_cost)
-	stats.start_cooldown(spell.key, spell.cooldown)
+	var cdr: float = float(active_aura.param(&"cooldown_reduction", 0.0)) if active_aura != null else 0.0
+	stats.start_cooldown(spell.key, spell.cooldown * (1.0 - cdr))
 	spell_cast.emit(spell)
 
 
