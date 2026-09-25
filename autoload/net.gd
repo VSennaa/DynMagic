@@ -17,6 +17,7 @@ const BROADCAST_INTERVAL: float = 1.0
 const LOBBY_TIMEOUT: float = 3.0
 ## Two players plus room for spectators later (spec 04 §1).
 const MAX_CLIENTS: int = 5
+const NET_MATCH_SCENE: String = "res://scenes/net/net_match.tscn"
 
 ## ENet channels (spec 04 §8).
 const CHANNEL_RELIABLE: int = 0
@@ -272,9 +273,11 @@ func _parse_cli() -> void:
 				lobbies_changed.connect(func() -> void: _log("lobbies %s" % [lobbies.keys()]))
 		i += 1
 	if action == "host":
-		host(port)
+		if host(port) == OK:
+			get_tree().change_scene_to_file(NET_MATCH_SCENE)
 	elif action == "join":
-		join(address, port)
+		if join(address, port) == OK:
+			get_tree().change_scene_to_file(NET_MATCH_SCENE)
 
 
 func _log(message: String) -> void:

@@ -63,7 +63,35 @@ func wall_transform(distance: float) -> Transform3D:
 	return Transform3D(Basis.looking_at(forward, Vector3.UP), center)
 
 
+## Resolves where a spell goes: [origin, direction, target]. Computed once by the caster
+## so every peer spawns the same thing (docs/specs/04-networking.md section 6).
+func cast_params(spell: ResolvedSpell) -> Array:
+	var origin: Vector3 = player.cast_origin.global_position
+	var target: Vector3 = aim_point()
+	var direction: Vector3 = target - origin
+	if direction.length_squared() < 0.0001:
+		direction = -player.get_aim_camera().global_basis.z
+	match spell.key:
+		&"area_burst":
+			target = ground_target(float(spell.param(&"range", 25.0)))
+		&"area_lingering":
+			var xform: Transform3D = wall_transform(float(spell.param(&"distance", 4.0)))
+			target = xform.origin
+			direction = -xform.basis.z
+	return [origin, direction.normalized(), target]
+
+
 func _on_spell_cast(spell: ResolvedSpell) -> void:
+	var where: Array = cast_params(spell)
+	var net_match: Node = get_tree().get_first_node_in_group(&"net_match")
+	if Net.is_online() and net_match != null:
+		net_match.call(&"request_cast", player, spell, where[0], where[1], where[2])
+	else:
+		spawn(spell, where[0], where[1], where[2])
+
+
+## Instantiates the spell scene. Called directly offline, or on every peer by NetMatch.
+func spawn(spell: ResolvedSpell, origin: Vector3, direction: Vector3, target: Vector3) -> void:
 	if spell.scene == null:
 		push_warning("SpellCaster: %s has no scene yet" % spell.key)
 		return
@@ -71,10 +99,6 @@ func _on_spell_cast(spell: ResolvedSpell) -> void:
 	if node == null:
 		push_error("SpellCaster: %s scene root must extend SpellNode" % spell.key)
 		return
-	var origin: Vector3 = player.cast_origin.global_position
-	var target: Vector3 = aim_point()
-	var direction: Vector3 = target - origin
-	if direction.length_squared() < 0.0001:
-		direction = -player.get_aim_camera().global_basis.z
 	node.setup(spell, player, origin, direction, target)
-	player.get_parent().add_child(node)
+	# Spells live at the scene root, never beside players (NetMatch owns the Players node).
+	get_tree().current_scene.add_child(node)

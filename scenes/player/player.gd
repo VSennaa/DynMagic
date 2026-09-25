@@ -5,6 +5,8 @@ extends CharacterBody3D
 
 ## Emitted after mana and cooldown are paid. Spell scenes subscribe here.
 signal spell_cast(spell: ResolvedSpell)
+## Emitted by the local player after each movement tick (NetSync records it for prediction).
+signal input_sampled(frame: Dictionary)
 
 const PITCH_LIMIT: float = deg_to_rad(89.0)
 const KNOCKBACK_DECAY: float = 18.0
@@ -14,6 +16,8 @@ const GLIDE_GRAVITY_SCALE: float = 0.25
 @export var tuning: PlayerTuning = preload("res://data/player_tuning.tres")
 ## Only the local player reads input. Remote players are driven by NetSync (M3).
 @export var is_local: bool = true
+## When true, NetSync moves this body (host replaying client inputs, or client interpolating).
+var net_driven: bool = false
 
 ## Set by the spell composer: sprint is blocked while composing a spell.
 var sprint_blocked: bool = false
@@ -92,12 +96,41 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	if net_driven:
+		return
 	if not is_local:
-		# Offline stand-in until NetSync (M3) drives remote players: idle but still ticks statuses and knockback.
+		# Offline stand-in: idle but still ticks statuses and knockback.
 		simulate(delta, Vector2.ZERO, false, false, false)
 		return
-	var input_dir: Vector2 = Input.get_vector(&"move_left", &"move_right", &"move_forward", &"move_back")
-	simulate(delta, input_dir, Input.is_action_pressed(&"jump"), Input.is_action_pressed(&"crouch"), Input.is_action_pressed(&"sprint"))
+	var frame: Dictionary = {
+		"move": Input.get_vector(&"move_left", &"move_right", &"move_forward", &"move_back"),
+		"yaw": rotation.y,
+		"pitch": _pitch,
+		"buttons": _buttons(Input.is_action_pressed(&"jump"), Input.is_action_pressed(&"crouch"), Input.is_action_pressed(&"sprint")),
+	}
+	apply_input(delta, frame)
+	input_sampled.emit(frame)
+
+
+## Runs one tick from a recorded or received input frame (prediction replay and host simulation).
+func apply_input(delta: float, frame: Dictionary) -> void:
+	set_look(float(frame["yaw"]), float(frame["pitch"]))
+	var buttons: int = int(frame["buttons"])
+	simulate(delta, frame["move"], buttons & NetCodec.InputButton.JUMP != 0, buttons & NetCodec.InputButton.CROUCH != 0, buttons & NetCodec.InputButton.SPRINT != 0)
+
+
+func set_look(yaw: float, pitch: float) -> void:
+	rotation.y = yaw
+	_pitch = clampf(pitch, -PITCH_LIMIT, PITCH_LIMIT)
+	_head.rotation.x = _pitch
+
+
+func get_pitch() -> float:
+	return _pitch
+
+
+static func _buttons(jump: bool, crouch: bool, sprint: bool) -> int:
+	return (NetCodec.InputButton.JUMP if jump else 0) | (NetCodec.InputButton.CROUCH if crouch else 0) | (NetCodec.InputButton.SPRINT if sprint else 0)
 
 
 ## One movement tick. Kept free of Input reads so the host can replay client inputs (M3).

@@ -40,6 +40,8 @@ func _physics_process(delta: float) -> void:
 
 
 func _apply_tick() -> void:
+	if not has_authority():
+		return
 	var applies_status: bool = bool(spell.param(&"zone_applies_status", false))
 	for target: Node in overlap_damageables(global_position + Vector3.UP * 0.9, radius):
 		if dps > 0.0:

@@ -65,9 +65,8 @@ func _cast_cone() -> void:
 
 func _place_mark() -> void:
 	_radius = float(spell.param(&"radius", 2.5))
-	var spell_caster: Node = caster.get_node_or_null(^"SpellCaster") if caster != null else null
-	var point: Vector3 = spell_caster.call(&"ground_target", float(spell.param(&"range", 25.0))) if spell_caster != null else target_point
-	global_position = point + Vector3.UP * 0.04
+	# SpellCaster.cast_params already dropped the target to the floor.
+	global_position = target_point + Vector3.UP * 0.04
 	var disc: CylinderMesh = CylinderMesh.new()
 	disc.top_radius = 1.0
 	disc.bottom_radius = 1.0
@@ -81,7 +80,7 @@ func _detonate() -> void:
 	var launch: float = float(spell.param(&"launch_up", 0.0))
 	for target: Node in overlap_damageables(global_position + Vector3.UP * 0.9, _radius):
 		hit(target)
-		if target == caster:
+		if target == caster or not has_authority():
 			continue
 		# Frost Mark roots (a full slow); wind Mark launches upward.
 		if root_time > 0.0 and target.has_method(&"receive_status"):
@@ -96,8 +95,9 @@ func _detonate() -> void:
 
 
 func _place_wall() -> void:
-	var spell_caster: Node = caster.get_node_or_null(^"SpellCaster") if caster != null else null
-	var xform: Transform3D = spell_caster.call(&"wall_transform", float(spell.param(&"distance", 4.0))) if spell_caster != null else global_transform
+	# SpellCaster.cast_params gives the wall centre (target) and its facing (direction).
+	var forward: Vector3 = Vector3(direction.x, 0.0, direction.z).normalized()
+	var xform: Transform3D = Transform3D(Basis.looking_at(forward if forward.length() > 0.01 else Vector3.FORWARD, Vector3.UP), target_point)
 	var wall: Wall = WALL_SCENE.instantiate() as Wall
 	wall.setup(spell, caster, xform.origin, direction, target_point)
 	get_parent().add_child(wall)

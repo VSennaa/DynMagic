@@ -80,7 +80,7 @@ func receive_hit(amount: float, _spell: ResolvedSpell, _source: Node) -> void:
 func _contact_tick() -> void:
 	var dps: float = float(spell.param(&"contact_dps", 0.0))
 	var burns: bool = bool(spell.param(&"contact_burn", false))
-	if dps <= 0.0 and not burns:
+	if (dps <= 0.0 and not burns) or not SpellNode.has_authority():
 		return
 	var shape: BoxShape3D = BoxShape3D.new()
 	shape.size = _size + Vector3(CONTACT_MARGIN, 0.0, CONTACT_MARGIN) * 2.0

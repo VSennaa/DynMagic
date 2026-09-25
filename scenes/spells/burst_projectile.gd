@@ -26,7 +26,7 @@ func _explode(center: Vector3) -> void:
 	for target: Node in targets:
 		var target_3d: Node3D = target as Node3D
 		var body_center: Vector3 = target_3d.global_position + Vector3.UP * 0.9
-		if pull > 0.0 and target != caster and target.has_method(&"apply_knockback"):
+		if pull > 0.0 and has_authority() and target != caster and target.has_method(&"apply_knockback"):
 			var toward: Vector3 = center - body_center
 			toward.y = 0.0
 			target.call(&"apply_knockback", toward.normalized() * pull)

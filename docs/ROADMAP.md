@@ -75,10 +75,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (write th
 - [x] Handshake + protocol version check (spec 04 §3); verified host+client headless. Room-full and version reject paths not exercised yet
 - [x] LAN discovery broadcast on 7778 + lobby list (spec 04 §2); verified headless (lobby list UI lands in M6). Note: the broadcast source IP may be a VPN adapter (26.x seen on this PC)
 - [x] `InputFrame` + `Snapshot` serialization + `test_net_serialization.gd` (`NetCodec`: ~14 B per input frame, ~50 B per player entry)
-- [ ] Client prediction + reconciliation (spec 04 §5)
-- [ ] Remote player interpolation (100 ms buffer)
-- [ ] Cast request/validation/spawn flow (spec 04 §6)
-- [ ] Deterministic projectile simulation on both sides; host-only hit detection
+- [x] Client prediction + reconciliation (spec 04 §5): `NetSync` (history, ack, replay). Headless bot test: corrections 0.06-0.11 m
+- [x] Remote player interpolation (100 ms buffer)
+- [x] Cast request/validation/spawn flow (spec 04 §6): `NetMatch.request_cast` → host validates → `_spawn_spell` on all peers. `SpellCaster.cast_params` fixes origin/direction/target at the caster
+- [x] Deterministic projectile simulation on both sides; host-only hit detection (`SpellNode.has_authority()`). Remote rune circle not yet driven by snapshot composer bits
 - [ ] Lag compensation for Cone
 - [ ] Network simulator (latency/jitter/loss) + F3 overlay
 - [ ] Two local instances play 5 min without visible desync
