@@ -161,7 +161,29 @@ func _build_cover() -> void:
 		var box: CSGBox3D = _box("Cover%02d" % index, Vector3(entry[0], size.y * 0.5, entry[1]), size, cover_color)
 		box.rotation.y = deg_to_rad(float(entry[5]))
 		box.add_to_group(&"cover")
+		_add_cover_visual(box, size)
 		index += 1
+
+
+## Keep the original CSG collision and layout; replace only exact-size cover visuals.
+func _add_cover_visual(box: CSGBox3D, size: Vector3) -> void:
+	var scene: PackedScene
+	if size.is_equal_approx(Vector3(1.5, 1.0, 1.5)):
+		scene = preload("res://scenes/assets/cover_low.tscn")
+	elif size.is_equal_approx(Vector3(1.5, 2.2, 1.5)):
+		scene = preload("res://scenes/assets/cover_high.tscn")
+	elif size.is_equal_approx(Vector3(4.5, 1.4, 1.2)):
+		scene = preload("res://scenes/assets/cover_bar.tscn")
+	elif size.is_equal_approx(Vector3(3.0, 3.0, 3.0)):
+		scene = preload("res://scenes/assets/pillar.tscn")
+	if scene == null:
+		return
+	# Render layers do not control CSG collision generation; visibility does.
+	box.layers = 0
+	var visual: Node3D = scene.instantiate() as Node3D
+	visual.position = box.position - Vector3.UP * size.y * 0.5
+	visual.rotation = box.rotation
+	_adopt(visual)
 
 
 func _build_spawns() -> void:

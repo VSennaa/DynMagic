@@ -424,14 +424,8 @@ func _add_nameplate() -> void:
 	_nameplate.outline_size = 8
 	_nameplate.position = Vector3(0.0, 2.3, 0.0)
 	add_child(_nameplate)
-	# Remote players need a visible body until the character model exists (M7).
-	var body: MeshInstance3D = MeshInstance3D.new()
-	var capsule: CapsuleMesh = CapsuleMesh.new()
-	capsule.radius = tuning.capsule_radius
-	capsule.height = tuning.stand_height
-	body.mesh = capsule
-	body.material_override = Toon.material(Color(0.9, 0.85, 0.75))
-	body.position.y = tuning.stand_height * 0.5
+	var body: Node3D = preload("res://scenes/assets/mage.tscn").instantiate() as Node3D
+	body.name = "ThirdPersonModel"
 	add_child(body)
 
 

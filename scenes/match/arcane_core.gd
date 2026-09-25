@@ -14,25 +14,15 @@ var progress: Dictionary[int, float] = {}
 var _hp_seen: Dictionary[int, float] = {}
 var _done: bool = false
 
-@onready var _mesh: MeshInstance3D = $Mesh
+@onready var _mesh: Node3D = $Model.find_child("Crystal", true, false) as Node3D
 @onready var _ring: MeshInstance3D = $Ring
 
 
 static func create() -> ArcaneCore:
 	var core: ArcaneCore = ArcaneCore.new()
 	core.name = "ArcaneCore"
-	var mesh: MeshInstance3D = MeshInstance3D.new()
-	mesh.name = "Mesh"
-	var prism: PrismMesh = PrismMesh.new()
-	prism.size = Vector3(0.6, 0.9, 0.6)
-	mesh.mesh = prism
-	mesh.position.y = 1.4
-	var mat: StandardMaterial3D = StandardMaterial3D.new()
-	mat.albedo_color = Color(0.95, 0.9, 1.0)
-	mat.emission_enabled = true
-	mat.emission = Color(0.8, 0.6, 1.0)
-	mat.emission_energy_multiplier = 3.0
-	mesh.material_override = mat
+	var mesh: Node3D = preload("res://scenes/assets/arcane_core.tscn").instantiate() as Node3D
+	mesh.name = "Model"
 	core.add_child(mesh)
 	var ring: MeshInstance3D = MeshInstance3D.new()
 	ring.name = "Ring"
@@ -56,7 +46,7 @@ static func create() -> ArcaneCore:
 
 func _process(delta: float) -> void:
 	_mesh.rotate_y(delta * 1.5)
-	_mesh.position.y = 1.4 + sin(Time.get_ticks_msec() / 400.0) * 0.1
+	_mesh.position.y = sin(Time.get_ticks_msec() / 400.0) * 0.1
 
 
 ## Host: advance capture for the given players ({id: Player}).
