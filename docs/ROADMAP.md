@@ -82,7 +82,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (write th
 - [x] Lag compensation for Cone (host keeps 250 ms of positions per player; rewind = RTT/2 + interpolation delay + simulated latency)
 - [x] Network simulator (latency/jitter/loss) + F3 overlay (`--sim-latency/--sim-jitter/--sim-loss` on unreliable streams). Headless bot at 80 ms RTT + 2% loss: corrections 0.06-0.11 m only at direction changes; host repeats the last input when one is late
 - [x] Two local instances play 5 min without visible desync (headless bot soak, 80 ms RTT + 2% loss: 0 errors, reconciliation avg 0.08 m / max 0.11 m)
-- [~] Milestone review with user — M3 done 2026-09-24 except Echo-rune recast flag not sent to host (host charges full cost). Review pending
+- [~] Milestone review with user — M3 done 2026-09-24. Review pending
 
 ## M4 — Loop de partida
 

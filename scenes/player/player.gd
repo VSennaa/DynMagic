@@ -380,12 +380,7 @@ func _validate_cast(spell: ResolvedSpell) -> StringName:
 
 func _on_cast_requested(spell: ResolvedSpell) -> void:
 	stats.spend_mana(mana_cost_for(spell, composer.is_recasting))
-	var cdr: float = float(active_aura.param(&"cooldown_reduction", 0.0)) if active_aura != null else 0.0
-	if rune == &"haste":
-		cdr = 1.0 - (1.0 - cdr) * 0.8
-	if mana_surge:
-		cdr = 1.0 - (1.0 - cdr) * 0.5
-	stats.start_cooldown(spell.key, spell.cooldown * (1.0 - cdr))
+	stats.start_cooldown(spell.key, cooldown_for(spell))
 	if has_overcharge():
 		overcharge_casts -= 1
 	spell_cast.emit(spell)
@@ -469,3 +464,12 @@ func grant_overcharge() -> void:
 
 func has_overcharge() -> bool:
 	return overcharge_time > 0.0 and overcharge_casts > 0
+
+## Cooldown after Aura (storm), Haste rune and Mana Surge reductions. Used by the caster and the host.
+func cooldown_for(spell: ResolvedSpell) -> float:
+	var cdr: float = float(active_aura.param(&"cooldown_reduction", 0.0)) if active_aura != null else 0.0
+	if rune == &"haste":
+		cdr = 1.0 - (1.0 - cdr) * 0.8
+	if mana_surge:
+		cdr = 1.0 - (1.0 - cdr) * 0.5
+	return spell.cooldown * (1.0 - cdr)

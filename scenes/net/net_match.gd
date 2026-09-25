@@ -163,11 +163,11 @@ func request_cast(player: Player, spell: ResolvedSpell, origin: Vector3, directi
 	if Net.is_host():
 		_broadcast_spawn(int(String(player.name)), spell, origin, direction, target)
 	else:
-		_request_cast.rpc_id(1, spell.form, spell.effect, origin, direction, target)
+		_request_cast.rpc_id(1, spell.form, spell.effect, origin, direction, target, player.composer.is_recasting)
 
 
 @rpc("any_peer", "call_remote", "reliable", Net.CHANNEL_RELIABLE)
-func _request_cast(form: StringName, effect: StringName, origin: Vector3, direction: Vector3, target: Vector3) -> void:
+func _request_cast(form: StringName, effect: StringName, origin: Vector3, direction: Vector3, target: Vector3, is_recast: bool) -> void:
 	if not Net.is_host():
 		return
 	var caster_id: int = multiplayer.get_remote_sender_id()
@@ -177,21 +177,22 @@ func _request_cast(form: StringName, effect: StringName, origin: Vector3, direct
 	var spell: ResolvedSpell = SpellDB.resolve(player.composer.element_id, form, effect)
 	if spell == null:
 		return
-	var reason: StringName = _validate(player, spell, origin)
+	var cost: float = player.mana_cost_for(spell, is_recast)
+	var reason: StringName = _validate(player, spell, origin, cost)
 	if reason != &"":
 		_cast_rejected.rpc_id(caster_id, spell.key, reason)
 		return
-	player.stats.spend_mana(spell.mana_cost)
-	player.stats.start_cooldown(spell.key, spell.cooldown)
+	player.stats.spend_mana(cost)
+	player.stats.start_cooldown(spell.key, player.cooldown_for(spell))
 	_broadcast_spawn(caster_id, spell, origin, direction, target)
 
 
-func _validate(player: Player, spell: ResolvedSpell, origin: Vector3) -> StringName:
+func _validate(player: Player, spell: ResolvedSpell, origin: Vector3, cost: float) -> StringName:
 	if player.stats.is_dead:
 		return &"dead"
 	if player.stats.is_on_cooldown(spell.key):
 		return &"cooldown"
-	if not player.stats.can_afford(spell.mana_cost):
+	if not player.stats.can_afford(cost):
 		return &"no_mana"
 	if origin.distance_to(player.cast_origin.global_position) > MAX_ORIGIN_ERROR:
 		return &"bad_origin"
