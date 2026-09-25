@@ -111,6 +111,9 @@ func _sync_players() -> void:
 			_hud.bind(player)
 		if Net.is_host():
 			player.stats.died.connect(MatchState.report_death.bind(id))
+	for child: Node in _players_root.get_children():
+		if child is Player and not (child as Player).is_local:
+			_hud.threat = child as Node3D
 	if Net.players.size() >= 2 and not _loaded_sent and _players_root.get_child_count() >= 2:
 		_loaded_sent = true
 		if Net.is_host() and not MatchState.active:
@@ -304,6 +307,7 @@ func _on_match_changed() -> void:
 			if p != null:
 				p.apply_rune(runes.get(int(String(p.name)), &""))
 	_update_core(view, round_number)
+	_hud.set_core_progress(float((view.get("core_progress", {}) as Dictionary).get(multiplayer.get_unique_id(), 0.0)))
 	_update_overtime(view, round_number)
 	_update_draft_panel(view)
 	var frozen: bool = MatchState.is_frozen()
@@ -330,6 +334,7 @@ func _start_round(north_id: int) -> void:
 
 
 func _unhandled_key_input(event: InputEvent) -> void:
+	_scoreboard_input(event)
 	var key: InputEventKey = event as InputEventKey
 	if key == null or not key.pressed or key.echo or MatchState.phase() != MatchFsm.Phase.DRAFT:
 		return
@@ -567,3 +572,36 @@ func _update_draft_panel(view: Dictionary) -> void:
 			rune_buttons.append(UiKit.button(String(rune), MatchState.pick_rune.bind(StringName(rune))))
 		column.add_child(UiKit.row(rune_buttons))
 	column.add_child(UiKit.label("Tempo: %d s" % ceili(float(view.get("time_left", 0.0))), 18))
+
+## Host: capture progress ratios for the view (clients get them once per second).
+func core_progress() -> Dictionary:
+	var out: Dictionary = {}
+	if _core != null:
+		for id: int in Net.players:
+			out[id] = _core.progress_ratio(id)
+	return out
+
+
+# --- Scoreboard (Tab) ---------------------------------------------------------------------
+
+var _scoreboard: Control
+
+
+func _scoreboard_input(event: InputEvent) -> void:
+	if event.is_action(&"scoreboard"):
+		if event.is_pressed() and _scoreboard == null:
+			_scoreboard = _panel("Placar")
+			var column: VBoxContainer = _scoreboard.get_node(^"Column") as VBoxContainer
+			var view: Dictionary = MatchState.view
+			var score: Dictionary = view.get("score", {})
+			var elements: Dictionary = view.get("elements", {})
+			var runes: Dictionary = view.get("runes", {})
+			for id: int in Net.players:
+				var player: Player = _player(id)
+				column.add_child(UiKit.label("%s — %d rounds — %s%s — HP %d" % [
+					Net.players[id], int(score.get(id, 0)), String(elements.get(id, "?")),
+					" + " + String(runes[id]) if runes.has(id) else "", roundi(player.stats.hp) if player else 0], 20))
+			column.add_child(UiKit.label("Round %d · arena %s" % [int(view.get("round", 0)), String(view.get("arena", "A"))], 18))
+		elif not event.is_pressed() and _scoreboard != null:
+			_scoreboard.queue_free()
+			_scoreboard = null

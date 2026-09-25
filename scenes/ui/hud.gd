@@ -19,6 +19,12 @@ var _hp_label: Label
 var _mana_label: Label
 var _status_label: Label
 var _cooldown_cells: Dictionary[StringName, Label] = {}
+var _damage_arrow: Label
+var _core_bar: ProgressBar
+var _last_hp: float = -1.0
+var _arrow_time: float = 0.0
+## Where hits most likely came from (1v1: the opponent). Set by the match scene.
+var threat: Node3D
 
 
 func _ready() -> void:
@@ -29,10 +35,11 @@ func bind(p_player: Player) -> void:
 	player = p_player
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
 	if player == null or not is_instance_valid(player):
 		return
 	var stats: Stats = player.stats
+	_update_damage_arrow(delta, stats.hp + stats.shield)
 	_hp_bar.max_value = stats.max_hp
 	_hp_bar.value = stats.hp
 	_shield_bar.max_value = stats.max_hp
@@ -99,6 +106,18 @@ func _build() -> void:
 	_hint.modulate = Color(1, 1, 1, 0.7)
 	trail_box.add_child(_hint)
 
+	_damage_arrow = _label("▲", 48)
+	_damage_arrow.add_theme_color_override(&"font_color", Color(1.0, 0.25, 0.25))
+	_damage_arrow.visible = false
+	root.add_child(_damage_arrow)
+
+	_core_bar = _bar(Color(0.8, 0.6, 1.0))
+	_core_bar.max_value = 1.0
+	_core_bar.set_anchors_preset(Control.PRESET_CENTER)
+	_core_bar.position = Vector2(-160, 110)
+	_core_bar.visible = false
+	root.add_child(_core_bar)
+
 	var bars: VBoxContainer = VBoxContainer.new()
 	bars.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
 	bars.position = Vector2(32, -150)
@@ -157,3 +176,29 @@ func _bar(color: Color) -> ProgressBar:
 	bg.bg_color = Color(0, 0, 0, 0.5)
 	bar.add_theme_stylebox_override(&"background", bg)
 	return bar
+
+## Directional damage indicator (spec 06 §2): when HP drops, an arrow at the screen edge points
+## toward the threat for 1 s. In 1v1 the threat is the opponent.
+func _update_damage_arrow(delta: float, total_hp: float) -> void:
+	if _last_hp >= 0.0 and total_hp < _last_hp - 0.5:
+		_arrow_time = 1.0
+	_last_hp = total_hp
+	_arrow_time = maxf(_arrow_time - delta, 0.0)
+	_damage_arrow.visible = _arrow_time > 0.0 and threat != null and is_instance_valid(threat)
+	if not _damage_arrow.visible:
+		return
+	var to_threat: Vector3 = threat.global_position - player.global_position
+	var local: Vector3 = player.global_basis.inverse() * to_threat
+	var angle: float = atan2(local.x, -local.z)
+	var screen: Vector2 = get_viewport().get_visible_rect().size
+	var radius: float = minf(screen.x, screen.y) * 0.32
+	_damage_arrow.position = screen * 0.5 + Vector2(sin(angle), -cos(angle)) * radius - _damage_arrow.size * 0.5
+	_damage_arrow.rotation = angle
+	_damage_arrow.pivot_offset = _damage_arrow.size * 0.5
+	_damage_arrow.modulate.a = _arrow_time
+
+
+## Core capture progress for the local player (0..1); hidden at 0.
+func set_core_progress(ratio: float) -> void:
+	_core_bar.visible = ratio > 0.0
+	_core_bar.value = ratio

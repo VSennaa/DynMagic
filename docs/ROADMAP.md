@@ -90,7 +90,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (write th
 - [x] Side swap every round, spawn barriers during countdown (`Player.frozen` during draft/countdown/round end; respawn in `NetMatch._start_round`)
 - [x] Sequential draft: side A then side B, no duplicate element (spec 02 §3): keys 1-4 in the net match (draft screen UI in M6); bots auto-pick
 - [x] Runes: 7 runes + loser pick of 3 random (spec 02 §3): ids in `MatchFsm.RUNES`, effects in `Player.apply_rune`/`mana_cost_for`/`damage_mult`/`speed_mult`, keys 5-7 to pick. Not yet seen in a live match
-- [x] Arcane Core: spawn at 30 s, capture rules, Overcharge (spec 02 §4): `ArcaneCore` (host counts progress, damage resets it) + `Player.grant_overcharge`. Not yet captured in a live test
+- [x] Arcane Core: spawn at 30 s, capture rules, Overcharge (spec 02 §4): `ArcaneCore` (host counts progress, damage resets it) + `Player.grant_overcharge`. Verified live: a bot captured it and won the overtime tie-break "core"
 - [x] Overtime: Collapse (spec 02 §5): `CollapseZone` 24→5 m in 20 s, 12 dps outside
 - [x] Overtime: Sudden Death (HP 1, shields off, burn off, Collapse after 30 s)
 - [x] Overtime: Mana Surge (free spells, cooldowns -50% for 20 s, then Collapse)
@@ -117,7 +117,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (write th
 - [x] Main menu with animated 3D background (spec 06 §1); now the project main scene
 - [x] Host/Join screens + lobby screen (`play_lan`, `lobby_screen`, `Lobby` autoload with ready flags and rules). UI-driven two-instance run not yet tested; CLI `--host/--join` still skips the lobby
 - [x] Draft screen: element cards (disabled when taken or not your turn) + rune offer + timer, in `NetMatch._update_draft_panel`; headless run clean. Keys 1-7 still work
-- [~] Final HUD (spec 06 §2): temporary HUD + match line + rune/Overcharge/status line. Pending: directional damage indicator, Core capture bar on clients, Tab scoreboard, final art
+- [~] Final HUD (spec 06 §2): temporary HUD + match line + rune/Overcharge/status line. directional damage arrow (points at the opponent), Core capture bar (1 Hz from host), Tab scoreboard added. Pending: final art
 - [x] Pause menu + forfeit (Esc in the match; online match keeps running)
 - [x] Results screen + rematch (panel with score, damage, accuracy, Cores; "Voltar ao lobby" = rematch path)
 - [x] Grimório screen (36-spell reference; text only, no preview video)

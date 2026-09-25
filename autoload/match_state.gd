@@ -156,6 +156,7 @@ func _broadcast() -> void:
 		"core_spawned": fsm.core_spawned,
 		"core_holder": fsm.core_holder,
 		"arena": fsm.arena,
+		"core_progress": _core_progress(),
 	}
 	_sync.rpc(state)
 
@@ -190,3 +191,8 @@ func _hp_by_player() -> Dictionary:
 		if player != null:
 			out[id] = player.stats.hp
 	return out
+
+
+func _core_progress() -> Dictionary:
+	var net_match: Node = get_tree().get_first_node_in_group(&"net_match")
+	return net_match.call(&"core_progress") if net_match != null else {}
