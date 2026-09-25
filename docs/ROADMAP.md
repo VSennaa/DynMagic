@@ -187,6 +187,8 @@ Phase 3 — server
 - [ ] C13 join by IP:port, show host IP, disconnect reason
 - [ ] C15 lean headless server (no HUD/anim/audio, fixed 60 Hz physics)
 - [ ] D13 `dynmagic@.service` template, 3 instances with MemoryMax; 1 h load test (VPS upgraded to 2 GB by the user)
+- [ ] Queue on the VPS (user 2026-09-25): 3 rooms per session with a waiting queue until the 4 GB upgrade; writes `/var/www/dynmagic/status.json` for the site (rooms, players, state, queue length)
+- [ ] Website `web/` (brief `docs/briefs/website.md`), served by nginx at a second DuckDNS name
 - [ ] D3 overtime default Colapso; Aleatório in lobby and `--overtime`/`--arena` server flags
 
 Phase 4 — balance (user decisions D1, D2)
