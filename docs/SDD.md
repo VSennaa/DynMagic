@@ -28,7 +28,7 @@ Pilares:
 | Personagem | Um único mago base. A identidade vem do elemento | Usuário |
 | Formato | Rounds (MD7, primeiro a 4) + draft na fase 0:00 | Usuário |
 | Rede | LAN, host-authoritative, ENet | Usuário (LAN) + proposta |
-| Arte | Shader-first com placeholders estilizados; Blender + mcp-blender + Tripo numa fase posterior | Usuário |
+| Arte | Shader-first; M7 com Blender 5.2.1 LTS headless e Python procedural, sem Tripo/Meshy, serviços pagos ou mcp-blender nesta rodada | Usuário, 2026-09-25 |
 | Arenas | 3 variantes (A, B, C) do layout da imagem de referência | Usuário |
 
 ## 3. Premissas
@@ -128,7 +128,7 @@ Placar 3-3 ─► Round decisivo (arena sorteada, runa para ambos)
 | M4 Loop | FSM de partida, draft, runas, Núcleo, overtime, resultados | Partida MD7 completa de ponta a ponta em LAN |
 | M5 Arenas | 3 variantes com greybox final e colisão | Cada variante passa checklist de simetria e linhas de visão |
 | M6 Polimento | Menus, configurações, áudio, shaders toon, VFX por elemento | Checklist de UX aprovado pelo usuário |
-| M7 Arte | Pipeline Blender + mcp-blender + Tripo, personagem e props finais | Assets importados sem quebra de colisão e com outline |
+| M7 Arte | Pipeline Blender Python procedural, personagem e props | Assets importados sem quebra de colisão e com outline |
 
 ## 7. Riscos
 

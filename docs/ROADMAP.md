@@ -136,8 +136,12 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (write th
 ## M7 — Arte final
 
 - [x] User approved (2026-09-25): Blender 5.2.1 installed via winget; assets generated procedurally with Blender Python by Codex (no Tripo/paid services, no mcp-blender)
-- [ ] Mage character model + rig + animations
-- [ ] First-person arms model + 4 poses + cast animation
-- [ ] Arena props and cover dressing
-- [ ] Import checklist applied to all assets (spec 07 §3)
+- [x] Mage character model (2026-09-25): 1.304 tris, 1,80 m, integrado no oponente
+- [ ] Mage rig + animations (opcionais/fora da rodada 3)
+- [x] First-person arms model + 4 poses (2026-09-25): 2.368 tris no total; wrapper seleciona uma pose
+- [ ] First-person arms controller integration + cast animation 0,12 s + camada sem clipping
+- [x] Arena props generated + exact-size cover dressing (2026-09-25): 7 props, colisões preservadas A/B/C
+- [ ] Posicionar banner/brazier/spawn_arch nas arenas e revisar arte com o usuário
+- [x] Arcane Core crystal + pedestal: 204 tris, integrado; só o cristal flutua/gira
+- [x] Import checklist applied to all 10 assets (2026-09-25): escala/eixos/origem, budgets, toon por superfície, outline na galeria; raycasts físicos A/B/C e 73 testes passaram
 - [ ] Milestone review with user

@@ -33,21 +33,19 @@ Tudo dentro do Godot, sem ferramenta externa.
 
 ## 3. Fase 2 — Pipeline de assets (M7)
 
-Ferramentas (instalar só no M7):
-
-- **Blender 4.x** + **[mcp-blender](https://github.com/RFingAdam/mcp-blender)**: modelagem, limpeza, rig e export controlados pelo Claude.
-- **Tripo** (API paga): geração estilizada de personagem e props. Melhor opção para visual hand-painted.
-- **Meshy** (opcional): props genéricos com PBR bom.
-- **Poly Haven**: texturas base (CC0).
+Autorizado pelo usuário em **2026-09-25**: Blender **5.2.1 LTS**, somente headless, modelagem procedural com Python. Sem downloads, Tripo/Meshy, serviços pagos ou mcp-blender nesta rodada. Substitui o plano anterior de geração por API.
 
 Fluxo:
 
 ```
-Prompt/concept ─► Tripo (image/text-to-3D) ─► Blender via MCP:
-   decimar (personagem ≤ 15k tris, prop ≤ 3k), retopo leve, UV,
-   rig Mixamo-compatível, pintar sobre textura
-─► export .glb ─► Godot import (material trocado pelo toon.gdshader)
+tools/blender/<asset>.py + common.py
+  → modelagem em metros, bevels, cores planas, runas escavadas
+  → aplicar transforms → export GLB Y-up + relatório JSON de geometria
+  → assets/models/<asset>.glb
+  → scenes/assets/<asset>.tscn → Toon.material(cor) em todas as superfícies
 ```
+
+Orçamento: personagem ≤ 15.000 triângulos; cada prop ≤ 3.000. Rig é opcional na rodada 3; animações e conexão dos braços ao controlador ficam para uma etapa posterior.
 
 Regras de importação:
 
@@ -67,3 +65,41 @@ Regras de importação:
 - [ ] Os 4 elementos são distinguíveis em escala de cinza (teste de silhueta e forma das partículas).
 - [ ] Nenhum VFX passa de 2.000 partículas vivas por magia.
 - [ ] Asset gerado por IA passa o checklist de importação antes de entrar no repositório.
+
+## 6. Assets gerados
+
+Rodada 3, 2026-09-25. Fontes: `tools/blender/`; binários e relatórios: `assets/models/`; wrappers: `scenes/assets/`. Cores planas sem texturas externas. Contagens da malha base (LOD 0), verificadas também depois da importação Godot.
+
+| Asset | Triângulos | Descrição / dimensões X × Y × Z em metros |
+|---|---:|---|
+| `mage.glb` | 1.304 | Mago estático de 1,80 m; origem nos pés, frente −Z; chapéu pontudo largo, manto, luvas, botas e runas. Sem rig/animações. |
+| `fp_arms.glb` | 2.368 | Total das quatro poses com ambos os braços: `OpenPalm`, `Fist`, `PalmDown`, `Cast`; origem comum para câmera, frente −Z. Wrapper mostra apenas uma pose por vez. |
+| `cover_low.glb` | 319 | Pedra chanfrada com runas escavadas; 1,5 × 1,0 × 1,5. |
+| `cover_high.glb` | 326 | Pedra chanfrada com runas escavadas; 1,5 × 2,2 × 1,5. |
+| `cover_bar.glb` | 696 | Barra de pedra com três runas em cada face frontal/traseira; 4,5 × 1,4 × 1,2. |
+| `pillar.glb` | 326 | Pilar chanfrado com runas escavadas; 3 × 3 × 3. |
+| `banner.glb` | 288 | Tecido vinho com espessura, bordas douradas e sigilo; 2,7 m de altura. |
+| `brazier.glb` | 280 | Base de pedra, cuba dourada e chama facetada estática; 1,62 m de altura. |
+| `spawn_arch.glb` | 646 | Portal de pedra, pilares com runas escavadas, lintel e sigilo; 8,5 × 5 × 1,159. |
+| `arcane_core.glb` | 204 | Cristal facetado suspenso sobre pedestal rúnico; 1,88 m de altura. Só o cristal gira/flutua em runtime. |
+
+Integração: `Player._add_nameplate()` usa o mago apenas no jogador remoto; `ArcaneCore.create()` instancia cristal/pedestal; `ArenaBuilder` troca somente visuais de coberturas com tamanho exato. As caixas CSG mantêm `use_collision = true` e `visible = true`, mas usam `layers = 0`; o wrapper visual é um irmão com a mesma rotação e origem no chão. Nichos e peças de medidas especiais continuam no greybox. Nenhum GLB contém colisão.
+
+`asset_visual.gd` substitui cada superfície importada por `Toon.material(color)`, preservando a paleta e compartilhando materiais por cor. Outline usa o pós-processo existente das câmeras. Os braços estão disponíveis como asset/wrapper com seleção `pose`; não foram conectados ao jogador nem animados, conforme o escopo de integração restrito da rodada. Estandarte, braseiro e portal estão prontos para posicionamento, ainda fora das arenas.
+
+Reprodução na raiz do projeto:
+
+```powershell
+$env:BLENDER_USER_CONFIG = 'D:/DynMagic/.blender_tmp/config'
+$env:BLENDER_USER_SCRIPTS = 'D:/DynMagic/.blender_tmp/scripts'
+& 'C:/Program Files/Blender Foundation/Blender 5.2/blender.exe' -b --factory-startup --python-exit-code 1 -P tools/blender/mage.py -- --preview
+# Troque mage pelo nome de qualquer asset. --preview salva em build/assets/ e é opcional.
+$g = 'C:/Users/vinic/Downloads/Godot_v4.7.2-stable_win64.exe/Godot_v4.7.2-stable_win64_console.exe'
+& $g --headless --path D:/DynMagic --import
+& $g --headless --path D:/DynMagic res://tools/verify_assets.tscn
+& $g --path D:/DynMagic res://tools/assets_gallery.tscn -- --capture D:/DynMagic/build/assets/godot-gallery.png
+```
+
+Validação: `verify_assets` compara triângulos/dimensões importados com os relatórios, toon de todas as superfícies, origem no solo, seleção exclusiva das poses, ausência de colisões importadas, modelo remoto e pedestal estacionário. Raycasts físicos verificam o topo de cada cobertura e bloqueio entre spawns nas três arenas. Galeria inspecionada com toon e outline reais. Todos os geradores foram executados novamente com relatórios geométricos idênticos; alguns GLBs diferiram binariamente entre execuções, sem alteração das contagens/dimensões verificadas.
+
+Pendentes: revisão artística do usuário, rig/animações, braços no controlador/camada sem clipping e posicionamento dos props decorativos.
