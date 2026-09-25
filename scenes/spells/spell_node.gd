@@ -8,6 +8,8 @@ var caster: Node3D
 var direction: Vector3 = Vector3.FORWARD
 ## Point under the crosshair (for area spells and previews).
 var target_point: Vector3 = Vector3.ZERO
+## Host only: seconds to rewind targets for instant hits from remote casters (lag compensation).
+var rewind: float = 0.0
 
 
 func setup(p_spell: ResolvedSpell, p_caster: Node3D, origin: Vector3, p_direction: Vector3, p_target: Vector3) -> void:

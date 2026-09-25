@@ -25,6 +25,10 @@ const CHANNEL_INPUT: int = 1
 const CHANNEL_SNAPSHOT: int = 2
 
 var player_name: String = "Mago"
+## Network simulator for unreliable streams (spec 04 §9): added one-way delay, jitter and loss.
+var sim_latency_ms: float = 0.0
+var sim_jitter_ms: float = 0.0
+var sim_loss: float = 0.0
 var lobby_name: String = ""
 var port: int = DEFAULT_PORT
 ## peer id -> player name, host included (id 1). Only complete after the handshake.
@@ -178,6 +182,26 @@ func _on_server_disconnected() -> void:
 	disconnected.emit()
 
 
+## Sends through the simulator: may drop, or delay by latency ± jitter. Used for inputs and snapshots.
+func simulate_send(send: Callable) -> void:
+	if sim_loss > 0.0 and randf() < sim_loss:
+		return
+	var delay: float = (sim_latency_ms + randf_range(-sim_jitter_ms, sim_jitter_ms)) / 1000.0
+	if delay <= 0.0:
+		send.call()
+	else:
+		get_tree().create_timer(delay, true, true).timeout.connect(send)
+
+
+## Round-trip time to a peer in ms as ENet measures it (host side), or to the host (client side).
+func rtt_ms(peer_id: int = 1) -> float:
+	var enet: ENetMultiplayerPeer = multiplayer.multiplayer_peer as ENetMultiplayerPeer
+	if enet == null:
+		return 0.0
+	var packet_peer: ENetPacketPeer = enet.get_peer(peer_id)
+	return packet_peer.get_statistic(ENetPacketPeer.PEER_ROUND_TRIP_TIME) if packet_peer != null else 0.0
+
+
 # --- LAN discovery (spec 04 §2) ---------------------------------------------
 
 func start_discovery() -> void:
@@ -267,6 +291,18 @@ func _parse_cli() -> void:
 			"--name":
 				if i + 1 < args.size():
 					player_name = args[i + 1]
+					i += 1
+			"--sim-latency":
+				if i + 1 < args.size():
+					sim_latency_ms = float(args[i + 1])
+					i += 1
+			"--sim-jitter":
+				if i + 1 < args.size():
+					sim_jitter_ms = float(args[i + 1])
+					i += 1
+			"--sim-loss":
+				if i + 1 < args.size():
+					sim_loss = float(args[i + 1])
 					i += 1
 			"--discover":
 				start_discovery()

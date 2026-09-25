@@ -50,11 +50,14 @@ func _cast_cone() -> void:
 	var half_angle: float = deg_to_rad(float(spell.param(&"angle_deg", 50.0)) * 0.5)
 	var origin: Vector3 = caster.global_position + Vector3.UP * 0.9 if caster != null else global_position
 	var forward: Vector3 = direction
-	for target: Node in overlap_damageables(origin, reach + CONE_REACH_MARGIN):
-		var to_target: Vector3 = (target as Node3D).global_position + Vector3.UP * 0.9 - origin
+	# With lag compensation the search widens by how far a target can move while rewound.
+	var slack: float = rewind * 12.0
+	for target: Node in overlap_damageables(origin, reach + CONE_REACH_MARGIN + slack):
+		var target_pos: Vector3 = _rewound_position(target as Node3D)
+		var to_target: Vector3 = target_pos + Vector3.UP * 0.9 - origin
 		if to_target.length() > reach + CONE_REACH_MARGIN or forward.angle_to(to_target) > half_angle:
 			continue
-		if _has_line_of_sight(origin, target as Node3D):
+		if _has_line_of_sight(origin, target as Node3D, target_pos):
 			hit(target)
 	# Visual: a flat fan pointing along the aim direction.
 	global_position = origin
@@ -105,8 +108,16 @@ func _place_wall() -> void:
 	queue_free()
 
 
-func _has_line_of_sight(origin: Vector3, target: Node3D) -> bool:
-	var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(origin, target.global_position + Vector3.UP * 0.9)
+## Host lag compensation: players are checked where the remote caster saw them.
+func _rewound_position(target: Node3D) -> Vector3:
+	if rewind <= 0.0:
+		return target.global_position
+	var sync: NetSync = target.get_node_or_null(^"NetSync") as NetSync
+	return sync.position_ago(rewind) if sync != null else target.global_position
+
+
+func _has_line_of_sight(origin: Vector3, target: Node3D, target_pos: Vector3) -> bool:
+	var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(origin, target_pos + Vector3.UP * 0.9)
 	var body: CollisionObject3D = caster as CollisionObject3D
 	if body != null:
 		query.exclude = [body.get_rid()]

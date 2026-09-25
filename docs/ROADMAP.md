@@ -78,9 +78,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (write th
 - [x] Client prediction + reconciliation (spec 04 §5): `NetSync` (history, ack, replay). Headless bot test: corrections 0.06-0.11 m
 - [x] Remote player interpolation (100 ms buffer)
 - [x] Cast request/validation/spawn flow (spec 04 §6): `NetMatch.request_cast` → host validates → `_spawn_spell` on all peers. `SpellCaster.cast_params` fixes origin/direction/target at the caster
-- [x] Deterministic projectile simulation on both sides; host-only hit detection (`SpellNode.has_authority()`). Remote rune circle not yet driven by snapshot composer bits
-- [ ] Lag compensation for Cone
-- [ ] Network simulator (latency/jitter/loss) + F3 overlay
+- [x] Deterministic projectile simulation on both sides; host-only hit detection (`SpellNode.has_authority()`). remote rune circle driven by composer bits from inputs/snapshots
+- [x] Lag compensation for Cone (host keeps 250 ms of positions per player; rewind = RTT/2 + interpolation delay + simulated latency)
+- [x] Network simulator (latency/jitter/loss) + F3 overlay (`--sim-latency/--sim-jitter/--sim-loss` on unreliable streams). Headless bot at 80 ms RTT + 2% loss: corrections 0.06-0.11 m only at direction changes; host repeats the last input when one is late
 - [ ] Two local instances play 5 min without visible desync
 - [ ] Milestone review with user
 

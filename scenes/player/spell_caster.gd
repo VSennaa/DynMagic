@@ -91,7 +91,7 @@ func _on_spell_cast(spell: ResolvedSpell) -> void:
 
 
 ## Instantiates the spell scene. Called directly offline, or on every peer by NetMatch.
-func spawn(spell: ResolvedSpell, origin: Vector3, direction: Vector3, target: Vector3) -> void:
+func spawn(spell: ResolvedSpell, origin: Vector3, direction: Vector3, target: Vector3, rewind: float = 0.0) -> void:
 	if spell.scene == null:
 		push_warning("SpellCaster: %s has no scene yet" % spell.key)
 		return
@@ -100,5 +100,6 @@ func spawn(spell: ResolvedSpell, origin: Vector3, direction: Vector3, target: Ve
 		push_error("SpellCaster: %s scene root must extend SpellNode" % spell.key)
 		return
 	node.setup(spell, player, origin, direction, target)
+	node.rewind = rewind
 	# Spells live at the scene root, never beside players (NetMatch owns the Players node).
 	get_tree().current_scene.add_child(node)

@@ -48,3 +48,14 @@ func _show(form: StringName, effect: StringName) -> void:
 		visible = true
 		scale = Vector3.ONE * 0.2
 		create_tween().tween_property(self, ^"scale", Vector3.ONE, APPEAR_TIME).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+
+## Remote players: draw from the composer bits carried by inputs/snapshots (NetCodec.pack_composer).
+func show_bits(bits: int) -> void:
+	var unpacked: Vector3i = NetCodec.unpack_composer(bits)
+	if unpacked.x == SpellComposer.State.IDLE:
+		visible = false
+		return
+	var forms: Array = FORM_INDEX.keys()
+	var effects: Array = EFFECT_INDEX.keys()
+	_show(forms[unpacked.y] if unpacked.y >= 0 else &"", effects[unpacked.z] if unpacked.z >= 0 else &"")

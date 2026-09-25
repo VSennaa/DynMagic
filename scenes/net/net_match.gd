@@ -15,6 +15,7 @@ var _hud: Hud
 var _bot: bool = false
 var _bot_clock: float = 0.0
 var _log_timer: float = 0.0
+var _overlay: Label
 
 @onready var _players_root: Node3D = $Players
 @onready var _arena: Node3D = $Arena
@@ -29,6 +30,12 @@ func _ready() -> void:
 	_bot = OS.get_cmdline_user_args().has("--bot")
 	_hud = Hud.new()
 	add_child(_hud)
+	_overlay = Label.new()
+	_overlay.position = Vector2(16, 16)
+	_overlay.add_theme_color_override(&"font_outline_color", Color.BLACK)
+	_overlay.add_theme_constant_override(&"outline_size", 6)
+	_overlay.visible = false
+	_hud.add_child(_overlay)
 	_sync_players()
 
 
@@ -85,7 +92,8 @@ func _send_snapshot() -> void:
 		var sync: NetSync = child.get_node_or_null(^"NetSync") as NetSync
 		if sync != null:
 			entries.append(sync.snapshot_entry())
-	_receive_snapshot.rpc(NetCodec.pack_snapshot({"tick": _tick, "players": entries}))
+	var data: PackedByteArray = NetCodec.pack_snapshot({"tick": _tick, "players": entries})
+	Net.simulate_send(func() -> void: _receive_snapshot.rpc(data))
 
 
 @rpc("authority", "call_remote", "unreliable_ordered", Net.CHANNEL_SNAPSHOT)
@@ -158,7 +166,11 @@ func _spawn_spell(caster_id: int, element: StringName, form: StringName, effect:
 	var spell: ResolvedSpell = SpellDB.resolve(element, form, effect)
 	if player == null or spell == null:
 		return
-	(player.get_node(^"SpellCaster") as SpellCaster).spawn(spell, origin, direction, target)
+	# Cone is instant: the host rewinds targets to what the remote caster saw (spec 04 §6).
+	var rewind: float = 0.0
+	if Net.is_host() and caster_id != multiplayer.get_unique_id() and spell.key == &"area_direct":
+		rewind = Net.rtt_ms(caster_id) / 2000.0 + NetSync.INTERP_DELAY + Net.sim_latency_ms / 1000.0
+	(player.get_node(^"SpellCaster") as SpellCaster).spawn(spell, origin, direction, target, rewind)
 
 
 @rpc("authority", "call_remote", "reliable", Net.CHANNEL_RELIABLE)
@@ -195,3 +207,25 @@ func _log_state() -> void:
 		var sync: NetSync = player.get_node_or_null(^"NetSync") as NetSync
 		parts.append("%s[%s] pos=%s hp=%d corr=%.2f" % [player.name, NetSync.Role.keys()[sync.role] if sync else "?", player.global_position.snapped(Vector3.ONE * 0.01), roundi(player.stats.hp), sync.last_correction if sync else 0.0])
 	print("[net] ", " | ".join(parts))
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed(&"net_overlay"):
+		_overlay.visible = not _overlay.visible
+
+
+func _process(_delta: float) -> void:
+	if not _overlay.visible:
+		return
+	var me: Player = _player(multiplayer.get_unique_id())
+	var sync: NetSync = me.get_node_or_null(^"NetSync") as NetSync if me != null else null
+	var ping: float = 0.0
+	if Net.is_host():
+		for id: int in Net.players:
+			if id != 1:
+				ping = Net.rtt_ms(id)
+	else:
+		ping = Net.rtt_ms(1)
+	_overlay.text = "%s  ping %d ms  tick %d\nsim +%d±%d ms  perda %d%%\ncorreção %.2f m  jogadores %d" % [
+		"HOST" if Net.is_host() else "CLIENTE", roundi(ping), _tick,
+		roundi(Net.sim_latency_ms), roundi(Net.sim_jitter_ms), roundi(Net.sim_loss * 100.0),
+		sync.last_correction if sync != null else 0.0, Net.players.size()]

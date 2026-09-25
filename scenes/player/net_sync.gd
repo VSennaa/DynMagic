@@ -12,6 +12,7 @@ const RECONCILE_EPSILON: float = 0.05
 const INTERP_DELAY: float = 0.1
 ## Host keeps at most this many buffered inputs; older ones are dropped to cap latency.
 const MAX_INPUT_BACKLOG: int = 6
+const LAG_HISTORY: float = 0.25
 
 enum Role { OFFLINE, LOCAL_CLIENT, HOST_REMOTE, CLIENT_REMOTE, HOST_LOCAL }
 
@@ -28,9 +29,12 @@ var _seq: int = 0
 var _history: Array[Dictionary] = []
 ## Host: inputs received from the client, ordered by seq.
 var _pending_inputs: Array[Dictionary] = []
+var _last_frame: Dictionary = {}
 ## Client remote: [{time, pos, yaw, pitch}] snapshots for interpolation.
 var _buffer: Array[Dictionary] = []
 var _clock: float = 0.0
+## Host: [{time, pos}] for the last LAG_HISTORY seconds (Cone lag compensation, spec 04 §6).
+var _pos_history: Array[Dictionary] = []
 
 
 func configure(p_player: Player, p_peer_id: int) -> void:
@@ -52,6 +56,19 @@ func _physics_process(delta: float) -> void:
 	_clock += delta
 	if role == Role.HOST_REMOTE:
 		_host_step(delta)
+	if role == Role.HOST_REMOTE or role == Role.HOST_LOCAL:
+		_pos_history.append({"time": _clock, "pos": player.global_position})
+		while not _pos_history.is_empty() and _clock - float(_pos_history[0]["time"]) > LAG_HISTORY:
+			_pos_history.pop_front()
+
+
+## Host: where this player was seconds ago (clamped to the kept history).
+func position_ago(seconds: float) -> Vector3:
+	var when: float = _clock - seconds
+	for i: int in range(_pos_history.size() - 1, -1, -1):
+		if float(_pos_history[i]["time"]) <= when:
+			return _pos_history[i]["pos"]
+	return _pos_history[0]["pos"] if not _pos_history.is_empty() else player.global_position
 
 
 func _process(_delta: float) -> void:
@@ -72,7 +89,8 @@ func _on_input_sampled(frame: Dictionary) -> void:
 	var recent: Array[Dictionary] = []
 	for i: int in range(maxi(0, _history.size() - INPUT_REDUNDANCY), _history.size()):
 		recent.append(_history[i]["frame"])
-	receive_inputs.rpc_id(1, NetCodec.pack_inputs(recent))
+	var data: PackedByteArray = NetCodec.pack_inputs(recent)
+	Net.simulate_send(func() -> void: receive_inputs.rpc_id(1, data))
 
 
 ## Host snapshot for our own player: drop acknowledged inputs, replay the rest if we drifted.
@@ -116,13 +134,18 @@ func receive_inputs(data: PackedByteArray) -> void:
 
 func _host_step(delta: float) -> void:
 	if _pending_inputs.is_empty():
-		# No input this tick: keep physics (gravity, knockback) running with a neutral frame.
-		player.simulate(delta, Vector2.ZERO, false, false, false)
+		# Late or lost input: repeat the last one so the body keeps its course (the client
+		# predicted it that way too). Without any input yet, idle.
+		if _last_frame.is_empty():
+			player.simulate(delta, Vector2.ZERO, false, false, false)
+		else:
+			player.apply_input(delta, _last_frame)
 		return
 	var frame: Dictionary = _pending_inputs.pop_front()
 	player.apply_input(delta, frame)
+	_last_frame = frame
 	last_processed_seq = int(frame["seq"])
-	remote_composer_bits = int(frame["composer"])
+	_set_remote_composer(int(frame["composer"]))
 
 
 func _has_pending(seq: int) -> bool:
@@ -138,7 +161,7 @@ func push_remote_state(entry: Dictionary) -> void:
 	_buffer.append({"time": _clock, "pos": entry["pos"], "yaw": entry["yaw"], "pitch": entry["pitch"]})
 	while _buffer.size() > 20:
 		_buffer.pop_front()
-	remote_composer_bits = int(entry["composer"])
+	_set_remote_composer(int(entry["composer"]))
 
 
 func _interpolate() -> void:
@@ -162,6 +185,15 @@ func _interpolate() -> void:
 
 ## Composer bits of a remote player (host from inputs, client from snapshots): drives its rune circle.
 var remote_composer_bits: int = 0
+
+
+func _set_remote_composer(bits: int) -> void:
+	if bits == remote_composer_bits:
+		return
+	remote_composer_bits = bits
+	var rune: RuneCircle = player.get_node_or_null(^"Head/Camera3D/RuneCircle") as RuneCircle
+	if rune != null:
+		rune.show_bits(bits)
 
 
 func snapshot_entry() -> Dictionary:
