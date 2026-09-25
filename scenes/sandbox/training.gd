@@ -19,6 +19,31 @@ func _ready() -> void:
 	var hud: Hud = Hud.new()
 	add_child(hud)
 	hud.bind(player)
+	add_child(PauseMenu.new())
+	_spawn_dummies()
+
+
+## Dummy layout on Arena A, facing the south spawn: close, mid-range, strafing, behind
+## cover, on the west balcony and far across the arena.
+const DUMMY_SCENE: PackedScene = preload("res://scenes/sandbox/training_dummy.tscn")
+const DUMMIES: Array[Dictionary] = [
+	{"pos": Vector3(0, 0, 14), "patrol": 0.0},
+	{"pos": Vector3(-5, 0, 9), "patrol": 0.0},
+	{"pos": Vector3(4, 0, 6), "patrol": 3.0},
+	{"pos": Vector3(0, 0, -4), "patrol": 0.0},
+	{"pos": Vector3(-12.5, 1.5, 2), "patrol": 0.0},
+	{"pos": Vector3(6, 0, -12), "patrol": 2.0},
+]
+
+
+func _spawn_dummies() -> void:
+	var root: Node3D = $Dummies as Node3D
+	for entry: Dictionary in DUMMIES:
+		var dummy: TrainingDummy = DUMMY_SCENE.instantiate() as TrainingDummy
+		dummy.patrol_distance = float(entry["patrol"])
+		dummy.position = entry["pos"]
+		dummy.rotation.y = PI  # the model faces -Z; turn it toward the south spawn
+		root.add_child(dummy)
 
 
 func _unhandled_input(event: InputEvent) -> void:

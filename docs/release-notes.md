@@ -1,4 +1,14 @@
-# DynMagic v0.1.0 — primeira build testável (Windows x64)
+# DynMagic v0.1.1 — correções da primeira build (Windows x64)
+
+## Novidades na 0.1.1
+
+- **Menu do Esc** funcionando no treino e na partida: Voltar ao jogo, Configurações (abre por cima do jogo) e Sair/Desistir com confirmação.
+- **Círculo de composição na mira**: três setores seguindo as teclas (Q em cima, E à esquerda, R à direita). Primeira tecla escolhe a forma — **P** Projétil, **S** Pessoal, **A** Área; a segunda escolhe o efeito — **D** Direto, **X** Explosivo, **P** Persistente. A cor segue o elemento, setores em recarga ficam apagados e, na mira, a combinação aparece no centro.
+- **Modo treino** com 6 bonecos de treino (modelo novo): perto, meia distância, atrás de cobertura, na varanda, longe e dois que se movem de lado. Balançam ao receber dano e mostram DPS só quando atingidos.
+- Removidos os placeholders do treino (cilindro e personagem).
+
+---
+
 
 Arena 1v1 de magia dinâmica em primeira pessoa, multiplayer por LAN.
 

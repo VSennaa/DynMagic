@@ -1,9 +1,14 @@
 class_name TrainingDummy
-extends StaticBody3D
-## Target with infinite HP. Shows floating damage numbers and a rolling DPS counter.
+extends AnimatableBody3D
+## Target with infinite HP. Shows floating damage numbers and a rolling DPS counter,
+## wobbles when hit and can patrol side to side (strafing target).
 
 const DPS_WINDOW: float = 5.0
 const NUMBER_LIFETIME: float = 0.9
+
+## Side-to-side patrol distance in metres (0 = stands still) and speed in m/s.
+@export var patrol_distance: float = 0.0
+@export var patrol_speed: float = 3.0
 
 var total_damage: float = 0.0
 var last_hit_spell: StringName = &""
@@ -12,12 +17,25 @@ var statuses: Dictionary[StringName, float] = {}
 ## [time, amount] pairs inside the DPS window.
 var _recent: Array[Vector2] = []
 var _clock: float = 0.0
+var _origin: Vector3
+var _wobble: float = 0.0
 
 @onready var _dps_label: Label3D = $DpsLabel
+@onready var _visual: Node3D = $Visual
 
 
 func _ready() -> void:
 	add_to_group(&"damageable")
+	_origin = position
+
+
+func _physics_process(delta: float) -> void:
+	if patrol_distance > 0.0:
+		var side: Vector3 = global_basis.x
+		position = _origin + side * sin(_clock * patrol_speed / maxf(patrol_distance, 0.01)) * patrol_distance
+	# Hit wobble: a damped sway of the visual only (collision stays upright).
+	_wobble = move_toward(_wobble, 0.0, delta * 2.5)
+	_visual.rotation.z = sin(_clock * 22.0) * 0.18 * _wobble
 
 
 func _process(delta: float) -> void:
@@ -28,7 +46,9 @@ func _process(delta: float) -> void:
 		statuses[id] -= delta
 		if statuses[id] <= 0.0:
 			statuses.erase(id)
-	_dps_label.text = "DPS %.1f\nTotal %.0f%s" % [dps(), total_damage, _status_text()]
+	# Only show numbers while the dummy is being worked on (keeps the arena clean).
+	_dps_label.visible = not _recent.is_empty() or not statuses.is_empty()
+	_dps_label.text = "DPS %.1f  ·  %.0f%s" % [dps(), total_damage, _status_text()]
 
 
 func receive_hit(amount: float, spell: ResolvedSpell, _source: Node) -> void:
@@ -38,7 +58,9 @@ func receive_hit(amount: float, spell: ResolvedSpell, _source: Node) -> void:
 		last_hit_spell = spell.key
 		if spell.status_id != &"" and bool(spell.param(&"applies_status", false)):
 			statuses[spell.status_id] = spell.status_duration
-	_spawn_number(amount, spell.color if spell != null else Color.WHITE)
+	_wobble = 1.0
+	if Settings.show_damage_numbers:
+		_spawn_number(amount, spell.color if spell != null else Color.WHITE)
 
 
 func receive_status(spell: ResolvedSpell, _source: Node = null) -> void:

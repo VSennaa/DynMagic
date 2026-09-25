@@ -1,9 +1,8 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://scenes/sandbox/training.gd" id="1_training"]
 [ext_resource type="PackedScene" path="res://scenes/arena/arena_a.tscn" id="2_arena"]
 [ext_resource type="PackedScene" path="res://scenes/player/player.tscn" id="3_player"]
-[ext_resource type="PackedScene" path="res://scenes/sandbox/training_dummy.tscn" id="4_dummy"]
 
 [node name="Training" type="Node3D"]
 script = ExtResource("1_training")
@@ -12,9 +11,4 @@ script = ExtResource("1_training")
 
 [node name="Player" parent="." instance=ExtResource("3_player")]
 
-[node name="TrainingDummy" parent="." instance=ExtResource("4_dummy")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 4, 0, 12)
-
-[node name="Target" parent="." instance=ExtResource("3_player")]
-transform = Transform3D(-1, 0, 0, 0, 1, 0, 0, 0, -1, 0, 0, 16)
-is_local = false
+[node name="Dummies" type="Node3D" parent="."]

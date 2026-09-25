@@ -1,6 +1,6 @@
 class_name Hud
 extends CanvasLayer
-## Temporary M1 HUD: crosshair, composition trail, HP/shield/mana bars, 3×3 cooldown grid
+## HUD: crosshair composition wheel, HP/shield/mana bars, 3×3 cooldown grid
 ## and active statuses. Final layout arrives in M6 (docs/specs/06-ui-settings.md section 2).
 
 const SLOT_KEYS: Array[String] = ["Q", "E", "R"]
@@ -11,6 +11,7 @@ const ELEMENT_NAMES: Dictionary = {&"fire": "Fogo", &"frost": "Gelo", &"storm": 
 var player: Player
 
 var _trail: Label
+var _wheel: CrosshairWheel
 var _hint: Label
 var _hp_bar: ProgressBar
 var _shield_bar: ProgressBar
@@ -74,21 +75,11 @@ func _process(delta: float) -> void:
 	_status_label.text = "  ".join(parts)
 
 
+## The wheel shows the combo; text remains only as a short hint while aiming.
 func _update_trail(composer: SpellComposer) -> void:
-	var element: String = ELEMENT_NAMES.get(composer.element_id, String(composer.element_id))
-	var form: String = FORM_NAMES.get(composer.form, "_")
-	match composer.state:
-		SpellComposer.State.IDLE, SpellComposer.State.CASTING:
-			_trail.text = "%s ▸ _ ▸ _" % element
-			_hint.text = "Q Projétil · E Pessoal · R Área"
-		SpellComposer.State.SLOT_EFFECT:
-			_trail.text = "%s ▸ %s ▸ _" % [element, form]
-			_hint.text = "Q Direto · E Explosivo · R Persistente"
-		SpellComposer.State.AIMING:
-			var effect: String = EFFECT_NAMES.get(composer.pending.effect, "?") if composer.pending != null else "?"
-			_trail.text = "%s ▸ %s ▸ %s" % [element, form, effect]
-			_hint.text = "LMB confirmar · RMB cancelar"
-
+	_wheel.player = player
+	_trail.text = ""
+	_hint.text = "LMB confirmar · RMB cancelar" if composer.state == SpellComposer.State.AIMING else ""
 
 func _build() -> void:
 	var root: Control = Control.new()
@@ -103,14 +94,13 @@ func _build() -> void:
 	_caption_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	root.add_child(_caption_label)
 
-	var crosshair: Label = _label("+", 28)
-	crosshair.set_anchors_preset(Control.PRESET_CENTER)
-	crosshair.position -= Vector2(8, 20)
-	root.add_child(crosshair)
+	_wheel = CrosshairWheel.new()
+	root.add_child(_wheel)
+	_wheel.set_anchors_and_offsets_preset(Control.PRESET_CENTER, Control.PRESET_MODE_KEEP_SIZE)
 
 	var trail_box: VBoxContainer = VBoxContainer.new()
 	trail_box.set_anchors_preset(Control.PRESET_CENTER)
-	trail_box.position = Vector2(-200, 40)
+	trail_box.position = Vector2(-200, 80)
 	trail_box.custom_minimum_size = Vector2(400, 0)
 	root.add_child(trail_box)
 	_trail = _label("", 22)

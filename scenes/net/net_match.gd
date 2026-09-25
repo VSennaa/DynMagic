@@ -50,6 +50,9 @@ func _ready() -> void:
 	_match_label.add_theme_constant_override(&"outline_size", 6)
 	_hud.add_child(_match_label)
 	MatchState.changed.connect(_on_match_changed)
+	_pause = PauseMenu.new()
+	_pause.leave_text = "Desistir"
+	add_child(_pause)
 	_overlay = Label.new()
 	_overlay.position = Vector2(16, 16)
 	_overlay.add_theme_color_override(&"font_outline_color", Color.BLACK)
@@ -307,8 +310,6 @@ func _log_state() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed(&"net_overlay"):
 		_overlay.visible = not _overlay.visible
-	elif event.is_action_pressed(&"pause"):
-		_toggle_pause_menu()
 
 
 func _process(_delta: float) -> void:
@@ -513,31 +514,11 @@ func _set_overtime_flags(sudden: bool, surge: bool) -> void:
 # --- Pause and results (spec 06 §1) ------------------------------------------------------
 
 var _menu: Control
-
-
-## Esc: the match keeps running online; the menu only frees the mouse.
-func _toggle_pause_menu() -> void:
-	if _menu != null:
-		_menu.queue_free()
-		_menu = null
-		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
-		return
-	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	_menu = _panel("Pausa")
-	var column: VBoxContainer = _menu.get_node(^"Column") as VBoxContainer
-	column.add_child(UiKit.button("Voltar ao jogo", _toggle_pause_menu))
-	column.add_child(UiKit.button("Desistir", _confirm_forfeit))
-
-
-func _confirm_forfeit() -> void:
-	var column: VBoxContainer = _menu.get_node(^"Column") as VBoxContainer
-	column.add_child(UiKit.label("Desistir encerra a partida para você. Confirmar?", 18))
-	column.add_child(UiKit.button("Sim, desistir", func() -> void:
-		Net.close()
-		SceneRouter.go_to(SceneRouter.MAIN_MENU)))
+var _pause: PauseMenu
 
 
 func _show_results(winner_id: int, reason: StringName) -> void:
+	_pause.close()
 	if _menu != null:
 		_menu.queue_free()
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
@@ -596,7 +577,7 @@ func _update_draft_panel(view: Dictionary) -> void:
 		if _draft_panel != null:
 			_draft_panel.queue_free()
 			_draft_panel = null
-			if _menu == null:
+			if _menu == null and not PauseMenu.is_open:
 				Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 		return
 	if _draft_panel != null:

@@ -105,9 +105,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		rotate_y(-motion.relative.x * Settings.mouse_sensitivity)
 		_pitch = clampf(_pitch + y_sign * motion.relative.y * Settings.mouse_sensitivity, -PITCH_LIMIT, PITCH_LIMIT)
 		_head.rotation.x = _pitch
-	elif event.is_action_pressed(&"pause"):
-		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
-	elif event is InputEventMouseButton and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED:
+	elif event is InputEventMouseButton and Input.mouse_mode != Input.MOUSE_MODE_CAPTURED and not PauseMenu.is_open:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 		get_viewport().set_input_as_handled()
 

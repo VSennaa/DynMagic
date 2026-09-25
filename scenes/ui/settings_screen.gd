@@ -93,7 +93,11 @@ func _ready() -> void:
 			_status.text = "Salvo."),
 		UiKit.button("Voltar", func() -> void:
 			Settings.save_settings()
-			SceneRouter.go_to(SceneRouter.MAIN_MENU)),
+			# Opened from the pause menu: just close the overlay.
+			if has_meta(&"overlay"):
+				queue_free()
+			else:
+				SceneRouter.go_to(SceneRouter.MAIN_MENU)),
 	]))
 
 
