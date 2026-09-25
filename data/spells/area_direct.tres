@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="SpellBase" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/spell_base.gd" id="1_base"]
+
+[resource]
+script = ExtResource("1_base")
+form = &"area"
+effect = &"direct"
+display_name = "Leque"
+cast_mode = 0
+damage = 20.0
+mana_cost = 18.0
+cooldown = 1.2
+params = {"range": 6.0, "angle_deg": 50.0}

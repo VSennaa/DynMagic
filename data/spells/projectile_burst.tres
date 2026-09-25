@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="SpellBase" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/spell_base.gd" id="1_base"]
+
+[resource]
+script = ExtResource("1_base")
+form = &"projectile"
+effect = &"burst"
+display_name = "Orbe"
+cast_mode = 1
+damage = 28.0
+mana_cost = 30.0
+cooldown = 2.0
+params = {"speed": 22.0, "max_range": 30.0, "radius": 3.0, "min_damage": 10.0}

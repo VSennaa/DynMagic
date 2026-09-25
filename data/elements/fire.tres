@@ -1,0 +1,24 @@
+[gd_resource type="Resource" script_class="ElementDef" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/element_def.gd" id="1_element"]
+
+[resource]
+script = ExtResource("1_element")
+id = &"fire"
+display_name = "Fogo"
+color = Color(1, 0.352941, 0.121569, 1)
+damage_mult = 1.15
+status_id = &"burn"
+status_duration = 3.0
+status_params = {"dps": 4.0}
+variants = {
+"area_burst": {"applies_status": true},
+"area_direct": {"range": 7.0},
+"area_lingering": {"contact_burn": true},
+"projectile_burst": {"burning_ground_duration": 2.0},
+"projectile_direct": {"applies_status": true},
+"projectile_lingering": {"zone_dps": 8.0},
+"self_burst": {"trail_duration": 2.0},
+"self_direct": {"reflect_ratio": 0.2},
+"self_lingering": {"damage_bonus": 0.2}
+}

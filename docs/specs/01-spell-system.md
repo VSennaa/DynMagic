@@ -102,6 +102,8 @@ class_name SpellBase extends Resource
 @export var params: Dictionary      # speed, radius, duration...
 ```
 
+Implementação (2026-09-24): bases em `data/spells/<form>_<effect>.tres`, elementos em `data/elements/<id>.tres`. `ElementDef.variants` guarda, por chave de magia, parâmetros que sobrescrevem ou somam aos de `SpellBase.params`. `FormDef`/`EffectDef` ficam para o M2, junto com os glifos.
+
 `SpellDB.resolve(element, form, effect) -> ResolvedSpell` monta os números finais. Função pura, sem estado. Testada nas 36 combinações.
 
 `SpellBase` também tem `@export var cast_mode: CastMode` (`QUICK` ou `CONFIRM`), conforme a tabela 2.1.

@@ -1,0 +1,14 @@
+[gd_resource type="Resource" script_class="SpellBase" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://data/spell_base.gd" id="1_base"]
+
+[resource]
+script = ExtResource("1_base")
+form = &"projectile"
+effect = &"direct"
+display_name = "Seta"
+cast_mode = 0
+damage = 16.0
+mana_cost = 12.0
+cooldown = 0.35
+params = {"speed": 45.0, "lifetime": 2.5}

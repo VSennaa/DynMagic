@@ -37,8 +37,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (write th
 - [x] First-person movement: walk, sprint, crouch, jump, coyote time, step-up (spec 05 §2). Verified walk + jump in game via MCP input; step-up and crouch tunnel still need a manual playtest
 - [x] Mouse look with sensitivity and invert Y (values in `Settings` autoload, in-memory until M6)
 - [x] `Stats` node: HP, mana, regen pause, shield, status stacking, cooldowns (spec 05 §3)
-- [ ] Data classes: `ElementDef`, `FormDef`, `EffectDef`, `SpellBase` with `cast_mode` (spec 01 §4)
-- [ ] `SpellDB.resolve()` pure function + test for one element
+- [x] Data classes: `ElementDef`, `SpellBase` with `cast_mode`, `ResolvedSpell`; 9 bases in `data/spells/`, `fire.tres` (spec 01 §4). `FormDef`/`EffectDef` deferred to M2 rune circle (they only carry glyphs; ids live in `SpellDB.FORMS`/`EFFECTS`)
+- [x] `SpellDB.resolve()` pure function + test for one element
 - [ ] `SpellComposer` FSM: IDLE, SLOT_EFFECT, AIMING, CASTING, timeout, cancel, 150 ms buffer (spec 01 §1)
 - [ ] `test_spell_composer.gd`: quick vs confirm, timeout, cancel, recast
 - [ ] Spell: Bolt (projectile/direct)
