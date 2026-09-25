@@ -8,7 +8,7 @@ Toda magia = **Elemento + Forma + Efeito**.
 |---|---|---|---|
 | 1. Elemento | fixo no round (escolhido no draft) | — | — |
 | 2. Forma | Projétil | Pessoal | Área |
-| 3. Efeito | Direto | Explosivo | Persistente |
+| 3. Efeito | Direto | Explosivo | Contínuo |
 
 - Cada jogador tem **sempre 1 elemento por round**. O slot 1 é preenchido sozinho. O jogador aperta 2 teclas: forma e efeito.
 - Cada magia tem um **modo de conjuração** (seção 2.1):
@@ -34,7 +34,7 @@ IDLE ─tecla─► SLOT_EFFECT ─tecla─┬─ rápida ───────�
 
 Valores base, antes do multiplicador de elemento. Dano em HP (vida máxima = 100). Mana máxima = 100, regeneração de 12/s.
 
-| Forma \ Efeito | Direto | Explosivo | Persistente |
+| Forma \ Efeito | Direto | Explosivo | Contínuo |
 |---|---|---|---|
 | **Projétil** | **Seta.** Rápida (45 m/s), 16 dano, 12 mana, CD 0,35 s | **Orbe.** 22 m/s, explode no impacto ou a 30 m. Raio 3 m, 28 dano central com queda linear até 10. 30 mana, CD 2 s | **Semente.** Parábola (18 m/s). Cria zona de 3,5 m por 4 s no impacto. 22 mana, CD 5 s |
 | **Pessoal** | **Guarda.** Escudo de 30 por 3 s. 25 mana, CD 8 s | **Impulso** (mobilidade superior). Dash de 9 m na direção do input em 0,18 s, com invulnerabilidade nos primeiros 0,1 s. Deixa rastro. 20 mana, CD 4 s | **Aura.** Buff de 6 s (ver elemento). 30 mana, CD 14 s |
@@ -61,7 +61,7 @@ Cada elemento aplica um multiplicador de dano, um status e uma variação por ma
 
 ### 2.1 Modo de conjuração
 
-| Forma \ Efeito | Direto | Explosivo | Persistente |
+| Forma \ Efeito | Direto | Explosivo | Contínuo |
 |---|---|---|---|
 | **Projétil** | Rápida | Confirmada (prévia: ponto de impacto + raio) | Confirmada (prévia: arco da parábola + zona) |
 | **Pessoal** | Rápida | Rápida (direção = input de movimento; sem input = para frente) | Rápida |
@@ -113,7 +113,7 @@ Cooldown é por **combinação forma+efeito**. Todos os cooldowns zeram no iníc
 ## 5. Leitura visual
 
 - Ao apertar o slot de forma, um **círculo rúnico** aparece na frente das mãos. O oponente vê o mesmo círculo no modelo de terceira pessoa.
-- Cor do círculo = elemento. Glifo central = forma. Anel externo = efeito (liso = direto, dentado = explosivo, pontilhado = persistente).
+- Cor do círculo = elemento. Glifo central = forma. Anel externo = efeito (liso = direto, dentado = explosivo, pontilhado = contínuo).
 - Som de conjuração em 3 camadas: timbre do elemento, ataque da forma, cauda do efeito.
 
 ## 6. Critérios de aceite

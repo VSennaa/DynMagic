@@ -2,7 +2,7 @@ extends Control
 ## Grimório (spec 06 §1): pick element, form and effect to read any of the 36 spells.
 
 const FORM_NAMES: Array[String] = ["Projétil", "Pessoal", "Área"]
-const EFFECT_NAMES: Array[String] = ["Direto", "Explosivo", "Persistente"]
+const EFFECT_NAMES: Array[String] = ["Direto", "Explosivo", "Contínuo"]
 
 var _element: int = 0
 var _form: int = 0

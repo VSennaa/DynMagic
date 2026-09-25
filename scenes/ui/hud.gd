@@ -3,9 +3,6 @@ extends CanvasLayer
 ## HUD: crosshair composition wheel, HP/shield/mana bars, 3×3 cooldown grid
 ## and active statuses. Final layout arrives in M6 (docs/specs/06-ui-settings.md section 2).
 
-const SLOT_KEYS: Array[String] = ["Q", "E", "R"]
-const FORM_NAMES: Dictionary = {&"projectile": "Projétil", &"self": "Pessoal", &"area": "Área"}
-const EFFECT_NAMES: Dictionary = {&"direct": "Direto", &"burst": "Explosivo", &"lingering": "Persistente"}
 const ELEMENT_NAMES: Dictionary = {&"fire": "Fogo", &"frost": "Gelo", &"storm": "Raio", &"wind": "Vento"}
 
 var player: Player
@@ -21,7 +18,7 @@ var _mana_bar: ProgressBar
 var _hp_label: Label
 var _mana_label: Label
 var _status_label: Label
-var _cooldown_cells: Dictionary[StringName, Label] = {}
+var _cooldowns: CooldownGrid
 var _damage_arrow: Label
 var _fps_label: Label
 var _caption_label: Label
@@ -64,11 +61,7 @@ func _process(delta: float) -> void:
 	_mana_bar.value = stats.mana
 	_mana_label.text = "MN %d" % roundi(stats.mana)
 	_update_trail(player.composer)
-	for key: StringName in _cooldown_cells:
-		var left: float = stats.cooldown_left(key)
-		var cell: Label = _cooldown_cells[key]
-		cell.text = "%.1f" % left if left > 0.0 else "·"
-		cell.modulate = Color(1, 1, 1, 0.45) if left > 0.0 else Color.WHITE
+	_cooldowns.player = player
 	var parts: PackedStringArray = PackedStringArray()
 	for id: StringName in stats.active_statuses():
 		parts.append("%s %.1fs" % [id, stats.status_time_left(id)])
@@ -154,23 +147,12 @@ func _build() -> void:
 	_status_label = _label("", 16)
 	bars.add_child(_status_label)
 
-	var grid: GridContainer = GridContainer.new()
-	_player_widgets.append(grid)
-	grid.columns = 4
-	grid.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
-	grid.position = Vector2(-340, -150)
-	root.add_child(grid)
-	grid.add_child(_label("", 14))
-	for effect: StringName in [&"direct", &"burst", &"lingering"]:
-		grid.add_child(_label(EFFECT_NAMES[effect], 14))
-	for form: StringName in [&"projectile", &"self", &"area"]:
-		grid.add_child(_label(FORM_NAMES[form], 14))
-		for effect: StringName in [&"direct", &"burst", &"lingering"]:
-			var cell: Label = _label("·", 18)
-			cell.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			cell.custom_minimum_size = Vector2(70, 0)
-			grid.add_child(cell)
-			_cooldown_cells[SpellBase.make_key(form, effect)] = cell
+	_cooldowns = CooldownGrid.new()
+	_player_widgets.append(_cooldowns)
+	# Anchor before parenting: with no parent yet, position becomes the offset from the corner.
+	_cooldowns.set_anchors_preset(Control.PRESET_BOTTOM_RIGHT)
+	_cooldowns.position = -_cooldowns.custom_minimum_size - Vector2(32, 32)
+	root.add_child(_cooldowns)
 
 
 func _label(text: String, size: int) -> Label:

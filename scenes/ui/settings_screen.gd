@@ -76,6 +76,12 @@ func _ready() -> void:
 	name_edit.custom_minimum_size = Vector2(260, 36)
 	body.add_child(UiKit.row([UiKit.label("Nome", 18), name_edit]))
 	body.add_child(_check("Números de dano", Settings.show_damage_numbers, func(v: bool) -> void: Settings.show_damage_numbers = v))
+	var wheel: OptionButton = OptionButton.new()
+	for text: String in ["Significado (símbolos)", "Atalhos (teclas)"]:
+		wheel.add_item(text)
+	wheel.selected = Settings.wheel_labels
+	wheel.item_selected.connect(func(i: int) -> void: Settings.wheel_labels = i as Settings.WheelLabels)
+	body.add_child(UiKit.row([UiKit.label("Roda de magias", 18), wheel]))
 	body.add_child(_check("Mostrar FPS", Settings.show_fps, func(v: bool) -> void: Settings.show_fps = v))
 
 	body.add_child(UiKit.header("Acessibilidade"))

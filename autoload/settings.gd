@@ -72,6 +72,13 @@ var left_handed: bool = false:
 		left_handed = value
 		changed.emit(&"left_handed")
 
+## What the crosshair wheel shows on each sector: option symbols or the bound keys.
+enum WheelLabels { MEANING, KEYS }
+var wheel_labels: WheelLabels = WheelLabels.MEANING:
+	set(value):
+		wheel_labels = value
+		changed.emit(&"wheel_labels")
+
 var show_fps: bool = false:
 	set(value):
 		show_fps = value
@@ -118,6 +125,7 @@ func load_settings(path: String = PATH) -> void:
 	colorblind_mode = cfg.get_value("accessibility", "colorblind_mode", colorblind_mode)
 	sound_captions = cfg.get_value("accessibility", "sound_captions", sound_captions)
 	show_fps = cfg.get_value("game", "show_fps", show_fps)
+	wheel_labels = clampi(int(cfg.get_value("game", "wheel_labels", wheel_labels)), 0, WheelLabels.size() - 1) as WheelLabels
 	for bus: String in volumes.keys():
 		volumes[bus] = cfg.get_value("audio", bus, volumes[bus])
 	_load_bindings(cfg)
@@ -140,6 +148,7 @@ func save_settings(path: String = PATH) -> Error:
 	cfg.set_value("accessibility", "colorblind_mode", colorblind_mode)
 	cfg.set_value("accessibility", "sound_captions", sound_captions)
 	cfg.set_value("game", "show_fps", show_fps)
+	cfg.set_value("game", "wheel_labels", wheel_labels)
 	for bus: String in volumes:
 		cfg.set_value("audio", bus, volumes[bus])
 	for action: StringName in REMAPPABLE:

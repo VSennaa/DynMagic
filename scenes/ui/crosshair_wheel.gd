@@ -1,9 +1,8 @@
 class_name CrosshairWheel
 extends Control
 ## Composition wheel around the crosshair. Three sectors follow the key layout:
-## Q on top, E bottom-left, R bottom-right. Letters are the option initials:
-##   form step  : P Projétil · S Pessoal (self) · A Área
-##   effect step: D Direto · X Explosivo · P Persistente
+## Q on top, E bottom-left, R bottom-right. Settings.wheel_labels picks what each sector shows:
+## the SpellGlyph symbol of the option (meaning) or the bound key (shortcuts).
 ## Colour = element. Sectors dim while that spell is on cooldown. While aiming,
 ## the chosen letters sit in the centre and the ring pulses.
 
@@ -12,8 +11,8 @@ const BAND: float = 16.0
 const SECTOR_SPAN: float = deg_to_rad(96.0)
 ## Sector centre angles (screen space, 0 = right, clockwise): Q top, E bottom-left, R bottom-right.
 const ANGLES: Array[float] = [-PI / 2.0, PI * 5.0 / 6.0, PI / 6.0]
-const FORM_LETTERS: Array[String] = ["P", "S", "A"]
-const EFFECT_LETTERS: Array[String] = ["D", "X", "P"]
+const SLOT_ACTIONS: Array[StringName] = [&"slot_1", &"slot_2", &"slot_3"]
+const GLYPH_RADIUS: float = 10.5
 const FORMS: Array[StringName] = [&"projectile", &"self", &"area"]
 const EFFECTS: Array[StringName] = [&"direct", &"burst", &"lingering"]
 
@@ -47,23 +46,22 @@ func _draw() -> void:
 	match composer.state:
 		SpellComposer.State.IDLE, SpellComposer.State.CASTING:
 			# Resting: faint form options, so the screen stays clean.
-			_draw_sectors(center, color, FORM_LETTERS, 0.28, -1, &"")
+			_draw_sectors(center, color, FORMS, 0.28, &"")
 		SpellComposer.State.SLOT_EFFECT:
-			var form_index: int = FORMS.find(composer.form)
-			_draw_sectors(center, color, EFFECT_LETTERS, 0.95, -1, composer.form)
-			_draw_center_text(center, FORM_LETTERS[form_index] if form_index >= 0 else "", color)
+			_draw_sectors(center, color, EFFECTS, 0.95, composer.form)
+			_draw_center(center, [composer.form], color)
 		SpellComposer.State.AIMING:
 			var spell: ResolvedSpell = composer.pending
 			if spell != null:
 				var pulse: float = 0.5 + 0.5 * sin(_pulse * 8.0)
 				draw_arc(center, RADIUS, 0.0, TAU, 64, Color(color, 0.35 + 0.4 * pulse), 3.0, true)
-				_draw_center_text(center, "%s·%s" % [FORM_LETTERS[FORMS.find(spell.form)], EFFECT_LETTERS[EFFECTS.find(spell.effect)]], color)
+				_draw_center(center, [spell.form, spell.effect], color)
 
 
-func _draw_sectors(center: Vector2, color: Color, letters: Array[String], alpha: float, _highlight: int, form: StringName) -> void:
+func _draw_sectors(center: Vector2, color: Color, options: Array[StringName], alpha: float, form: StringName) -> void:
 	for i: int in 3:
 		var sector_alpha: float = alpha
-		# Effect step: dim options whose spell (form + effect) is on cooldown or unaffordable.
+		# Effect step: dim options whose spell (form + effect) is on cooldown.
 		if form != &"":
 			var key: StringName = SpellBase.make_key(form, EFFECTS[i])
 			if player.stats.is_on_cooldown(key):
@@ -72,12 +70,31 @@ func _draw_sectors(center: Vector2, color: Color, letters: Array[String], alpha:
 		var end: float = ANGLES[i] + SECTOR_SPAN * 0.5
 		draw_arc(center, RADIUS, start, end, 24, Color(color, sector_alpha * 0.55), BAND, true)
 		draw_arc(center, RADIUS + BAND * 0.5, start, end, 24, Color(color.lightened(0.3), sector_alpha), 1.5, true)
-		var letter_pos: Vector2 = center + Vector2.from_angle(ANGLES[i]) * RADIUS
-		_draw_letter(letter_pos, letters[i], Color(1, 1, 1, clampf(sector_alpha + 0.1, 0.0, 1.0)), 16)
+		var pos: Vector2 = center + Vector2.from_angle(ANGLES[i]) * RADIUS
+		_draw_option(pos, options[i], Color(1, 1, 1, clampf(sector_alpha + 0.1, 0.0, 1.0)), 1.0)
 
 
-func _draw_center_text(center: Vector2, text: String, color: Color) -> void:
-	_draw_letter(center + Vector2(0, -22), text, color.lightened(0.35), 15)
+## Chosen options above the crosshair: symbols, or the keys that picked them.
+func _draw_center(center: Vector2, chosen: Array[StringName], color: Color) -> void:
+	var tint: Color = color.lightened(0.35)
+	var step: float = GLYPH_RADIUS * 2.6
+	var origin: Vector2 = center + Vector2(-step * (chosen.size() - 1) * 0.5, -24.0)
+	for i: int in chosen.size():
+		_draw_option(origin + Vector2(step * i, 0.0), chosen[i], tint, 0.9)
+
+
+func _draw_option(pos: Vector2, id: StringName, color: Color, scale_factor: float) -> void:
+	if Settings.wheel_labels == Settings.WheelLabels.KEYS:
+		var index: int = maxi(FORMS.find(id), EFFECTS.find(id))
+		_draw_letter(pos, key_text(SLOT_ACTIONS[index]), color, roundi(16 * scale_factor))
+	else:
+		SpellGlyph.draw(self, id, pos, GLYPH_RADIUS * scale_factor, color, 2.0)
+
+
+## Short label of the first key bound to `action` ("Q", "Mouse 4"...).
+static func key_text(action: StringName) -> String:
+	var events: Array[InputEvent] = InputMap.action_get_events(action)
+	return events[0].as_text().replace(" (Physical)", "") if not events.is_empty() else "?"
 
 
 func _draw_letter(pos: Vector2, text: String, color: Color, font_size: int) -> void:

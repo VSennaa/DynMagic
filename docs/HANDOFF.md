@@ -4,7 +4,7 @@ Last update: 2026-09-25. Written so any AI agent (Claude, Codex, Gemini, etc.) c
 
 ## 0. Active agent
 
-Active agent: none (round 6 reviewed and committed by Claude, 2026-09-25: staffs in-game OK, grimoire UI art integrated in ui_kit/build_ui_theme, released v0.3.0)
+Active agent: none (Claude, 2026-09-25: v0.3.0 released; after it: SpellGlyph symbols, wheel Atalhos/Significado setting, CooldownGrid with symbols and clock sweep, "Persistente" renamed "Contínuo" in UI; 73/73 tests)
 
 Rodada 3 concluída em 2026-09-25, sem commit; arquivos, triângulos e pendências na seção 12. Round 2 (video settings, compose metrics, reconnect) was reviewed, tested (73/73 + bot match) and committed by Claude.
 
