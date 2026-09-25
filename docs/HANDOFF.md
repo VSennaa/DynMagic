@@ -4,9 +4,27 @@ Last update: 2026-09-25. Written so any AI agent (Claude, Codex, Gemini, etc.) c
 
 ## 0. Active agent
 
-Active agent: none — BUT Codex round 2 stopped on its usage limit (2026-09-25 ~00:00; Codex quota back at 02:47) with UNCOMMITTED, possibly incomplete work: video settings (`autoload/video_settings.gd`), compose-time metrics (`scenes/match/compose_metrics.gd`), reconnect slot restore (`scenes/net/reconnect_state.gd`, changes in net.gd, match_state.gd, match_fsm.gd, net_match.gd, net_sync.gd, arcane_core.gd, self_spell.gd) plus tests. Next agent: restart the editor (class cache), run `test_run` and a headless host/--bot client match, fix or finish what is broken, then commit in three commits (video settings, compose metrics, reconnect). Do not discard this work.
+Active agent: Codex (round 3: Blender assets, started 2026-09-25 ~05:30). Round 2 (video settings, compose metrics, reconnect) was reviewed, tested (73/73 + bot match) and committed by Claude.
 
-### Handoff brief for Codex (round 2)
+### Handoff brief for Codex (round 3 — Blender assets, user-approved 2026-09-25)
+The user asked for Codex to generate the art assets in Blender. Blender 5.2.1 LTS is installed at `C:\Program Files\Blender Foundation\Blender 5.2\blender.exe` (verified headless). No paid services (no Tripo/Meshy): model procedurally with Blender Python.
+- Run Blender only headless: `& "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" -b --factory-startup -P tools/blender/<script>.py -- <args>`. If the sandbox blocks writes to AppData, set `$env:BLENDER_USER_CONFIG` and `$env:BLENDER_USER_SCRIPTS` to a folder under `D:\DynMagic\.blender_tmp\` (add it to .gitignore).
+- One script per asset in `tools/blender/` (reproducible: running it rebuilds the .glb). Shared helpers in `tools/blender/common.py` (clear scene, bevel, flat colour material, export glTF binary Y-up, 1 unit = 1 m, apply transforms).
+- Output `.glb` files to `assets/models/`. Style (spec 07): cartoon proportions like Sea of Thieves, chunky bevelled shapes, flat base colours only (the Godot toon shader replaces materials), mage aesthetic between Bleach and Witch Hat Atelier (pointed hat, long cloak, rune details).
+- Assets, in order:
+  1. `mage.glb` — full-body mage for the opponent view: pointed wide-brim hat, cloak, gloved hands, boots; ≤ 15k tris; origin at the feet, facing -Z, 1.8 m tall. A simple armature (root, spine, head, arms) is welcome but optional.
+  2. `fp_arms.glb` — first-person gloved forearms + hands; 4 poses as separate objects or shape keys: open palm, fist, palm down, cast (spec 05 §4).
+  3. Arena props matching `ArenaBuilder` sizes (spec 03 §2): `cover_low.glb` 1.5×1.0×1.5, `cover_high.glb` 1.5×2.2×1.5, `cover_bar.glb` 4.5×1.4×1.2, `pillar.glb` 3×3×3 — carved stone with bevels and rune engravings; plus `banner.glb`, `brazier.glb`, `spawn_arch.glb`.
+  4. `arcane_core.glb` — floating faceted crystal on a small carved pedestal.
+- Godot integration (keep gameplay code untouched except where listed):
+  - `scenes/assets/*.tscn` wrappers that instance each .glb and apply `Toon.material(color)` to every MeshInstance3D (spec 07 §3: all imported materials replaced).
+  - `Player._add_nameplate()`: replace the placeholder capsule with the mage scene.
+  - `ArcaneCore.create()`: replace the prism mesh with the crystal scene.
+  - `ArenaBuilder`: optionally swap cover visuals for the prop meshes while keeping the CSG boxes for collision (hide their mesh, keep `use_collision`). Only if it stays simple and tests pass.
+  - Run `--headless --path D:\DynMagic --import` after adding .glb files and fix any import errors.
+- Record triangle counts and a short description of each asset in `docs/specs/07-art-pipeline.md` (new section "Assets gerados"). Update ROADMAP M7 checkboxes.
+- You cannot commit (read-only .git in your sandbox). Leave changes uncommitted and list them here; Claude reviews and commits. Set `Active agent: none` when you stop.
+### Handoff brief for Codex (round 2, done)
 
 **Conclu?do em 2026-09-25; altera??es sem commit para revis?o do Claude. Evid?ncias e arquivos na se??o 11.**
 - Codex cannot commit (read-only .git in its sandbox): leave changes uncommitted and list them in this file; Claude commits after review.
@@ -25,7 +43,7 @@ Active agent: none — BUT Codex round 2 stopped on its usage limit (2026-09-25 
   4. Música: pasta `audio/` sem assets; pergunta sobre download CC0 enviada, sem resposta até este registro. Manter bloqueada até autorização.
 - Tools: Godot console binary at `C:\Users\vinic\Downloads\Godot_v4.7.2-stable_win64.exe\Godot_v4.7.2-stable_win64_console.exe`. Without the Godot AI MCP, check scripts with `--headless --path D:\DynMagic --import` and run tests by opening the editor only if needed; multiplayer smoke tests are headless (see §5 notes).
 - Do not touch: `addons/godot_ai/` (vendored plugin), `project.godot` autoload/plugin sections, `.claude/`.
-- Do not download export templates or install paid services. Codex must leave changes uncommitted. Update this file and set `Active agent: none — BUT Codex round 2 stopped on its usage limit (2026-09-25 ~00:00; Codex quota back at 02:47) with UNCOMMITTED, possibly incomplete work: video settings (`autoload/video_settings.gd`), compose-time metrics (`scenes/match/compose_metrics.gd`), reconnect slot restore (`scenes/net/reconnect_state.gd`, changes in net.gd, match_state.gd, match_fsm.gd, net_match.gd, net_sync.gd, arcane_core.gd, self_spell.gd) plus tests. Next agent: restart the editor (class cache), run `test_run` and a headless host/--bot client match, fix or finish what is broken, then commit in three commits (video settings, compose metrics, reconnect). Do not discard this work.` before stopping.
+- Do not download export templates or install paid services. Codex must leave changes uncommitted. Update this file and set `Active agent: Codex (round 3: Blender assets, started 2026-09-25 ~05:30). Round 2 (video settings, compose metrics, reconnect) was reviewed, tested (73/73 + bot match) and committed by Claude.
 
 ## 1. What this project is
 

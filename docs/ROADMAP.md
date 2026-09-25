@@ -135,7 +135,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (write th
 
 ## M7 — Arte final
 
-- [!] Needs user approval: install Blender + mcp-blender, Tripo API key (paid)
+- [x] User approved (2026-09-25): Blender 5.2.1 installed via winget; assets generated procedurally with Blender Python by Codex (no Tripo/paid services, no mcp-blender)
 - [ ] Mage character model + rig + animations
 - [ ] First-person arms model + 4 poses + cast animation
 - [ ] Arena props and cover dressing
