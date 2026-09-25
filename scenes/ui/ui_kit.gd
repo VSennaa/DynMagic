@@ -1,40 +1,65 @@
 class_name UiKit
 extends RefCounted
-## Small builders for code-made menus in the DynMagic style (spec 06 §4):
-## ink blue-black panels, cream text, element-coloured accents.
+## Small builders for code-made menus. Visual style lives in the project theme
+## (res://ui/dynmagic_theme.tres, built by tools/build_ui_theme.gd): ink panels, gold trim,
+## cream text, Cinzel titles. These helpers only add layout, the backdrop and sounds.
 
 const INK: Color = Color("#11161F")
 const CREAM: Color = Color("#F2E8D5")
+const GOLD: Color = Color("#E8C170")
 const ACCENT: Color = Color("#C98BFF")
+const BACKDROP_SHADER: Shader = preload("res://ui/menu_backdrop.gdshader")
 
 
-static func screen(root: Control) -> VBoxContainer:
+## Full-screen menu: animated grimoire backdrop + a framed panel in the centre.
+## Returns the column to fill.
+static func screen(root: Control, min_width: float = 560.0) -> VBoxContainer:
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
-	var bg: ColorRect = ColorRect.new()
-	bg.color = INK
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	root.add_child(bg)
+	root.add_child(backdrop())
 	var center: CenterContainer = CenterContainer.new()
 	center.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.add_child(center)
+	var panel: PanelContainer = PanelContainer.new()
+	center.add_child(panel)
 	var column: VBoxContainer = VBoxContainer.new()
-	column.custom_minimum_size = Vector2(520, 0)
-	column.add_theme_constant_override(&"separation", 14)
-	center.add_child(column)
+	column.custom_minimum_size = Vector2(min_width, 0)
+	column.add_theme_constant_override(&"separation", 12)
+	panel.add_child(column)
 	return column
 
 
+static func backdrop() -> ColorRect:
+	var bg: ColorRect = ColorRect.new()
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var mat: ShaderMaterial = ShaderMaterial.new()
+	mat.shader = BACKDROP_SHADER
+	bg.material = mat
+	return bg
+
+
 static func title(text: String, size: int = 56) -> Label:
-	var heading: Label = label(text, size)
+	var heading: Label = Label.new()
+	heading.text = text
+	heading.theme_type_variation = &"TitleLabel"
+	heading.add_theme_font_size_override(&"font_size", size)
 	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	return heading
+
+
+## Section header in the title font, framed by small rune marks.
+static func header(text: String) -> Label:
+	var label_node: Label = Label.new()
+	label_node.text = "◆  %s  ◆" % text
+	label_node.theme_type_variation = &"HeaderLabel"
+	label_node.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	return label_node
 
 
 static func label(text: String, size: int = 20) -> Label:
 	var l: Label = Label.new()
 	l.text = text
 	l.add_theme_font_size_override(&"font_size", size)
-	l.add_theme_color_override(&"font_color", CREAM)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	return l
 
@@ -43,14 +68,6 @@ static func button(text: String, on_pressed: Callable) -> Button:
 	var b: Button = Button.new()
 	b.text = text
 	b.custom_minimum_size = Vector2(0, 48)
-	b.add_theme_font_size_override(&"font_size", 22)
-	var normal: StyleBoxFlat = _box(Color(CREAM, 0.08), Color(CREAM, 0.35))
-	var hover: StyleBoxFlat = _box(Color(ACCENT, 0.25), ACCENT)
-	b.add_theme_stylebox_override(&"normal", normal)
-	b.add_theme_stylebox_override(&"hover", hover)
-	b.add_theme_stylebox_override(&"focus", hover)
-	b.add_theme_stylebox_override(&"pressed", _box(Color(ACCENT, 0.45), ACCENT))
-	b.add_theme_color_override(&"font_color", CREAM)
 	b.pressed.connect(func() -> void: AudioBus.play_ui("click"))
 	b.mouse_entered.connect(func() -> void: AudioBus.play_ui("hover", -16.0))
 	b.pressed.connect(on_pressed)
@@ -67,14 +84,3 @@ static func row(children: Array[Control]) -> HBoxContainer:
 			child.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		h.add_child(child)
 	return h
-
-
-static func _box(fill: Color, border: Color) -> StyleBoxFlat:
-	var box: StyleBoxFlat = StyleBoxFlat.new()
-	box.bg_color = fill
-	box.border_color = border
-	box.set_border_width_all(2)
-	box.set_corner_radius_all(6)
-	box.content_margin_left = 16
-	box.content_margin_right = 16
-	return box

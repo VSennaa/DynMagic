@@ -26,7 +26,7 @@ func _ready() -> void:
 	body.add_theme_constant_override(&"separation", 10)
 	scroll.add_child(body)
 
-	body.add_child(UiKit.label("— Vídeo —", 22))
+	body.add_child(UiKit.header("Vídeo"))
 	body.add_child(_check("Tela cheia", Settings.fullscreen, func(v: bool) -> void: Settings.fullscreen = v))
 	var resolutions: PackedStringArray = []
 	for size: Vector2i in VideoSettings.RESOLUTIONS:
@@ -52,11 +52,11 @@ func _ready() -> void:
 	fps.item_selected.connect(func(i: int) -> void: Settings.max_fps = FPS_OPTIONS[i])
 	body.add_child(UiKit.row([UiKit.label("Limite de FPS", 18), fps]))
 
-	body.add_child(UiKit.label("— Áudio —", 22))
+	body.add_child(UiKit.header("Áudio"))
 	for bus: String in Settings.volumes:
 		body.add_child(_slider(bus, 0.0, 1.0, 0.05, Settings.volumes[bus], func(v: float) -> void: Settings.set_volume(bus, v)))
 
-	body.add_child(UiKit.label("— Controles —", 22))
+	body.add_child(UiKit.header("Controles"))
 	body.add_child(_slider("Sensibilidade", 0.0005, 0.008, 0.0001, Settings.mouse_sensitivity, func(v: float) -> void: Settings.mouse_sensitivity = v))
 	body.add_child(_check("Inverter Y", Settings.invert_y, func(v: bool) -> void: Settings.invert_y = v))
 	body.add_child(_check("Modo canhoto (cajado na mão esquerda)", Settings.left_handed, func(v: bool) -> void: Settings.left_handed = v))
@@ -69,7 +69,7 @@ func _ready() -> void:
 		Settings.restore_default_bindings()
 		_refresh_bindings()))
 
-	body.add_child(UiKit.label("— Jogo —", 22))
+	body.add_child(UiKit.header("Jogo"))
 	var name_edit: LineEdit = LineEdit.new()
 	name_edit.text = Settings.player_name
 	name_edit.text_changed.connect(func(t: String) -> void: Settings.player_name = t)
@@ -78,7 +78,7 @@ func _ready() -> void:
 	body.add_child(_check("Números de dano", Settings.show_damage_numbers, func(v: bool) -> void: Settings.show_damage_numbers = v))
 	body.add_child(_check("Mostrar FPS", Settings.show_fps, func(v: bool) -> void: Settings.show_fps = v))
 
-	body.add_child(UiKit.label("— Acessibilidade —", 22))
+	body.add_child(UiKit.header("Acessibilidade"))
 	var palette: OptionButton = OptionButton.new()
 	for text: String in ["Padrão", "Deuteranopia", "Protanopia", "Tritanopia"]:
 		palette.add_item(text)

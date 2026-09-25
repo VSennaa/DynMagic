@@ -576,11 +576,6 @@ func _panel(heading: String) -> Control:
 	panel.set_anchors_preset(Control.PRESET_CENTER)
 	panel.position = Vector2(-320, -240)
 	panel.custom_minimum_size = Vector2(640, 0)
-	var style: StyleBoxFlat = StyleBoxFlat.new()
-	style.bg_color = Color(UiKit.INK, 0.92)
-	style.set_corner_radius_all(8)
-	style.set_content_margin_all(24)
-	panel.add_theme_stylebox_override(&"panel", style)
 	var column: VBoxContainer = VBoxContainer.new()
 	column.name = "Column"
 	column.add_theme_constant_override(&"separation", 12)

@@ -23,7 +23,7 @@ func _ready() -> void:
 	_name_edit = _line(Settings.player_name, "Seu nome")
 	column.add_child(UiKit.row([UiKit.label("Nome", 20), _name_edit]))
 
-	column.add_child(UiKit.label("— Hospedar —", 22))
+	column.add_child(UiKit.header("Hospedar"))
 	_lobby_edit = _line("", "Nome da sala")
 	column.add_child(_lobby_edit)
 	_overtime = _options(OVERTIME_LABELS)
@@ -31,7 +31,7 @@ func _ready() -> void:
 	column.add_child(UiKit.row([UiKit.label("Overtime", 18), _overtime, UiKit.label("Arena", 18), _arena]))
 	column.add_child(UiKit.button("Criar sala", _host))
 
-	column.add_child(UiKit.label("— Entrar —", 22))
+	column.add_child(UiKit.header("Entrar"))
 	_list = ItemList.new()
 	_list.custom_minimum_size = Vector2(0, 140)
 	_list.item_activated.connect(func(_i: int) -> void: _join_selected())

@@ -12,6 +12,7 @@ config_version=5
 
 config/name="DynMagic"
 config/description="1v1 dynamic magic arena (first person, LAN)"
+config/version="0.3.0"
 run/main_scene="res://scenes/ui/main_menu.tscn"
 config/features=PackedStringArray("4.7", "Forward Plus")
 
@@ -40,6 +41,10 @@ window/stretch/aspect="expand"
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/godot_ai/plugin.cfg")
+
+[gui]
+
+theme/custom="res://ui/dynmagic_theme.tres"
 
 [input]
 
