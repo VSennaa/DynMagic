@@ -66,13 +66,18 @@ static func build() -> Theme:
 	# OptionButton / CheckBox reuse button colours.
 	for type: StringName in [&"OptionButton", &"MenuButton"]:
 		for state: String in ["normal", "hover", "pressed", "disabled", "focus"]:
-			theme.set_stylebox(StringName(state), type, _button_box(state, textured, 14))
+			theme.set_stylebox(StringName(state), type, _button_box(state, false, 14))
 		theme.set_color(&"font_color", type, CREAM)
 		theme.set_color(&"font_hover_color", type, GOLD)
 		theme.set_font_size(&"font_size", type, 18)
 	theme.set_color(&"font_color", &"CheckBox", CREAM)
 	theme.set_color(&"font_hover_color", &"CheckBox", GOLD)
 	theme.set_color(&"font_pressed_color", &"CheckBox", CREAM)
+	theme.set_icon(&"unchecked", &"CheckBox", _check_icon(false))
+	theme.set_icon(&"checked", &"CheckBox", _check_icon(true))
+	theme.set_icon(&"unchecked_disabled", &"CheckBox", _check_icon(false))
+	theme.set_icon(&"checked_disabled", &"CheckBox", _check_icon(true))
+	theme.set_constant(&"h_separation", &"CheckBox", 10)
 	theme.set_stylebox(&"normal", &"CheckBox", StyleBoxEmpty.new())
 	theme.set_stylebox(&"hover", &"CheckBox", StyleBoxEmpty.new())
 	theme.set_stylebox(&"pressed", &"CheckBox", StyleBoxEmpty.new())
@@ -124,11 +129,17 @@ static func _button_box(state: String, textured: bool, margin: int = 22) -> Styl
 		var file: String = "res://assets/ui/button_%s.png" % ("hover" if state == "focus" else state)
 		if ResourceLoader.exists(file):
 			var tex: StyleBoxTexture = StyleBoxTexture.new()
-			tex.texture = load(file) as Texture2D
-			for side: Side in [SIDE_LEFT, SIDE_RIGHT, SIDE_TOP, SIDE_BOTTOM]:
-				tex.set_texture_margin(side, 16)
-			tex.content_margin_left = margin
-			tex.content_margin_right = margin
+			# The art is 512x128 with 48/24 margins (spec 07 §6); drawn at half size so the
+			# gold frame stays thin on 48 px buttons.
+			var image: Image = (load(file) as Texture2D).get_image()
+			image.resize(256, 64, Image.INTERPOLATE_LANCZOS)
+			tex.texture = ImageTexture.create_from_image(image)
+			tex.set_texture_margin(SIDE_LEFT, 24)
+			tex.set_texture_margin(SIDE_RIGHT, 24)
+			tex.set_texture_margin(SIDE_TOP, 12)
+			tex.set_texture_margin(SIDE_BOTTOM, 12)
+			tex.content_margin_left = margin + 12
+			tex.content_margin_right = margin + 12
 			tex.content_margin_top = 8
 			tex.content_margin_bottom = 8
 			return tex
@@ -155,10 +166,32 @@ static func _button_box(state: String, textured: bool, margin: int = 22) -> Styl
 	return box
 
 
+## Gold-framed square; checked adds a violet rune dot. Drawn here so no extra art file is needed.
+static func _check_icon(checked: bool) -> ImageTexture:
+	const SIZE: int = 22
+	var image: Image = Image.create_empty(SIZE, SIZE, false, Image.FORMAT_RGBA8)
+	image.fill(Color(INK, 0.9))
+	for i: int in SIZE:
+		for w: int in 2:
+			image.set_pixel(i, w, GOLD)
+			image.set_pixel(i, SIZE - 1 - w, GOLD)
+			image.set_pixel(w, i, GOLD)
+			image.set_pixel(SIZE - 1 - w, i, GOLD)
+	if checked:
+		var c: Vector2 = Vector2(SIZE, SIZE) * 0.5
+		for y: int in SIZE:
+			for x: int in SIZE:
+				if Vector2(x + 0.5, y + 0.5).distance_to(c) <= 5.5:
+					image.set_pixel(x, y, VIOLET.lightened(0.2))
+	return ImageTexture.create_from_image(image)
+
+
 static func _panel_box(textured: bool) -> StyleBox:
-	if textured and ResourceLoader.exists("res://assets/ui/panel_parchment.png"):
+	# The light parchment art is kept for future light pages; menus keep dark ink panels so the
+	# cream text stays readable.
+	if false and textured and ResourceLoader.exists("res://assets/ui/parchment_panel.png"):
 		var tex: StyleBoxTexture = StyleBoxTexture.new()
-		tex.texture = load("res://assets/ui/panel_parchment.png") as Texture2D
+		tex.texture = load("res://assets/ui/parchment_panel.png") as Texture2D
 		for side: Side in [SIDE_LEFT, SIDE_RIGHT, SIDE_TOP, SIDE_BOTTOM]:
 			tex.set_texture_margin(side, 32)
 			tex.set_content_margin(side, 30)

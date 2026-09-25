@@ -12,8 +12,10 @@ func _ready() -> void:
 	grid.add_theme_constant_override("h_separation", 0)
 	grid.add_theme_constant_override("v_separation", 0)
 	add_child(grid)
-	var entries: Array[String] = ["mage", "fp_arms:OpenPalm", "fp_arms:Fist", "fp_arms:PalmDown", "fp_arms:Cast", "cover_low", "cover_high", "cover_bar", "pillar", "banner", "brazier", "spawn_arch", "arcane_core", "training_dummy"]
-	if OS.get_cmdline_user_args().has("--animations"):
+	var entries: Array[String] = ["mage", "fp_arms:OpenPalm", "fp_arms:Fist", "fp_arms:PalmDown", "fp_arms:Cast", "cover_low", "cover_high", "cover_bar", "pillar", "banner", "brazier", "spawn_arch", "arcane_core", "training_dummy", "staff_fire", "staff_frost", "staff_storm", "staff_wind", "fp_staff_arm"]
+	if OS.get_cmdline_user_args().has("--staffs"):
+		entries = ["staff_fire", "staff_frost", "staff_storm", "staff_wind", "fp_staff_arm"]
+	if OS.get_cmdline_user_args().has("--animations") or OS.get_cmdline_user_args().has("--remote-staff"):
 		entries = ["mage:idle", "mage:walk", "mage:cast", "mage:dash", "mage:death"]
 	for entry: String in entries:
 		var parts: PackedStringArray = entry.split(":")
@@ -35,7 +37,16 @@ func _ready() -> void:
 		var model: Node3D = (load("res://scenes/assets/%s.tscn" % asset) as PackedScene).instantiate() as Node3D
 		if parts.size() > 1 and asset == "fp_arms":
 			model.set("pose", parts[1])
-		view.add_child(model)
+		if OS.get_cmdline_user_args().has("--remote-staff"):
+			model.free()
+			var remote: Player = preload("res://scenes/player/player.tscn").instantiate() as Player
+			remote.is_local = false
+			view.add_child(remote)
+			remote.set_physics_process(false)
+			remote.get_node("MageAnimation").set_process(false)
+			model = remote.get_node("ThirdPersonModel") as Node3D
+		else:
+			view.add_child(model)
 		var bounds: AABB
 		var first: bool = true
 		for node: Node in model.find_children("*", "MeshInstance3D", true, false):
@@ -58,6 +69,7 @@ func _ready() -> void:
 		view.add_child(light)
 		var camera: Camera3D = Camera3D.new()
 		view.add_child(camera)
+		camera.current = true
 		camera.projection = Camera3D.PROJECTION_ORTHOGONAL
 		camera.size = maxf(bounds.size.y, maxf(bounds.size.x, bounds.size.z)) * 1.5
 		camera.position = bounds.get_center() + Vector3(2.4, 1.8, -4) * maxf(bounds.size.length(), 1.0)
@@ -76,6 +88,23 @@ func _first_person_preview() -> void:
 	add_child(player)
 	player.set_physics_process(false)
 	player.frozen = true
+	player.composer.validator = Callable()
+	player.composer.set_process(false)
+	var args: PackedStringArray = OS.get_cmdline_user_args()
+	Settings.left_handed = args.has("--left")
+	if args.has("--element"):
+		player.composer.element_id = StringName(args[args.find("--element") + 1])
+	if args.has("--pose"):
+		var pose: String = args[args.find("--pose") + 1]
+		if pose in ["compose", "aim", "cast"]:
+			player.composer.press_slot(0)
+		if pose in ["aim", "cast"]:
+			player.composer.press_slot(1)
+		if pose == "cast":
+			var arms: Node = player.get_node("Head/Camera3D/FirstPersonArms")
+			arms._on_cast(null)
+			arms._process(.06)
+			arms.set_process(false)
 	# Wall crosses the arms' normal depth range: the overlay must stay visible.
 	var wall: MeshInstance3D = MeshInstance3D.new()
 	var box: BoxMesh = BoxMesh.new()

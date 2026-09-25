@@ -117,3 +117,45 @@ Concluída, sem commit. Esta seção substitui as pendências de texturas, rig e
 - Galeria: `--animations` mostra cinco poses; `--first-person` coloca parede a 0,25 m; `--capture <png>` salva captura. Evidências locais ignoradas em `tools/blender/validation/`: `round5-gallery.png`, `round5-animations.png`, `round5-arms.png` e logs.
 
 Rebuild: comandos da seção 6, sem `--preview`; todos os geradores refazem o bake. Para escritas dentro do escopo desta rodada, configurar `BLENDER_USER_CONFIG`/`BLENDER_USER_SCRIPTS` sob `tools/blender/.runtime/`. Validação: import sem erros de scripts/assets, **ASSET_CHECKS: 0 failures**, **73 testes, 0 falhas**. Persistem avisos ambientais de certificados/cache/editor settings e objetos retidos ao sair. Capturas inspecionadas em Vulkan Forward+ na RX 580; revisão artística humana e benchmark continuam pendentes.
+
+## 8. Rodada 6 — cajados, mão única e arte de UI (2026-09-25)
+
+A decisão desta rodada substitui o viewmodel de dois braços: uma mão direita com cajado elemental, espelhada para a esquerda por `Settings.left_handed`. Os assets antigos `fp_arms` continuam disponíveis para compatibilidade, mas não são instanciados pelo jogador.
+
+| Asset | Triângulos | Descrição |
+|---|---:|---|
+| `staff_fire.glb` | 488 | Madeira carbonizada, cristal de brasa e cabeça em chama; #FF5A1F. |
+| `staff_frost.glb` | 478 | Madeira clara e coroa de cinco lascas de gelo; #6FD3FF. |
+| `staff_storm.glb` | 516 | Metal escuro, duas pontas e esfera violeta; #C98BFF. |
+| `staff_wind.glb` | 572 | Madeira clara torcida, penas, fitas e gema verde; #7CF2B0. |
+| `fp_staff_arm.glb` | 300 | Somente antebraço direito e luva com dedos fechados na empunhadura. |
+
+Todos os cajados têm 1,60 m, eixo +Y, origem no ponto de pega (base em Y = −0,65 m). Atlas UV Cycles EMIT de 512 × 512 em `assets/textures/`, com pinceladas procedurais do pipeline da rodada 5; GLBs, relatórios JSON e wrappers em suas pastas usuais. Geradores individuais `staff_<element>.py` chamam `staffs.py`; `fp_staff_arm.py` gera a mão.
+
+`first_person_arms.gd` anima o conjunto mão/cajado em runtime: idle com oscilação, compose elevado, aim inclinado para frente e cast com avanço/flash de 0,12 s. Lê `composer.element_id` e substitui o cajado quando muda. Conserva viewport transparente, mundo isolado, camada 20 e `Settings.viewmodel_fov`. `Settings.changed` aplica lateralidade ao vivo com escala X negativa; variante local do toon desativa culling para a inversão de winding, mantendo a transformação inversa transposta das normais pelo Godot. Os materiais compartilhados do mundo não são alterados. Morte oculta o conjunto; respawn restaura.
+
+Mago: 1.304 triângulos e agora oito ossos. `hand_R` acompanha `arm_R`; luva direita recebe os pesos desse osso. `mage_animation.gd` cria `BoneAttachment3D` em `hand_R`, corrige orientação de repouso e troca o cajado pelo elemento do composer. Walk reduz o balanço do braço armado; cast estende principalmente o direito. Nenhuma mudança em rede, física ou `player.gd` foi necessária.
+
+### Pack de UI
+
+Fonte reproduzível: `tools/blender/ui_art.py`; rasterização/bake offline Cycles dos materiais procedurais de papel, tinta, ouro e pedra. PNG RGBA, sem texto, em `assets/ui/`. Não requer fonte externa. O fundo é uma cena procedural de pátio arcano ao entardecer, com colunatas, torres, bandeiras, lanternas e cristal.
+
+Margens abaixo na ordem **esquerda / topo / direita / base**, em pixels da imagem original. Usar `StyleBoxTexture`/`NinePatchRect` para os painéis e botões; cantos e fundo são imagens inteiras, sem 9-slice.
+
+| Arquivo em `assets/ui/` | Dimensões | Margens 9-slice |
+|---|---|---|
+| `parchment_panel.png` | 512 × 512 | 32 / 32 / 32 / 32 |
+| `button_normal.png` | 512 × 128 | 48 / 24 / 48 / 24 |
+| `button_hover.png` | 512 × 128 | 48 / 24 / 48 / 24 |
+| `button_pressed.png` | 512 × 128 | 48 / 24 / 48 / 24 |
+| `button_disabled.png` | 512 × 128 | 48 / 24 / 48 / 24 |
+| `rune_corner_tl.png` | 128 × 128 | 0 / 0 / 0 / 0; sem slice |
+| `rune_corner_tr.png` | 128 × 128 | 0 / 0 / 0 / 0; sem slice |
+| `rune_corner_bl.png` | 128 × 128 | 0 / 0 / 0 / 0; sem slice |
+| `rune_corner_br.png` | 128 × 128 | 0 / 0 / 0 / 0; sem slice |
+| `title_banner.png` | 1024 × 256 | 128 / 64 / 128 / 64 |
+| `menu_backdrop.png` | 1920 × 1080 | 0 / 0 / 0 / 0; sem slice, manter proporção |
+
+Integração desses PNGs nas telas/tema pertence ao agente de UI. Os cantos decorativos do painel ficam dentro dos 32 px fixos. O título é uma faixa vazia para texto sobreposto pela UI.
+
+Validação: `--import` e `tools/verify_assets.tscn` cobrem dimensões, UV/texturas, triângulos, origem de pega, osso da mão, troca dos quatro elementos local/remota, poses, lateralidade ao vivo, FOV, morte/respawn, presença dos 11 PNGs e colisões A/B/C. Galeria: `--staffs`, `--remote-staff`, `--first-person [--left] [--element fire|frost|storm|wind] [--pose compose|aim|cast]`, sempre com `--capture <arquivo.png>`. Evidências locais em `tools/blender/validation/r6-*`.

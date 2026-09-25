@@ -1,0 +1,11 @@
+{
+  "asset": "staff_fire",
+  "triangles": 488,
+  "budget": 3000,
+  "size_xyz_m": [
+    0.37,
+    1.6,
+    0.14624
+  ],
+  "mesh_objects": 11
+}

@@ -7,6 +7,10 @@ var _last_position: Vector3
 var _dead: bool = false
 var _cast_time: float = 0.0
 var _last_state: int = 0
+var staff_socket: BoneAttachment3D
+var staff: Node3D
+var element: StringName = &""
+var grip_transform: Transform3D
 var current: StringName = &""
 
 
@@ -14,6 +18,17 @@ func setup(owner_player: Player, body: Node3D) -> void:
 	player = owner_player
 	animations = body.find_child("AnimationPlayer", true, false) as AnimationPlayer
 	_last_position = player.global_position
+	var skeleton: Skeleton3D = body.find_child("Skeleton3D", true, false) as Skeleton3D
+	if skeleton != null:
+		var hand: int = skeleton.find_bone("hand_R")
+		if hand >= 0:
+			staff_socket = BoneAttachment3D.new()
+			staff_socket.name = "StaffSocket"
+			staff_socket.bone_name = "hand_R"
+			skeleton.add_child(staff_socket)
+			var rest: Transform3D = skeleton.get_bone_global_rest(hand)
+			grip_transform = rest.affine_inverse() * Transform3D(Basis.IDENTITY, rest.origin)
+			_update_staff()
 	if animations == null:
 		push_error("Mage GLB has no AnimationPlayer")
 		return
@@ -43,6 +58,7 @@ func _on_cast(_spell: ResolvedSpell) -> void:
 func _process(delta: float) -> void:
 	if animations == null or delta <= 0.0:
 		return
+	_update_staff()
 	var displacement: Vector3 = player.global_position - _last_position
 	_last_position = player.global_position
 	if player.stats.is_dead or player.stats.hp <= 0.0:
@@ -85,3 +101,19 @@ func _play(clip: StringName, restart: bool = false) -> void:
 	if restart:
 		animations.stop()
 	animations.play(_clips[clip], 0.10)
+
+
+func _update_staff() -> void:
+	if staff_socket == null:
+		return
+	var selected: StringName = player.composer.element_id
+	if selected not in [&"fire", &"frost", &"storm", &"wind"]:
+		selected = &"fire"
+	if selected == element:
+		return
+	element = selected
+	if staff != null:
+		staff.free()
+	staff = (load("res://scenes/assets/staff_%s.tscn" % element) as PackedScene).instantiate() as Node3D
+	staff_socket.add_child(staff)
+	staff.transform = grip_transform

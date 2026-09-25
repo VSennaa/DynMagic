@@ -1,7 +1,7 @@
 extends Node
 ## Runtime import contract and collision regression check. Run tools/verify_assets.tscn.
 
-const ASSETS: Array[String] = ["mage", "fp_arms", "cover_low", "cover_high", "cover_bar", "pillar", "banner", "brazier", "spawn_arch", "arcane_core", "training_dummy"]
+const ASSETS: Array[String] = ["mage", "fp_arms", "cover_low", "cover_high", "cover_bar", "pillar", "banner", "brazier", "spawn_arch", "arcane_core", "training_dummy", "staff_fire", "staff_frost", "staff_storm", "staff_wind", "fp_staff_arm"]
 var _failures: int = 0
 
 
@@ -53,13 +53,25 @@ func _ready() -> void:
 					var pose_a: Quaternion = skeleton.get_bone_pose_rotation(skeleton.find_bone("leg_L"))
 					animation_player.seek(.75, true)
 					check(not pose_a.is_equal_approx(skeleton.get_bone_pose_rotation(skeleton.find_bone("leg_L"))), "walk deforms skeleton")
+					animation_player.play("cast")
+					animation_player.seek(.30, true)
+					var hand: int = skeleton.find_bone("hand_R")
+					check(hand >= 0, "dedicated right hand bone")
+					if hand >= 0:
+						var direction: Vector3 = skeleton.get_bone_global_pose(hand).basis * skeleton.get_bone_global_rest(hand).basis.inverse() * Vector3.UP
+						check(direction.normalized().dot(Vector3.FORWARD) > .8, "cast staff points forward")
 		var report: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/models/%s.json" % asset))
 		check(count == int(report["triangles"]), "%s exported triangle count: %d" % [asset, count])
 		var expected: Array = report["size_xyz_m"]
 		check(bounds.size.distance_to(Vector3(expected[0], expected[1], expected[2])) < .001, "%s dimensions" % asset)
 		check(model.find_children("*", "CollisionObject3D", true, false).is_empty(), "%s has no mesh collision" % asset)
-		if asset != "fp_arms":
+		if asset not in ["fp_arms", "fp_staff_arm"] and not asset.begins_with("staff_"):
 			check(absf(bounds.position.y) < .001, "%s sits on ground" % asset)
+		if asset.begins_with("staff_"):
+			check(count <= 3000 and absf(bounds.size.y - 1.6) < .01, "staff budget and height")
+			check(absf(bounds.position.y + .65) < .01, "staff origin at grip")
+		if asset == "fp_staff_arm":
+			check(model.find_children("*Left*", "MeshInstance3D", true, false).is_empty(), "single right hand")
 		if asset == "fp_arms":
 			for pose: String in ["OpenPalm", "Fist", "PalmDown", "Cast"]:
 				model.set("pose", pose)
@@ -107,6 +119,12 @@ func _ready() -> void:
 	check(player.has_node("ThirdPersonModel/Model"), "remote player uses mage wrapper")
 	var controller: Node = player.get_node("MageAnimation")
 	controller.set_process(false)
+	check(controller.staff_socket != null and controller.staff_socket.bone_name == "hand_R", "staff attached to right hand bone")
+	for selected: StringName in [&"fire", &"frost", &"storm", &"wind"]:
+		player.composer.element_id = selected
+		controller._process(.016)
+		check(controller.element == selected and controller.staff.name == "staff_" + selected, "remote elemental staff")
+	player.composer.element_id = &"fire"
 	player.velocity = Vector3(3, 0, 0)
 	controller._process(.016)
 	check(controller.current == &"walk", "moving remote walks")
@@ -152,17 +170,36 @@ func _ready() -> void:
 		local_player.composer.clear()
 		local_player.composer.press_slot(slot)
 		arms._process(0.0)
-		check(arms.arms.get("pose") == ["OpenPalm", "Fist", "PalmDown"][slot], "form selects arm pose")
+		check(arms.current_pose == &"compose", "form raises staff")
 	local_player.composer.clear()
 	local_player.composer.press_slot(0)
 	local_player.composer.press_slot(1)
 	arms._process(0.0)
-	check(local_player.composer.state == SpellComposer.State.AIMING and arms.arms.position.y > 0.02, "aim raises arms")
+	check(local_player.composer.state == SpellComposer.State.AIMING and arms.current_pose == &"aim", "aim raises arms")
 	local_player.composer.press_cast()
 	arms._process(0.0)
-	check(arms.arms.get("pose") == "Cast", "cast flash pose")
+	check(arms.current_pose == &"cast", "cast flash pose")
 	arms._process(.13)
-	check(arms.arms.get("pose") == "OpenPalm", "cast flash ends after 0.12s")
+	check(arms.current_pose == &"idle", "cast flash ends after 0.12s")
+	var original_hand: bool = Settings.left_handed
+	var original_fov: float = Settings.viewmodel_fov
+	Settings.left_handed = false
+	arms._process(0.0)
+	var right_position: Vector3 = arms.arms.position
+	Settings.left_handed = true
+	check(arms.arms.scale.x < 0 and arms.arms.position.x < 0, "left hand updates live on Settings.changed")
+	arms._process(0.0)
+	check(is_equal_approx(arms.arms.position.x, -right_position.x), "mirrored placement")
+	check(arms.mirrored_shader.code.contains("cull_disabled"), "mirrored winding is visible")
+	Settings.viewmodel_fov = 64.0
+	arms._process(0.0)
+	check(is_equal_approx(arms.camera.fov, 64.0), "viewmodel FOV")
+	Settings.left_handed = original_hand
+	Settings.viewmodel_fov = original_fov
+	for selected: StringName in [&"fire", &"frost", &"storm", &"wind"]:
+		local_player.composer.element_id = selected
+		arms._process(0.0)
+		check(arms.element == selected and arms.staff.name == "staff_" + selected, "local elemental staff")
 	local_player.stats.take_damage(1000)
 	arms._process(0.0)
 	check(not arms.overlay.visible, "dead player arms hidden")
@@ -170,5 +207,10 @@ func _ready() -> void:
 	arms._process(0.0)
 	check(arms.overlay.visible, "respawn restores arms")
 	local_player.free()
+	for filename: String in ["parchment_panel", "button_normal", "button_hover", "button_pressed", "button_disabled", "rune_corner_tl", "rune_corner_tr", "rune_corner_bl", "rune_corner_br", "title_banner", "menu_backdrop"]:
+		var texture: Texture2D = load("res://assets/ui/%s.png" % filename) as Texture2D
+		check(texture != null, "UI art " + filename)
+		if texture != null and filename == "menu_backdrop":
+			check(texture.get_size() == Vector2(1920, 1080), "backdrop full HD")
 	print("ASSET_CHECKS: %d failures" % _failures)
 	get_tree().quit(0 if _failures == 0 else 1)

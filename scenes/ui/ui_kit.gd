@@ -9,6 +9,9 @@ const CREAM: Color = Color("#F2E8D5")
 const GOLD: Color = Color("#E8C170")
 const ACCENT: Color = Color("#C98BFF")
 const BACKDROP_SHADER: Shader = preload("res://ui/menu_backdrop.gdshader")
+const PAINTING: String = "res://assets/ui/menu_backdrop.png"
+const CORNERS: Array[String] = ["tl", "tr", "bl", "br"]
+const CORNER_SIZE: float = 56.0
 
 
 ## Full-screen menu: animated grimoire backdrop + a framed panel in the centre.
@@ -25,17 +28,58 @@ static func screen(root: Control, min_width: float = 560.0) -> VBoxContainer:
 	column.custom_minimum_size = Vector2(min_width, 0)
 	column.add_theme_constant_override(&"separation", 12)
 	panel.add_child(column)
+	add_corners(panel)
 	return column
 
 
-static func backdrop() -> ColorRect:
+## Rune ornaments on the four corners of a panel (Codex art pack).
+static func add_corners(panel: PanelContainer) -> void:
+	# A plain Control is not laid out by the container logic of its own children,
+	# so the ornaments keep their size and sit on the frame corners.
+	var decor: Control = Control.new()
+	decor.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(decor)
+	for key: String in CORNERS:
+		var path: String = "res://assets/ui/rune_corner_%s.png" % key
+		if not ResourceLoader.exists(path):
+			continue
+		var corner: TextureRect = TextureRect.new()
+		corner.texture = load(path) as Texture2D
+		corner.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		corner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		decor.add_child(corner)
+		corner.size = Vector2.ONE * CORNER_SIZE
+		var inset: float = -30.0  # reach past the panel content margin onto the frame
+		var x: float = inset if key.ends_with("l") else -CORNER_SIZE - inset
+		var y: float = inset if key.begins_with("t") else -CORNER_SIZE - inset
+		corner.position = Vector2(x, y) + Vector2(0.0 if key.ends_with("l") else 1.0, 0.0 if key.begins_with("t") else 1.0) * decor.size
+		decor.resized.connect(func() -> void:
+			corner.position = Vector2(x, y) + Vector2(0.0 if key.ends_with("l") else 1.0, 0.0 if key.begins_with("t") else 1.0) * decor.size)
+
+
+## Painted courtyard (Codex art pack) under a translucent ink layer with the turning arcane circle.
+static func backdrop() -> Control:
+	var root: Control = Control.new()
+	root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var has_painting: bool = ResourceLoader.exists(PAINTING)
+	if has_painting:
+		var painting: TextureRect = TextureRect.new()
+		painting.texture = load(PAINTING) as Texture2D
+		painting.set_anchors_preset(Control.PRESET_FULL_RECT)
+		painting.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		painting.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+		painting.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		root.add_child(painting)
 	var bg: ColorRect = ColorRect.new()
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var mat: ShaderMaterial = ShaderMaterial.new()
 	mat.shader = BACKDROP_SHADER
+	mat.set_shader_parameter(&"base_alpha", 0.8 if has_painting else 1.0)
 	bg.material = mat
-	return bg
+	root.add_child(bg)
+	return root
 
 
 static func title(text: String, size: int = 56) -> Label:

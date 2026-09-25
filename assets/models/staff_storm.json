@@ -1,0 +1,11 @@
+{
+  "asset": "staff_storm",
+  "triangles": 516,
+  "budget": 3000,
+  "size_xyz_m": [
+    0.39,
+    1.6,
+    0.23
+  ],
+  "mesh_objects": 11
+}

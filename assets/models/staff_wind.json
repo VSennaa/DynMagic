@@ -1,0 +1,11 @@
+{
+  "asset": "staff_wind",
+  "triangles": 572,
+  "budget": 3000,
+  "size_xyz_m": [
+    0.46,
+    1.6,
+    0.12
+  ],
+  "mesh_objects": 17
+}

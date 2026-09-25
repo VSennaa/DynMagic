@@ -8,6 +8,8 @@ uniform vec4 ink_bottom : source_color = vec4(0.04, 0.05, 0.08, 1.0);
 uniform vec4 gold : source_color = vec4(0.91, 0.76, 0.44, 1.0);
 uniform vec4 violet : source_color = vec4(0.79, 0.55, 1.0, 1.0);
 uniform float circle_alpha = 0.16;
+// < 1 lets a painted backdrop show through (UiKit draws the Codex painting underneath).
+uniform float base_alpha = 1.0;
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float noise(vec2 p) {
@@ -41,5 +43,5 @@ void fragment() {
 	}
 	float glow = lines * circle_alpha * (0.8 + 0.2 * sin(TIME * 0.7));
 	col += mix(gold.rgb, violet.rgb, 0.5 + 0.5 * sin(a * 3.0 + TIME * 0.2)) * glow;
-	COLOR = vec4(col, 1.0);
+	COLOR = vec4(col, max(base_alpha, glow * 3.0));
 }

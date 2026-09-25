@@ -1,0 +1,11 @@
+{
+  "asset": "fp_staff_arm",
+  "triangles": 300,
+  "budget": 3000,
+  "size_xyz_m": [
+    0.34039,
+    0.86347,
+    0.52136
+  ],
+  "mesh_objects": 12
+}

@@ -1,4 +1,10 @@
-# DynMagic v0.2.1 — espectador, braços e servidor dedicado
+# DynMagic v0.3.0 — cajados e menus de grimório
+
+## Novidades na 0.3.0
+
+- **Cajado em primeira pessoa**: uma mão só segurando um cajado que muda com o elemento do round (Fogo, Gelo, Tempestade, Vento). O mago em 3ª pessoa também carrega o cajado.
+- **Modo canhoto** em Configurações: espelha o cajado para o lado esquerdo.
+- **Todos os menus estilizados** como um grimório: fundo pintado com círculo arcano animado, painéis com cantos rúnicos, botões com moldura dourada, fontes Cinzel e Alegreya Sans.
 
 ## Novidades na 0.2.1
 

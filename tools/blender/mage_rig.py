@@ -1,6 +1,7 @@
 ﻿"""Small deform rig and five baked actions; coordinates use common.xyz."""
 import bpy
 import math
+from mathutils import Matrix
 from common import xyz
 
 
@@ -19,6 +20,7 @@ def build_rig():
     for side, sign in [('L', -1), ('R', 1)]:
         definitions += [('arm_'+side, (sign*.26,1.14,0), (sign*.43,.73,-.045), 'spine'),
                         ('leg_'+side, (sign*.15,.50,0), (sign*.15,.10,0), 'root')]
+    definitions += [('hand_R', (.43,.73,-.045), (.43,.83,-.045), 'arm_R')]
     for name, head, tail, parent in definitions:
         bone = data.edit_bones.new(name)
         bone.head, bone.tail = xyz(head), xyz(tail)
@@ -30,7 +32,7 @@ def build_rig():
         side = 'L' if center.x < 0 else 'R'
         name = obj.name.split('.')[0]
         if name in ['Sleeve', 'Cuff', 'Glove', 'Thumb']:
-            bone = 'arm_'+side
+            bone = 'hand_R' if side == 'R' and name in ['Glove', 'Thumb'] else 'arm_'+side
         elif name in ['Boot', 'BootCuff']:
             bone = 'leg_'+side
         elif center.z > 1.25:
@@ -69,12 +71,12 @@ def build_rig():
             elif action_name == 'walk':
                 for side, sign in [('L',1), ('R',-1)]:
                     rig.pose.bones['leg_'+side].rotation_euler.x = wave*.34*sign
-                    rig.pose.bones['arm_'+side].rotation_euler.x = -wave*.30*sign
+                    rig.pose.bones['arm_'+side].rotation_euler.x = -wave*(.10 if side == 'R' else .30)*sign
                 rig.pose.bones['root'].location.y = abs(wave)*.025
             elif action_name == 'cast':
                 pulse = math.sin(math.pi*t)**.5
-                for side in ['L','R']:
-                    rig.pose.bones['arm_'+side].rotation_euler.x = 1.30*pulse
+                rig.pose.bones['arm_R'].rotation_euler.x = 1.30*pulse
+                rig.pose.bones['arm_L'].rotation_euler.x = .25*pulse
                 rig.pose.bones['spine'].rotation_euler.x = -.10*pulse
             elif action_name == 'dash':
                 rig.pose.bones['spine'].rotation_euler.x = -.30*math.sin(math.pi*t)
@@ -84,6 +86,14 @@ def build_rig():
                 ease = t*t*(3-2*t)
                 rig.pose.bones['root'].rotation_euler.x = math.pi*.48*ease
                 rig.pose.bones['root'].location.y = .09*ease
+            if action_name == 'cast':
+                # Arm lifts forward; counter-rotate the wrist so the staff head
+                # also points forward (-Z in Godot), never behind the hat.
+                bpy.context.view_layer.update()
+                rest = rig.data.bones['hand_R'].matrix_local
+                base = rig.pose.bones['arm_R'].matrix @ rig.data.bones['arm_R'].matrix_local.inverted() @ rest
+                desired = Matrix.Rotation(-1.30*pulse, 4, 'X') @ rest
+                rig.pose.bones['hand_R'].rotation_euler = (base.to_quaternion().inverted() @ desired.to_quaternion()).to_euler('XYZ')
             for bone in rig.pose.bones:
                 bone.keyframe_insert('rotation_euler', frame=frame, group=bone.name)
                 bone.keyframe_insert('location', frame=frame, group=bone.name)
