@@ -57,6 +57,7 @@ static func resolve_with(base: SpellBase, element: ElementDef) -> ResolvedSpell:
 	spell.cast_mode = base.cast_mode
 	spell.scene = base.scene
 	spell.color = element.color
+	spell.base_damage = base.damage
 	spell.damage = base.damage * element.damage_mult
 	spell.mana_cost = base.mana_cost
 	spell.cooldown = base.cooldown

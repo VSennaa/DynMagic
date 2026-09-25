@@ -1,9 +1,10 @@
-[gd_scene load_steps=6 format=3]
+[gd_scene load_steps=7 format=3]
 
 [ext_resource type="Script" path="res://scenes/player/player.gd" id="1_player"]
 [ext_resource type="Script" path="res://scenes/player/stats.gd" id="2_stats"]
 [ext_resource type="Script" path="res://scenes/player/spell_composer.gd" id="3_composer"]
 [ext_resource type="Script" path="res://scenes/player/spell_caster.gd" id="4_caster"]
+[ext_resource type="PackedScene" path="res://scenes/player/aim_preview.tscn" id="5_preview"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_body"]
 resource_local_to_scene = true
@@ -36,3 +37,5 @@ script = ExtResource("3_composer")
 
 [node name="SpellCaster" type="Node" parent="."]
 script = ExtResource("4_caster")
+
+[node name="AimPreview" parent="." instance=ExtResource("5_preview")]

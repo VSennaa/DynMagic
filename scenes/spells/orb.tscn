@@ -1,0 +1,19 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scenes/spells/burst_projectile.gd" id="1_orb"]
+
+[sub_resource type="SphereMesh" id="Sphere_orb"]
+radius = 0.22
+height = 0.44
+radial_segments = 16
+rings = 8
+
+[node name="Orb" type="Node3D"]
+script = ExtResource("1_orb")
+
+[node name="Mesh" type="MeshInstance3D" parent="."]
+mesh = SubResource("Sphere_orb")
+
+[node name="Light" type="OmniLight3D" parent="."]
+light_energy = 2.0
+omni_range = 4.0

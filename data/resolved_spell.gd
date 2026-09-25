@@ -12,6 +12,8 @@ var display_name: String
 var cast_mode: SpellBase.CastMode
 var scene: PackedScene
 var color: Color
+## Damage before the element multiplier.
+var base_damage: float
 var damage: float
 var mana_cost: float
 var cooldown: float

@@ -1,0 +1,83 @@
+class_name AimPreview
+extends Node3D
+## Shows where a confirm spell will land while the composer is AIMING.
+## Only the caster sees it (docs/specs/01-spell-system.md section 2.1).
+
+@export var player: Player
+
+var _spell: ResolvedSpell
+## Surface normal of the last preview ray hit.
+var _normal: Vector3 = Vector3.UP
+
+@onready var _ring: MeshInstance3D = $Ring
+
+
+func _ready() -> void:
+	top_level = true
+	visible = false
+	if player == null:
+		player = get_parent() as Player
+	# Children are ready before the player, so its @onready vars are still null here.
+	var composer: SpellComposer = player.get_node(^"SpellComposer") as SpellComposer
+	composer.aim_started.connect(_on_aim_started)
+	composer.aim_ended.connect(_on_aim_ended)
+
+
+func _physics_process(_delta: float) -> void:
+	if _spell == null:
+		return
+	match _spell.key:
+		&"projectile_burst":
+			_show_ring(_projectile_impact(float(_spell.param(&"max_range", 30.0))), float(_spell.param(&"radius", 3.0)))
+		&"area_burst":
+			_show_ring(_ground_point(float(_spell.param(&"range", 25.0))), float(_spell.param(&"radius", 2.5)))
+		_:
+			_ring.visible = false
+
+
+## First hit along the cast direction, capped at max range.
+func _projectile_impact(max_range: float) -> Vector3:
+	var origin: Vector3 = player.cast_origin.global_position
+	var aim: Vector3 = player.get_node(^"SpellCaster").call(&"aim_point")
+	var dir: Vector3 = (aim - origin).normalized()
+	return _ray(origin, origin + dir * max_range)
+
+
+## Crosshair point projected to the ground below it, clamped to range.
+func _ground_point(max_range: float) -> Vector3:
+	var aim: Vector3 = player.get_node(^"SpellCaster").call(&"aim_point")
+	var flat: Vector3 = aim - player.global_position
+	flat.y = 0.0
+	if flat.length() > max_range:
+		aim = player.global_position + flat.normalized() * max_range + Vector3.UP * aim.y
+	return _ray(aim + Vector3.UP * 0.5, aim + Vector3.DOWN * 20.0)
+
+
+func _ray(from: Vector3, to: Vector3) -> Vector3:
+	var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(from, to)
+	query.exclude = [player.get_rid()]
+	var result: Dictionary = player.get_world_3d().direct_space_state.intersect_ray(query)
+	_normal = result["normal"] if not result.is_empty() else Vector3.UP
+	return result["position"] if not result.is_empty() else to
+
+
+func _show_ring(point: Vector3, radius: float) -> void:
+	_ring.visible = true
+	# Lay the ring flat on the surface that was hit (floor, wall or target).
+	var up: Vector3 = _normal.normalized()
+	var side: Vector3 = up.cross(Vector3.FORWARD if absf(up.dot(Vector3.FORWARD)) < 0.9 else Vector3.RIGHT).normalized()
+	var ring_basis: Basis = Basis(side * radius, up, side.cross(up) * radius)
+	_ring.global_transform = Transform3D(ring_basis, point + up * 0.03)
+
+
+func _on_aim_started(spell: ResolvedSpell) -> void:
+	_spell = spell
+	visible = true
+	var mat: StandardMaterial3D = _ring.material_override as StandardMaterial3D
+	if mat != null:
+		mat.albedo_color = Color(spell.color, 0.45)
+
+
+func _on_aim_ended() -> void:
+	_spell = null
+	visible = false

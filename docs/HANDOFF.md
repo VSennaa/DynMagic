@@ -56,6 +56,8 @@ Chosen: **Godot AI** by hi-godot (https://github.com/hi-godot/godot-ai), plugin 
 - Editor quirks: autoloads added while the editor runs are not visible to editor-side script compilation until the editor restarts. In the editor, `can_instantiate()` is false for non-@tool scripts and `InputMap` holds editor actions only; tests must read `ProjectSettings` (`input/<action>`) and script method lists instead. `--check-only --script` does not load autoloads, so it reports false "Identifier not found" errors for autoload names.
 - Logic classes that editor tests instantiate (e.g. `Stats`) must be `@tool` and guard `_ready`/`_process` with `Engine.is_editor_hint()`; otherwise `.new()` returns a placeholder instance with no behavior.
 - Injecting input into the running game: separate `input_key` calls take seconds each, longer than the 2.5 s composer timeout. Use `game_manage(op="input_sequence")` with steps `{action, pressed, at_frame}` (frame-timed). Presses a few frames apart can still be missed by `is_action_just_pressed`; space steps ~10+ frames. `SpellComposer` polls actions in `_process` (only while the mouse is captured).
+- Player children run `_ready` before `Player`, so they must use `player.get_node(...)` instead of the player's `@onready` vars.
+- Confirm spells expire after 4 s of aiming: put the whole compose + `cast` timeline in one `input_sequence` call.
 - Input bindings use `keycode` (not `physical_keycode`). Revisit in M6 remapping if non-QWERTY layouts matter.
 
 ## 6. Status by milestone (SDD §6)

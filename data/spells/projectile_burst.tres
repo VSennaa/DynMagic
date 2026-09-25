@@ -1,6 +1,7 @@
-[gd_resource type="Resource" script_class="SpellBase" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="SpellBase" load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://data/spell_base.gd" id="1_base"]
+[ext_resource type="PackedScene" path="res://scenes/spells/orb.tscn" id="2_scene"]
 
 [resource]
 script = ExtResource("1_base")
@@ -8,6 +9,7 @@ form = &"projectile"
 effect = &"burst"
 display_name = "Orbe"
 cast_mode = 1
+scene = ExtResource("2_scene")
 damage = 28.0
 mana_cost = 30.0
 cooldown = 2.0
