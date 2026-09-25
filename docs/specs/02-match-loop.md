@@ -91,6 +91,8 @@ Timeout absoluto: 60 s de overtime. Depois disso, vence quem tem mais HP. Empate
 
 Por jogador: rounds vencidos, dano causado, dano recebido, precisão por forma, magia mais usada, Núcleos capturados, tempo médio de composição (tecla até conjuração).
 
+O cliente mede da primeira tecla de forma até o disparo, incluindo espera de input em buffer e mira. Envia a duração com o pedido; o host só acumula conjurações aceitas. Cancelamentos, timeouts, rejeições e recasts (`RMB`, sem tecla de forma) não entram na média. Sem amostras, resultados mostram `—`.
+
 ## 8. Critérios de aceite
 
 - [ ] Partida MD7 completa roda do lobby até os resultados em LAN.

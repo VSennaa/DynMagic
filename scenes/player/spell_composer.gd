@@ -37,6 +37,9 @@ var pending: ResolvedSpell
 var last_spell: ResolvedSpell
 ## True while the spell being validated or cast came from RMB (Echo rune discount).
 var is_recasting: bool = false
+## Duration of the current successful request, including aiming and buffered input.
+var compose_seconds: float = -1.0
+var _compose_elapsed: float = 0.0
 
 var _timer: float = 0.0
 var _buffered_slot: int = -1
@@ -77,6 +80,8 @@ func _poll_input() -> void:
 
 
 func tick(delta: float) -> void:
+	if is_composing():
+		_compose_elapsed += delta
 	match state:
 		State.SLOT_EFFECT:
 			_timer -= delta
@@ -96,6 +101,7 @@ func tick(delta: float) -> void:
 				_buffered_slot = -1
 				if slot >= 0 and _buffer_age <= INPUT_BUFFER + CAST_LOCKOUT:
 					press_slot(slot)
+					_compose_elapsed = _buffer_age
 
 
 ## Q/E/R = slot 0/1/2. First press picks the form, second picks the effect.
@@ -106,6 +112,7 @@ func press_slot(index: int) -> void:
 			if form == &"":
 				return
 			_timer = SEQUENCE_TIMEOUT
+			_compose_elapsed = 0.0
 			_set_state(State.SLOT_EFFECT)
 		State.SLOT_EFFECT:
 			var effect: StringName = SPELL_DB.effect_at(index)
@@ -148,6 +155,8 @@ func press_cancel() -> void:
 ## Drops the sequence and any aim. Called on F, timeouts, death and round end.
 func clear() -> void:
 	is_recasting = false
+	_compose_elapsed = 0.0
+	compose_seconds = -1.0
 	var was_aiming: bool = state == State.AIMING
 	form = &""
 	pending = null
@@ -192,6 +201,7 @@ func _fire(spell: ResolvedSpell) -> void:
 		clear()
 		return
 	last_spell = spell
+	compose_seconds = -1.0 if is_recasting else _compose_elapsed
 	pending = null
 	# A recast that went through aiming still counts as a recast when confirmed.
 	form = &""
@@ -220,4 +230,3 @@ func _set_state(new_state: State) -> void:
 	if state != new_state:
 		state = new_state
 		state_changed.emit(state)
-

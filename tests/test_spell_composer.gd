@@ -149,3 +149,49 @@ func test_is_composing_blocks_sprint() -> void:
 	assert_false(composer.is_composing())
 	composer.press_slot(0)
 	assert_true(composer.is_composing())
+
+
+func test_compose_duration_includes_aim_and_excludes_recast() -> void:
+	composer.press_slot(0)
+	composer.tick(0.5)
+	composer.press_slot(1)
+	composer.tick(1.0)
+	composer.press_cast()
+	assert_eq(composer.compose_seconds, 1.5)
+	composer.tick(0.2)
+	composer.press_recast()
+	composer.tick(0.5)
+	composer.press_cast()
+	assert_eq(composer.compose_seconds, -1.0)
+
+
+func test_cancel_reject_and_timeout_restart_measurement() -> void:
+	composer.press_slot(0)
+	composer.tick(0.5)
+	composer.press_cancel()
+	composer.press_slot(0)
+	composer.tick(0.25)
+	composer.press_slot(0)
+	assert_eq(composer.compose_seconds, 0.25)
+	composer.tick(0.2)
+	reject_reason = &"cooldown"
+	composer.press_slot(0)
+	composer.press_slot(0)
+	assert_eq(composer.compose_seconds, -1.0)
+	reject_reason = &""
+	composer.press_slot(0)
+	composer.tick(3.0)
+	composer.press_slot(0)
+	composer.tick(0.5)
+	composer.press_slot(0)
+	assert_eq(composer.compose_seconds, 0.5)
+
+
+func test_buffered_first_key_counts_lockout_wait() -> void:
+	composer.press_slot(0)
+	composer.press_slot(0)
+	composer.press_slot(2)
+	composer.tick(0.16)
+	composer.tick(0.2)
+	composer.press_slot(0)
+	assert_true(absf(composer.compose_seconds - 0.36) < 0.001)
