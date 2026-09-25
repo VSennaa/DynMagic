@@ -4,6 +4,7 @@ extends Node
 signal changed(key: StringName)
 
 const PATH: String = "user://settings.cfg"
+var video: VideoSettings = VideoSettings.new()
 
 var fov: float = 95.0:
 	set(value):
@@ -31,6 +32,7 @@ var fullscreen: bool = false:
 	set(value):
 		fullscreen = value
 		_apply_window()
+		_apply_video()
 		changed.emit(&"fullscreen")
 
 var vsync: bool = true:
@@ -73,6 +75,7 @@ var volumes: Dictionary[String, float] = {"Master": 1.0, "Music": 0.8, "SFX": 1.
 
 
 func _ready() -> void:
+	get_viewport().size_changed.connect(_apply_video)
 	load_settings()
 
 
@@ -84,12 +87,13 @@ func set_volume(bus: String, value: float) -> void:
 	changed.emit(&"volume")
 
 
-func load_settings() -> void:
+func load_settings(path: String = PATH) -> void:
 	var cfg: ConfigFile = ConfigFile.new()
-	if cfg.load(PATH) != OK:
+	if cfg.load(path) != OK:
 		_apply_all()
 		return
 	fov = cfg.get_value("video", "fov", fov)
+	video.read_config(cfg)
 	fullscreen = cfg.get_value("video", "fullscreen", fullscreen)
 	vsync = cfg.get_value("video", "vsync", vsync)
 	max_fps = cfg.get_value("video", "max_fps", max_fps)
@@ -106,8 +110,9 @@ func load_settings() -> void:
 	_apply_all()
 
 
-func save_settings() -> void:
+func save_settings(path: String = PATH) -> Error:
 	var cfg: ConfigFile = ConfigFile.new()
+	video.write_config(cfg)
 	cfg.set_value("video", "fov", fov)
 	cfg.set_value("video", "fullscreen", fullscreen)
 	cfg.set_value("video", "vsync", vsync)
@@ -125,7 +130,7 @@ func save_settings() -> void:
 		var events: Array[InputEvent] = InputMap.action_get_events(action)
 		if not events.is_empty():
 			cfg.set_value("bindings", String(action), events[0])
-	cfg.save(PATH)
+	return cfg.save(path)
 
 
 ## Actions the player may rebind (spec 06 §3).
@@ -161,6 +166,7 @@ func _load_bindings(cfg: ConfigFile) -> void:
 
 func _apply_all() -> void:
 	_apply_window()
+	_apply_video()
 	DisplayServer.window_set_vsync_mode(DisplayServer.VSYNC_ENABLED if vsync else DisplayServer.VSYNC_DISABLED)
 	Engine.max_fps = max_fps
 	Net.player_name = player_name
@@ -172,3 +178,27 @@ func _apply_window() -> void:
 	if DisplayServer.get_name() == "headless":
 		return
 	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN if fullscreen else DisplayServer.WINDOW_MODE_WINDOWED)
+	if not fullscreen:
+		DisplayServer.window_set_size(video.resolution)
+
+
+func set_video(key: StringName, value: Variant) -> void:
+	video.set(key, value)
+	video.normalize()
+	_apply_window()
+	_apply_video()
+	changed.emit(key)
+
+
+func _apply_video() -> void:
+	var viewport: Viewport = get_viewport()
+	# Fullscreen keeps the desktop display mode; the selected resolution sets the 3D budget.
+	var base_scale: float = float(video.resolution.y) / maxf(DisplayServer.window_get_size().y, 1.0) if fullscreen and DisplayServer.get_name() != "headless" else 1.0
+	viewport.scaling_3d_scale = clampf(base_scale * video.render_scale, 0.25, 2.0)
+	viewport.screen_space_aa = Viewport.SCREEN_SPACE_AA_FXAA if video.antialiasing == 1 else Viewport.SCREEN_SPACE_AA_DISABLED
+	viewport.msaa_3d = Viewport.MSAA_2X if video.antialiasing == 2 else (Viewport.MSAA_4X if video.antialiasing == 3 else Viewport.MSAA_DISABLED)
+	var atlas_sizes: Array[int] = [1024, 2048, 4096]
+	viewport.positional_shadow_atlas_size = atlas_sizes[video.shadow_quality]
+	RenderingServer.directional_shadow_atlas_set_size(atlas_sizes[video.shadow_quality], true)
+	RenderingServer.directional_soft_shadow_filter_set_quality(video.shadow_quality as RenderingServer.ShadowQuality)
+	RenderingServer.positional_soft_shadow_filter_set_quality(video.shadow_quality as RenderingServer.ShadowQuality)

@@ -28,6 +28,20 @@ func _ready() -> void:
 
 	body.add_child(UiKit.label("— Vídeo —", 22))
 	body.add_child(_check("Tela cheia", Settings.fullscreen, func(v: bool) -> void: Settings.fullscreen = v))
+	var resolutions: PackedStringArray = []
+	for size: Vector2i in VideoSettings.RESOLUTIONS:
+		resolutions.append("%d × %d" % [size.x, size.y])
+	body.add_child(_option("Resolução", resolutions, VideoSettings.RESOLUTIONS.find(Settings.video.resolution), func(i: int) -> void: Settings.set_video(&"resolution", VideoSettings.RESOLUTIONS[i])))
+	var scale_value: Label = UiKit.label("%d%%" % roundi(Settings.video.render_scale * 100.0), 18)
+	scale_value.autowrap_mode = TextServer.AUTOWRAP_OFF
+	scale_value.custom_minimum_size.x = 56.0
+	var scale_row: HBoxContainer = _slider("Escala de render", 50.0, 100.0, 5.0, Settings.video.render_scale * 100.0, func(v: float) -> void:
+		Settings.set_video(&"render_scale", v / 100.0)
+		scale_value.text = "%d%%" % roundi(v))
+	scale_row.add_child(scale_value)
+	body.add_child(scale_row)
+	body.add_child(_option("Sombras", ["Baixa", "Média", "Alta"], Settings.video.shadow_quality, func(i: int) -> void: Settings.set_video(&"shadow_quality", i)))
+	body.add_child(_option("Antialiasing", ["Off", "FXAA", "MSAA 2×", "MSAA 4×"], Settings.video.antialiasing, func(i: int) -> void: Settings.set_video(&"antialiasing", i)))
 	body.add_child(_check("VSync", Settings.vsync, func(v: bool) -> void: Settings.vsync = v))
 	body.add_child(_slider("FOV", 80.0, 110.0, 1.0, Settings.fov, func(v: float) -> void: Settings.fov = v))
 	var fps: OptionButton = OptionButton.new()
@@ -125,6 +139,15 @@ func _check(text: String, value: bool, on_toggle: Callable) -> CheckBox:
 	box.add_theme_color_override(&"font_color", UiKit.CREAM)
 	box.toggled.connect(on_toggle)
 	return box
+
+
+func _option(text: String, items: PackedStringArray, selected: int, on_select: Callable) -> HBoxContainer:
+	var option: OptionButton = OptionButton.new()
+	for item: String in items:
+		option.add_item(item)
+	option.selected = selected
+	option.item_selected.connect(on_select)
+	return UiKit.row([UiKit.label(text, 18), option])
 
 
 func _slider(text: String, min_value: float, max_value: float, step: float, value: float, on_change: Callable) -> HBoxContainer:

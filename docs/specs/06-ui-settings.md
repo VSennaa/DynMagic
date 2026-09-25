@@ -52,6 +52,8 @@ Salvas em `user://settings.cfg` (`ConfigFile`). Aplicadas na hora. Botão "Resta
 
 Ações de input (`InputMap`): `move_forward`, `move_back`, `move_left`, `move_right`, `jump`, `crouch`, `sprint`, `slot_1` (Q), `slot_2` (E), `slot_3` (R), `compose_cancel` (F), `cast` (LMB), `recast` (RMB), `scoreboard` (Tab), `pause` (Esc), `net_overlay` (F3).
 
+Implementação de vídeo: resoluções 1280×720, 1600×900, 1920×1080 (padrão), 2560×1440 e 3840×2160; escala 50–100%. Em janela, a resolução altera o tamanho da janela; em tela cheia, mantém o modo do desktop e define a resolução-base 3D, combinada com a escala (limites do viewport: 0,25–2×). Sombras baixa/média/alta usam atlas de 1024/2048/4096 e filtragem correspondente. FXAA e MSAA são mutuamente exclusivos. As opções são aplicadas imediatamente e persistidas por Salvar/Voltar em `user://settings.cfg`.
+
 ## 4. Diretrizes visuais da UI
 
 - Tipografia: título em fonte com pincel/serifa (clima de grimório); números em sans condensada.
