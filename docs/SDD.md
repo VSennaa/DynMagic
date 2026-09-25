@@ -26,6 +26,7 @@ Pilares:
 | Vantagem | Runa para quem perdeu + Núcleo Arcano. Sem segundo elemento | Usuário |
 | Overtime | Sorteado entre Colapso, Morte Súbita e Maré de Mana. O host pode fixar uma regra | Usuário |
 | Personagem | Um único mago base. A identidade vem do elemento | Usuário |
+| Etapa 2 (2026-09-25) | Servidor dedicado headless para LAN e VPS Linux (entrada por IP, sem matchmaking); texturas pintadas procedurais no Blender com bake; áudio misto (CC0 para UI/passos/impactos + síntese para magias); rig + animações básicas do mago e braços em 1ª pessoa | Usuário |
 | Formato | Rounds (MD7, primeiro a 4) + draft na fase 0:00 | Usuário |
 | Rede | LAN, host-authoritative, ENet | Usuário (LAN) + proposta |
 | Arte | Shader-first; M7 com Blender 5.2.1 LTS headless e Python procedural, sem Tripo/Meshy, serviços pagos ou mcp-blender nesta rodada | Usuário, 2026-09-25 |

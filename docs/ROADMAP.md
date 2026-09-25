@@ -145,3 +145,18 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (write th
 - [x] Arcane Core crystal + pedestal: 204 tris, integrado; só o cristal flutua/gira
 - [x] Import checklist applied to all 10 assets (2026-09-25): escala/eixos/origem, budgets, toon por superfície, outline na galeria; raycasts físicos A/B/C e 73 testes passaram
 - [ ] Milestone review with user
+
+## M8 — Arte final 2: texturas, animação e som (user decisions 2026-09-25)
+
+- [ ] (Codex) Hand-painted textures baked from procedural Blender nodes for every asset (stone, cloth, wood, straw, metal, crystal); PNG ≤ 1024², UV unwrap in the generators; Godot toon shader samples the albedo texture
+- [ ] (Codex) Mage rig + animations: idle, walk, cast, dash, death; `AnimationPlayer` on the remote mage driven by velocity/composer/Stats
+- [ ] (Codex) First-person arms on the local camera (own render layer, no wall clipping), poses/animations driven by `SpellComposer` state
+- [ ] (Claude) Audio mix: CC0 packs for UI clicks, footsteps and impacts; improved synthesis for element spells (layers, reverb, random variation); music loop placeholder
+- [ ] Milestone review with user
+
+## M9 — Servidor dedicado (user decision 2026-09-25: LAN + VPS Linux)
+
+- [ ] (Claude) `--server` headless mode: hosts without a local player, accepts two clients, auto-starts the match when both are ready, returns everyone to the lobby after results, loops forever
+- [ ] (Claude) Linux x86_64 server export preset + CI artifact (`DynMagic-server-linux-x64.tar.gz`) with a systemd unit and README (ports UDP 7777/7778, firewall, `--port`, `--name`)
+- [ ] (Claude) Headless test: dedicated server + two bot clients play a full match
+- [ ] Milestone review with user

@@ -8,6 +8,14 @@ Active agent: none (round 4 training dummy model completed by Codex, 2026-09-25:
 
 Rodada 3 concluída em 2026-09-25, sem commit; arquivos, triângulos e pendências na seção 12. Round 2 (video settings, compose metrics, reconnect) was reviewed, tested (73/73 + bot match) and committed by Claude.
 
+### Handoff brief for Codex (round 5 — textures, rig, animations; ROADMAP M8, 2026-09-25)
+Claude edits networking/server/audio files in parallel (`autoload/net.gd`, `autoload/lobby.gd`, `autoload/match_state.gd`, `autoload/audio_bus.gd`, `scenes/net/*`, `scenes/ui/lobby_screen.gd`, `export_presets.cfg`, `.github/*`, `audio/*`). Do not touch those.
+You may edit: `tools/blender/*`, `assets/*`, `scenes/assets/*`, `shaders/toon.gdshader` (add an optional albedo texture uniform, keep defaults working), `vfx/toon.gd`, `scenes/player/player.gd` (only the remote-body/animation and first-person-arms parts), new files under `scenes/player/` for animation, `tools/verify_assets.gd`, `tools/assets_gallery.gd`, `docs/specs/07-art-pipeline.md`, `docs/ROADMAP.md` (M8 Codex items only).
+Tasks, in order:
+1. Textures: extend the generators with UV unwraps and procedural hand-painted materials (brush-stroke noise, edge highlights, soft gradients) baked to PNG albedo maps (≤ 1024², in `assets/textures/`). Stone, wood, cloth, straw, gold trim, crystal. Toon shading must still read the flat look; add `albedo_texture` support to the toon shader/material helper.
+2. Mage rig + animations (idle, walk, cast, dash, death) exported in the glb; a small controller script plays them on the remote mage from velocity, composer state (synced as `remote_composer_bits` in NetSync — read only) and `Stats.died`.
+3. First-person arms on the local player's camera: separate render layer / camera-attached so they never clip walls; poses follow `SpellComposer` (idle, form chosen, aiming, cast flash).
+Verify with `--import`, `tools/verify_assets.tscn`, and the Godot tests if possible. Keep ≤ 15k tris for the mage. You cannot commit. Update this file with results and set round 5 to done.
 ### Handoff brief for Codex (round 4 — training dummy model, 2026-09-25)
 **Concluído em 2026-09-25, sem commit.** Modelo com **1.992 triângulos** (limite 3.000), dimensões **1,229 × 1,80 × 0,80 m**, origem no centro da base e frente −Z. Poste/braços de madeira, base redonda de pedra, saco com palha, amarras/costuras, alvo rúnico plano no peito e pequeno chapéu pontudo; GLB Y-up e cores planas.
 
