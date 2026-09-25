@@ -10,6 +10,9 @@ var _is_ready: bool = false
 
 func _ready() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	# --bot clients (load tests against a dedicated server) ready up on their own.
+	if OS.get_cmdline_user_args().has("--bot") and not Net.is_host():
+		Lobby.set_ready.call_deferred(true)
 	var column: VBoxContainer = UiKit.screen(self)
 	column.add_child(UiKit.title(Net.lobby_name if Net.is_host() else "Sala", 40))
 	_players = VBoxContainer.new()

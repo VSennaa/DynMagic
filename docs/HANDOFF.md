@@ -4,7 +4,7 @@ Last update: 2026-09-25. Written so any AI agent (Claude, Codex, Gemini, etc.) c
 
 ## 0. Active agent
 
-Active agent: none (Claude, 2026-09-25: v0.3.0 released; after it: SpellGlyph symbols, wheel Atalhos/Significado setting, CooldownGrid with symbols and clock sweep, "Persistente" renamed "Contínuo" in UI; 73/73 tests)
+Active agent: none (Claude, 2026-09-25: v0.3.1 released; 4 reviews in docs/reviews/ + SYNTHESIS.md with consensus items C1-C18 and decisions D1-D13 awaiting the user; VPS measured, see SYNTHESIS §4)
 
 Rodada 3 concluída em 2026-09-25, sem commit; arquivos, triângulos e pendências na seção 12. Round 2 (video settings, compose metrics, reconnect) was reviewed, tested (73/73 + bot match) and committed by Claude.
 
