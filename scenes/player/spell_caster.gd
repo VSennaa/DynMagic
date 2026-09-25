@@ -31,10 +31,22 @@ func ground_target(max_range: float) -> Vector3:
 	flat.y = 0.0
 	if flat.length() > max_range:
 		aim = player.global_position + flat.normalized() * max_range + Vector3.UP * aim.y
-	var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(aim + Vector3.UP * 0.5, aim + Vector3.DOWN * 20.0)
-	query.exclude = [player.get_rid()]
-	var result: Dictionary = player.get_world_3d().direct_space_state.intersect_ray(query)
-	return result["position"] if not result.is_empty() else Vector3(aim.x, player.global_position.y, aim.z)
+	return _floor_below(aim, Vector3(aim.x, player.global_position.y, aim.z))
+
+
+## First non-damageable surface below a point (rays pass through players and dummies).
+func _floor_below(point: Vector3, fallback: Vector3) -> Vector3:
+	var exclude: Array[RID] = [player.get_rid()]
+	for attempt: int in 4:
+		var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(point + Vector3.UP * 0.5, point + Vector3.DOWN * 20.0)
+		query.exclude = exclude
+		var result: Dictionary = player.get_world_3d().direct_space_state.intersect_ray(query)
+		if result.is_empty():
+			return fallback
+		if SpellNode.find_damageable(result["collider"]) == null:
+			return result["position"]
+		exclude.append(result["rid"])
+	return fallback
 
 
 ## Placement for Wall: `distance` ahead of the player on the floor, facing the aim direction.

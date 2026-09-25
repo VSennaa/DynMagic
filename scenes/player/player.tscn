@@ -1,15 +1,25 @@
-[gd_scene load_steps=7 format=3]
+[gd_scene load_steps=11 format=3]
 
 [ext_resource type="Script" path="res://scenes/player/player.gd" id="1_player"]
 [ext_resource type="Script" path="res://scenes/player/stats.gd" id="2_stats"]
 [ext_resource type="Script" path="res://scenes/player/spell_composer.gd" id="3_composer"]
 [ext_resource type="Script" path="res://scenes/player/spell_caster.gd" id="4_caster"]
 [ext_resource type="PackedScene" path="res://scenes/player/aim_preview.tscn" id="5_preview"]
+[ext_resource type="Script" path="res://scenes/player/rune_circle.gd" id="6_rune"]
+[ext_resource type="Shader" path="res://shaders/rune_circle.gdshader" id="7_rune_shader"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_body"]
 resource_local_to_scene = true
 radius = 0.35
 height = 1.8
+
+[sub_resource type="QuadMesh" id="Quad_rune"]
+size = Vector2(0.3, 0.3)
+
+[sub_resource type="ShaderMaterial" id="Mat_rune"]
+resource_local_to_scene = true
+render_priority = 1
+shader = ExtResource("7_rune_shader")
 
 [node name="Player" type="CharacterBody3D"]
 floor_snap_length = 0.35
@@ -28,6 +38,13 @@ near = 0.05
 
 [node name="CastOrigin" type="Marker3D" parent="Head/Camera3D"]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, -0.2, -0.3)
+
+[node name="RuneCircle" type="MeshInstance3D" parent="Head/Camera3D"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.17, -0.2, -0.6)
+cast_shadow = 0
+mesh = SubResource("Quad_rune")
+material_override = SubResource("Mat_rune")
+script = ExtResource("6_rune")
 
 [node name="Stats" type="Node" parent="."]
 script = ExtResource("2_stats")
