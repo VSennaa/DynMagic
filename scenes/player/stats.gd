@@ -151,6 +151,11 @@ func status_time_left(status_id: StringName) -> float:
 	return _statuses.get(status_id, 0.0)
 
 
+## Copy of status id -> seconds left (for the HUD).
+func active_statuses() -> Dictionary[StringName, float]:
+	return _statuses.duplicate()
+
+
 func clear_status(status_id: StringName) -> void:
 	if _statuses.erase(status_id):
 		status_expired.emit(status_id)

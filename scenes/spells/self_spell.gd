@@ -43,7 +43,7 @@ func _style_shell() -> void:
 	var mat: StandardMaterial3D = StandardMaterial3D.new()
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mat.cull_mode = BaseMaterial3D.CULL_FRONT  # visible from outside, not from the caster's camera
+	mat.cull_mode = BaseMaterial3D.CULL_BACK  # the caster's camera is inside the shell: only outside faces render
 	var alpha: float = 0.3 if spell.effect == &"direct" else 0.15
 	mat.albedo_color = Color(spell.color, alpha)
 	_shell.material_override = mat

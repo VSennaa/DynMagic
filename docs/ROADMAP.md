@@ -52,8 +52,8 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (write th
 - [x] Spell: Wall (area/lingering) + ghost preview (`Wall` StaticBody with HP; `SpellCaster.wall_transform`). All 3 verified in game: Cone 23, Mark 44 + burn, Wall blocked a Bolt
 - [x] Training dummy: infinite HP, damage numbers, DPS counter
 - [x] Greybox Arena A (spec 03 §3) for testing — `ArenaBuilder` (@tool) builds shell, balconies with ramps, cover and spawn markers from a half-map table mirrored 180°. Main scene is now `scenes/sandbox/training.tscn` (Arena A + dummy)
-- [ ] Temporary HUD: HP, mana, composition trail, 3×3 cooldown grid
-- [ ] Milestone review with user
+- [x] Temporary HUD: HP, mana, composition trail, 3×3 cooldown grid (`Hud`, built in code; also shows shield and statuses). Guard and Aura verified in game through it
+- [~] Milestone review with user — M1 done 2026-09-24. User asked (goal) to keep going without pausing; review happens when the user is back. Open items: headshot ×1.5 (needs hurtboxes), manual playtest of step-up and crouch tunnel
 
 ## M2 — Grimório (4 elements)
 

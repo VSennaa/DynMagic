@@ -66,7 +66,7 @@ Chosen: **Godot AI** by hi-godot (https://github.com/hi-godot/godot-ai), plugin 
 |---|---|
 | Design (SDD + specs 01–08) | Done, decisions validated by user |
 | M0 Setup | Done 2026-09-24: MCP verified, folder skeleton, 7 empty autoloads, 16 input actions, smoke suite 4/4 passing, first commit |
-| M1 Sandbox | Not started |
+| M1 Sandbox | Done 2026-09-24 (review pending with user): FPS controller, Stats, SpellDB, SpellComposer, all 9 fire spells, dummy, Arena A greybox, temporary HUD |
 | M2–M7 | Not started |
 
 ## 7. Next steps
@@ -92,4 +92,5 @@ $g = "$env:USERPROFILE\Downloads\Godot_v4.7.2-stable_win64.exe\Godot_v4.7.2-stab
 - Keep GDScript statically typed (untyped declarations are errors in `project.godot`).
 - Commits are authorized (2026-09-24): commit after each finished roadmap task. Do not push (no remote yet), and do not install paid services without asking the user.
 - Quota handoff: the user wants work handed to Codex CLI (skill `handoff-codex`) when the Claude 5-hour limit reaches 90%. Codex CLI 0.156.1 is installed at `C:\Users\vinic\AppData\Local\Programs\OpenAI\Codex\bin\codex.exe` (2026-09-24).
+- Standing goal (2026-09-24): keep working through milestones without stopping at reviews until the Claude 5-hour quota nears its limit; at 90% hand off to Codex (`handoff-codex`) and schedule a resume after the reset (no later than 05:30).
 - Loop mode: the user runs `/loop Siga docs/ROADMAP.md (protocolo de loop no topo)`. Stop at milestone reviews.

@@ -6,3 +6,6 @@ func _ready() -> void:
 	var spawn: Marker3D = get_node(^"Arena/Layout/SpawnSouth") as Marker3D
 	var player: Player = $Player as Player
 	player.global_transform = spawn.global_transform
+	var hud: Hud = Hud.new()
+	add_child(hud)
+	hud.bind(player)
