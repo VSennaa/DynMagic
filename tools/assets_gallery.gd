@@ -3,12 +3,18 @@ extends Control
 
 
 func _ready() -> void:
+	if OS.get_cmdline_user_args().has("--first-person"):
+		_first_person_preview()
+		await _capture()
+		return
 	var grid: GridContainer = GridContainer.new()
 	grid.columns = 5
 	grid.add_theme_constant_override("h_separation", 0)
 	grid.add_theme_constant_override("v_separation", 0)
 	add_child(grid)
 	var entries: Array[String] = ["mage", "fp_arms:OpenPalm", "fp_arms:Fist", "fp_arms:PalmDown", "fp_arms:Cast", "cover_low", "cover_high", "cover_bar", "pillar", "banner", "brazier", "spawn_arch", "arcane_core", "training_dummy"]
+	if OS.get_cmdline_user_args().has("--animations"):
+		entries = ["mage:idle", "mage:walk", "mage:cast", "mage:dash", "mage:death"]
 	for entry: String in entries:
 		var parts: PackedStringArray = entry.split(":")
 		var asset: String = parts[0]
@@ -27,7 +33,7 @@ func _ready() -> void:
 		view.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 		container.add_child(view)
 		var model: Node3D = (load("res://scenes/assets/%s.tscn" % asset) as PackedScene).instantiate() as Node3D
-		if parts.size() > 1:
+		if parts.size() > 1 and asset == "fp_arms":
 			model.set("pose", parts[1])
 		view.add_child(model)
 		var bounds: AABB
@@ -57,6 +63,37 @@ func _ready() -> void:
 		camera.position = bounds.get_center() + Vector3(2.4, 1.8, -4) * maxf(bounds.size.length(), 1.0)
 		camera.look_at(bounds.get_center())
 		Toon.add_outline(camera)
+		if parts.size() > 1 and asset == "mage":
+			var animation: AnimationPlayer = model.find_child("AnimationPlayer", true, false) as AnimationPlayer
+			animation.play(parts[1])
+			animation.seek(.9 if parts[1] == "death" else .25, true)
+			animation.pause()
+	await _capture()
+
+
+func _first_person_preview() -> void:
+	var player: Player = preload("res://scenes/player/player.tscn").instantiate() as Player
+	add_child(player)
+	player.set_physics_process(false)
+	player.frozen = true
+	# Wall crosses the arms' normal depth range: the overlay must stay visible.
+	var wall: MeshInstance3D = MeshInstance3D.new()
+	var box: BoxMesh = BoxMesh.new()
+	box.size = Vector3(4, 4, .05)
+	wall.mesh = box
+	wall.material_override = Toon.material(Color(.24, .30, .38))
+	wall.position = Vector3(0, 1.6, -.25)
+	add_child(wall)
+	var light: DirectionalLight3D = DirectionalLight3D.new()
+	light.rotation_degrees = Vector3(-30, -20, 0)
+	add_child(light)
+	var label: Label = Label.new()
+	label.text = "First-person arms / wall at 0.25 m / isolated depth"
+	label.position = Vector2(32, 32)
+	add_child(label)
+
+
+func _capture() -> void:
 	var args: PackedStringArray = OS.get_cmdline_user_args()
 	if args.has("--capture"):
 		for frame: int in 12:

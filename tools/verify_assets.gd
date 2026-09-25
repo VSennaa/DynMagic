@@ -31,6 +31,28 @@ func _ready() -> void:
 			for surface: int in mesh.mesh.get_surface_count():
 				var mat: ShaderMaterial = mesh.get_surface_override_material(surface) as ShaderMaterial
 				check(mat != null and mat.shader == Toon.TOON_SHADER, "%s surface uses toon" % asset)
+				if mat != null:
+					var texture: Texture2D = mat.get_shader_parameter(&"albedo_texture") as Texture2D
+					check(texture != null, "%s has baked albedo" % asset)
+					if texture != null:
+						check(texture.get_width() <= 1024 and texture.get_height() <= 1024, "texture budget")
+				check(not mesh.mesh.surface_get_arrays(surface)[Mesh.ARRAY_TEX_UV].is_empty(), "UV unwrap exists")
+		if asset == "mage":
+			var skeleton: Skeleton3D = model.find_child("Skeleton3D", true, false) as Skeleton3D
+			check(skeleton != null and skeleton.get_bone_count() >= 7, "mage deform rig")
+			var animation_player: AnimationPlayer = model.find_child("AnimationPlayer", true, false) as AnimationPlayer
+			check(animation_player != null, "mage AnimationPlayer imported")
+			if animation_player != null:
+				for clip: String in ["idle", "walk", "cast", "dash", "death"]:
+					check(animation_player.has_animation(clip), "mage clip " + clip)
+					if animation_player.has_animation(clip):
+						check(animation_player.get_animation(clip).get_track_count() > 0, "clip has bone tracks")
+				if skeleton != null:
+					animation_player.play("walk")
+					animation_player.seek(.25, true)
+					var pose_a: Quaternion = skeleton.get_bone_pose_rotation(skeleton.find_bone("leg_L"))
+					animation_player.seek(.75, true)
+					check(not pose_a.is_equal_approx(skeleton.get_bone_pose_rotation(skeleton.find_bone("leg_L"))), "walk deforms skeleton")
 		var report: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/models/%s.json" % asset))
 		check(count == int(report["triangles"]), "%s exported triangle count: %d" % [asset, count])
 		var expected: Array = report["size_xyz_m"]
@@ -83,6 +105,70 @@ func _ready() -> void:
 	player.is_local = false
 	add_child(player)
 	check(player.has_node("ThirdPersonModel/Model"), "remote player uses mage wrapper")
+	var controller: Node = player.get_node("MageAnimation")
+	controller.set_process(false)
+	player.velocity = Vector3(3, 0, 0)
+	controller._process(.016)
+	check(controller.current == &"walk", "moving remote walks")
+	player.velocity = Vector3(20, 0, 0)
+	controller._process(.016)
+	check(controller.current == &"dash", "fast remote dashes")
+	player.velocity = Vector3.ZERO
+	player.composer.press_slot(0)
+	controller._process(.016)
+	check(controller.current == &"cast", "remote prepares cast")
+	player.composer.clear()
+	controller._process(.016)
+	check(controller.current == &"idle", "cancel returns to idle")
+	player.stats.take_damage(1000)
+	check(controller.current == &"death", "Stats.died plays death")
+	player.stats.reset()
+	controller._process(.016)
+	check(controller.current == &"idle", "new round exits death")
+	var sync: NetSync = NetSync.new()
+	sync.name = "NetSync"
+	player.add_child(sync)
+	sync.set_process(false)
+	sync.set_physics_process(false)
+	sync.role = NetSync.Role.CLIENT_REMOTE
+	sync.remote_composer_bits = NetCodec.pack_composer(SpellComposer.State.AIMING, 0, 1)
+	controller._process(.016)
+	check(controller.current == &"cast", "synced composer drives remote animation")
+	sync.remote_composer_bits = 0
+	player.position.x += .05
+	controller._process(.016)
+	check(controller.current == &"walk", "interpolated displacement drives client walk")
+	player.position.x += 10.0
+	controller._process(.016)
+	check(controller.current == &"idle", "teleport is not a dash")
 	player.free()
+	var local_player: Player = preload("res://scenes/player/player.tscn").instantiate() as Player
+	add_child(local_player)
+	var arms: Node = local_player.get_node("Head/Camera3D/FirstPersonArms")
+	arms.set_process(false)
+	check(arms.view.own_world_3d and arms.view.transparent_bg, "arms isolated from world depth")
+	check(arms.camera.cull_mask == 1 << 19, "arms camera uses separate layer")
+	for slot: int in 3:
+		local_player.composer.clear()
+		local_player.composer.press_slot(slot)
+		arms._process(0.0)
+		check(arms.arms.get("pose") == ["OpenPalm", "Fist", "PalmDown"][slot], "form selects arm pose")
+	local_player.composer.clear()
+	local_player.composer.press_slot(0)
+	local_player.composer.press_slot(1)
+	arms._process(0.0)
+	check(local_player.composer.state == SpellComposer.State.AIMING and arms.arms.position.y > 0.02, "aim raises arms")
+	local_player.composer.press_cast()
+	arms._process(0.0)
+	check(arms.arms.get("pose") == "Cast", "cast flash pose")
+	arms._process(.13)
+	check(arms.arms.get("pose") == "OpenPalm", "cast flash ends after 0.12s")
+	local_player.stats.take_damage(1000)
+	arms._process(0.0)
+	check(not arms.overlay.visible, "dead player arms hidden")
+	local_player.stats.reset()
+	arms._process(0.0)
+	check(arms.overlay.visible, "respawn restores arms")
+	local_player.free()
 	print("ASSET_CHECKS: %d failures" % _failures)
 	get_tree().quit(0 if _failures == 0 else 1)

@@ -5,6 +5,7 @@ render_mode diffuse_toon, specular_toon;
 // block specular and a faint painted noise so flat colours do not look plastic.
 
 uniform vec4 base_color : source_color = vec4(0.6, 0.58, 0.55, 1.0);
+uniform sampler2D albedo_texture : source_color, hint_default_white, filter_linear_mipmap;
 uniform float shadow_floor : hint_range(0.0, 1.0) = 0.42;
 uniform float mid_band : hint_range(0.0, 1.0) = 0.72;
 uniform vec4 rim_color : source_color = vec4(1.0, 0.95, 0.85, 1.0);
@@ -30,7 +31,7 @@ void vertex() {
 
 void fragment() {
 	float n = noise(world_pos.xz * 1.7 + world_pos.y * 0.9);
-	ALBEDO = base_color.rgb * (1.0 - paint_noise + n * paint_noise * 2.0);
+	ALBEDO = base_color.rgb * texture(albedo_texture, UV).rgb * (1.0 - paint_noise + n * paint_noise * 2.0);
 	ROUGHNESS = 0.85;
 	SPECULAR = 0.2;
 }

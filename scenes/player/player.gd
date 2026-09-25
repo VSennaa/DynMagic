@@ -92,6 +92,10 @@ func _ready() -> void:
 	if is_local:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 		Toon.add_outline(_camera)
+		var arms: Node = preload("res://scenes/player/first_person_arms.gd").new()
+		arms.name = "FirstPersonArms"
+		_camera.add_child(arms)
+		arms.setup(self, _camera)
 	else:
 		_add_nameplate()
 
@@ -425,6 +429,10 @@ func _add_nameplate() -> void:
 	var body: Node3D = preload("res://scenes/assets/mage.tscn").instantiate() as Node3D
 	body.name = "ThirdPersonModel"
 	add_child(body)
+	var animation: Node = preload("res://scenes/player/mage_animation.gd").new()
+	animation.name = "MageAnimation"
+	add_child(animation)
+	animation.setup(self, body)
 
 
 func _process(_delta: float) -> void:

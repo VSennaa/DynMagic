@@ -6,10 +6,12 @@ const TOON_SHADER: Shader = preload("res://shaders/toon.gdshader")
 const OUTLINE_SHADER: Shader = preload("res://shaders/outline.gdshader")
 
 
-static func material(color: Color) -> ShaderMaterial:
+static func material(color: Color, albedo: Texture2D = null) -> ShaderMaterial:
 	var mat: ShaderMaterial = ShaderMaterial.new()
 	mat.shader = TOON_SHADER
 	mat.set_shader_parameter(&"base_color", color)
+	if albedo != null:
+		mat.set_shader_parameter(&"albedo_texture", albedo)
 	return mat
 
 

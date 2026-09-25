@@ -163,11 +163,14 @@ def export(name, budget, expected_size=None):
     assert triangles <= budget, (name, triangles, budget)
     if expected_size:
         assert all(abs(a-b) < .001 for a,b in zip(size, expected_size)), (size, expected_size)
+    from paint import bake_albedo
+    bake_albedo(name, objects, ROOT)
     output = ROOT / "assets" / "models"
     output.mkdir(parents=True, exist_ok=True)
     bpy.ops.export_scene.gltf(filepath=str(output / (name + ".glb")), export_format="GLB",
                               export_yup=True, use_selection=False, export_cameras=False,
-                              export_lights=False, export_animations=False)
+                              export_lights=False, export_animations=True,
+                              export_animation_mode="ACTIONS", export_nla_strips=True)
     report = {"asset": name, "triangles": triangles, "budget": budget,
               "size_xyz_m": [round(v, 5) for v in size], "mesh_objects": len(objects)}
     (output / (name + ".json")).write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")

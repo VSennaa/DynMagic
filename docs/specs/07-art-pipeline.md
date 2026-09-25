@@ -72,7 +72,7 @@ Rodada 3, 2026-09-25. Fontes: `tools/blender/`; binários e relatórios: `assets
 
 | Asset | Triângulos | Descrição / dimensões X × Y × Z em metros |
 |---|---:|---|
-| `mage.glb` | 1.304 | Mago estático de 1,80 m; origem nos pés, frente −Z; chapéu pontudo largo, manto, luvas, botas e runas. Sem rig/animações. |
+| `mage.glb` | 1.304 | Mago de 1,80 m; origem nos pés, frente −Z; chapéu pontudo largo, manto, luvas, botas e runas. Rig de 7 ossos e cinco animações (rodada 5). |
 | `fp_arms.glb` | 2.368 | Total das quatro poses com ambos os braços: `OpenPalm`, `Fist`, `PalmDown`, `Cast`; origem comum para câmera, frente −Z. Wrapper mostra apenas uma pose por vez. |
 | `cover_low.glb` | 319 | Pedra chanfrada com runas escavadas; 1,5 × 1,0 × 1,5. |
 | `cover_high.glb` | 326 | Pedra chanfrada com runas escavadas; 1,5 × 2,2 × 1,5. |
@@ -104,3 +104,16 @@ $g = 'C:/Users/vinic/Downloads/Godot_v4.7.2-stable_win64.exe/Godot_v4.7.2-stable
 Validação: `verify_assets` compara triângulos/dimensões importados com os relatórios, toon de todas as superfícies, origem no solo, seleção exclusiva das poses, ausência de colisões importadas, modelo remoto e pedestal estacionário. Raycasts físicos verificam o topo de cada cobertura e bloqueio entre spawns nas três arenas. Galeria inspecionada com toon e outline reais. Todos os geradores foram executados novamente com relatórios geométricos idênticos; alguns GLBs diferiram binariamente entre execuções, sem alteração das contagens/dimensões verificadas.
 
 Pendentes: revisão artística do usuário, rig/animações, braços no controlador/camada sem clipping e posicionamento dos props decorativos.
+
+## 7. Rodada 5 — texturas, rig e braços (2026-09-25)
+
+Concluída, sem commit. Esta seção substitui as pendências de texturas, rig e braços do histórico acima. Posicionamento de props e revisão artística humana continuam fora desta rodada.
+
+- Os 11 geradores usam `paint.py`: UV Smart Project com ilhas empacotadas em conjunto; ruído anisotrópico de pinceladas, gradiente vertical suave e realce de cantos pela diferença entre normal geométrica e Bevel. Madeira/palha/corda usam fibras verticais. Bake Cycles EMIT sem iluminação, PNG sRGB **512 × 512** por asset em `assets/textures/<asset>_albedo.png`. Pedra, tecido, madeira, palha, dourado e cristal mantêm a paleta plana. Geometria e colisões preservadas.
+- GLBs carregam o atlas; Godot extrai cópias `<asset>_<asset>_albedo.png` junto dos modelos. `asset_visual.gd` preserva textura e cor e compartilha materiais pelo par cor/textura. `Toon.material(color, albedo)` aceita textura opcional; sampler branco preserva os chamadores antigos.
+- `mage_rig.py`: root/spine/head/arm_L/arm_R/leg_L/leg_R, pesos graduais no manto e idle/walk/cast/dash/death a 30 FPS. Mago: **1.304 triângulos**, 1,80 m. `mage_animation.gd` lê `NetSync.remote_composer_bits`, usa velocidade autoritativa ou deslocamento interpolado no cliente, ignora teleporte e mantém a morte até Stats voltar à vida. Composição segura a pose preparada; cast reinicia o gesto. Sem mudanças na rede/física ou root motion.
+- `first_person_arms.gd` é filho da câmera local. Câmera própria acompanha FOV/aspecto; `SubViewport` transparente, `World3D` próprio e camada 20 exclusiva, composta abaixo do HUD. Paredes não participam da profundidade dos braços. Idle/projétil = OpenPalm, Self = Fist, Area = PalmDown; mira levanta/avança os braços; cast = Cast com pulso de **0,12 s**. Morte oculta e suspende a viewport; retorno à vida restaura. Custo: renderização adicional das mãos na resolução da viewport, ainda sem benchmark na GPU-alvo.
+- `verify_assets.tscn`: UVs/albedos/budget, esqueleto/clips, deformação dos ossos, seleção remota por velocidade/composer e deslocamento interpolado, teleporte, morte/reset, poses/mira/cast e isolamento de profundidade. Colisões das arenas A/B/C continuam verificadas.
+- Galeria: `--animations` mostra cinco poses; `--first-person` coloca parede a 0,25 m; `--capture <png>` salva captura. Evidências locais ignoradas em `tools/blender/validation/`: `round5-gallery.png`, `round5-animations.png`, `round5-arms.png` e logs.
+
+Rebuild: comandos da seção 6, sem `--preview`; todos os geradores refazem o bake. Para escritas dentro do escopo desta rodada, configurar `BLENDER_USER_CONFIG`/`BLENDER_USER_SCRIPTS` sob `tools/blender/.runtime/`. Validação: import sem erros de scripts/assets, **ASSET_CHECKS: 0 failures**, **73 testes, 0 falhas**. Persistem avisos ambientais de certificados/cache/editor settings e objetos retidos ao sair. Capturas inspecionadas em Vulkan Forward+ na RX 580; revisão artística humana e benchmark continuam pendentes.

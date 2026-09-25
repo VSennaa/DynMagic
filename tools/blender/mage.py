@@ -33,4 +33,6 @@ rune("HatSigil", 0,1.535,-.214,.22)
 box("Belt", (0,.87,-.18), (.43,.065,.065), "Leather", .012)
 box("Buckle", (0,.87,-.224), (.085,.085,.025), "Gold", .01)
 rune("CloakSigil", 0,.64,.248,.55)
+from mage_rig import build_rig
+build_rig()
 export("mage", 15000)

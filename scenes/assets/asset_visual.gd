@@ -3,7 +3,7 @@ extends Node3D
 ## Replace every imported surface with the shared toon shader, keeping its flat palette.
 ## FP arm poses share an origin; show only the requested pose.
 
-static var _materials: Dictionary[Color, ShaderMaterial] = {}
+static var _materials: Dictionary[String, ShaderMaterial] = {}
 
 @export_enum("OpenPalm", "Fist", "PalmDown", "Cast") var pose: String = "OpenPalm":
 	set(value):
@@ -23,9 +23,11 @@ func _apply_toon(node: Node) -> void:
 		for index: int in instance.mesh.get_surface_count():
 			var imported: BaseMaterial3D = instance.mesh.surface_get_material(index) as BaseMaterial3D
 			var color: Color = imported.albedo_color if imported != null else Color.WHITE
-			if not _materials.has(color):
-				_materials[color] = Toon.material(color)
-			instance.set_surface_override_material(index, _materials[color])
+			var texture: Texture2D = imported.albedo_texture if imported != null else null
+			var key: String = str(color) + ":" + str(texture.get_instance_id() if texture != null else 0)
+			if not _materials.has(key):
+				_materials[key] = Toon.material(color, texture)
+			instance.set_surface_override_material(index, _materials[key])
 	for child: Node in node.get_children():
 		_apply_toon(child)
 
