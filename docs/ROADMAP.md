@@ -33,9 +33,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (write th
 ## M1 — Sandbox (offline, 1 element)
 
 - [x] `PlayerTuning.tres` with every value from spec 05 §2
-- [ ] `Player` scene: CharacterBody3D, head, camera, FOV from settings (spec 05 §1)
-- [ ] First-person movement: walk, sprint, crouch, jump, coyote time, step-up (spec 05 §2)
-- [ ] Mouse look with sensitivity and invert Y
+- [x] `Player` scene: CharacterBody3D, head, camera, FOV from settings (spec 05 §1). Sandbox test scene at `scenes/sandbox/sandbox.tscn` (current main scene)
+- [x] First-person movement: walk, sprint, crouch, jump, coyote time, step-up (spec 05 §2). Verified walk + jump in game via MCP input; step-up and crouch tunnel still need a manual playtest
+- [x] Mouse look with sensitivity and invert Y (values in `Settings` autoload, in-memory until M6)
 - [ ] `Stats` node: HP, mana, regen pause, shield, status stacking (spec 05 §3)
 - [ ] Data classes: `ElementDef`, `FormDef`, `EffectDef`, `SpellBase` with `cast_mode` (spec 01 §4)
 - [ ] `SpellDB.resolve()` pure function + test for one element

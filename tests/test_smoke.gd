@@ -28,5 +28,6 @@ func test_input_actions_exist() -> void:
 		&"slot_1", &"slot_2", &"slot_3", &"compose_cancel",
 		&"cast", &"recast", &"scoreboard", &"pause", &"net_overlay",
 	]
+	# The editor's InputMap holds editor actions, so read the project settings instead.
 	for action: StringName in actions:
-		assert_true(InputMap.has_action(action), "missing input action %s" % action)
+		assert_true(ProjectSettings.has_setting("input/%s" % action), "missing input action %s" % action)
