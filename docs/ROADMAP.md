@@ -86,7 +86,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (write th
 
 ## M4 — Loop de partida
 
-- [ ] `MatchState` FSM on host (spec 02 §2) + `test_match_fsm.gd`
+- [x] `MatchState` FSM on host (spec 02 §2) + `test_match_fsm.gd`: pure `MatchFsm` (draft order, rune offers, Core timer, overtime choice and timeout rules, decisive round, disconnect pause/forfeit), 13 tests. Wiring into NetMatch is the next tasks
 - [ ] Side swap every round, spawn barriers during countdown
 - [ ] Sequential draft: side A then side B, no duplicate element (spec 02 §3)
 - [ ] Runes: 7 resources + loser pick of 3 random (spec 02 §3)
