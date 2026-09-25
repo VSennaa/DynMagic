@@ -4,7 +4,17 @@ Last update: 2026-09-25. Written so any AI agent (Claude, Codex, Gemini, etc.) c
 
 ## 0. Active agent
 
-Active agent: none (Claude, 2026-09-25: v0.3.1 released; 4 reviews in docs/reviews/ + SYNTHESIS.md with consensus items C1-C18 and decisions D1-D13 awaiting the user; VPS measured, see SYNTHESIS §4)
+Active agent: Codex (round 7 — ROADMAP M10 alpha 1.0, started 2026-09-25)
+
+### Handoff brief for Codex (round 7 — alpha 1.0, ROADMAP M10; 2026-09-25)
+User asked: skip further review, Codex implements M10, Claude commits afterwards. Read `docs/reviews/SYNTHESIS.md` (consensus C1–C18, decisions D1–D13, user decisions in §5) and the four reports in `docs/reviews/` for evidence (file:line). Work through ROADMAP M10 phases 1 → 4 in order, ticking `[x]` as you go.
+- You may edit anything in the project except `.git`, `addons/`, `.github/`. Keep GDScript static typing (untyped_declaration is an error), match surrounding style, UI text in Portuguese, identifiers in English.
+- User decisions (binding): Seta 3 charges (1 per 1.2 s) + RMB recast only for confirmed spells; element multipliers Fogo 1.05 / Gelo 0.95 / Raio 1.0 / Vento 0.95; overtime default Colapso, Aleatório as lobby option + `--overtime`/`--arena` server flags; VPS gets 2 GB and runs 3 processes via a `server/dynmagic@.service` template with MemoryMax (write the template + README section; do not ssh anywhere).
+- Other conflicts: follow the "Recomendação" column of SYNTHESIS §2 (glossary Raio/Leque/Prorrogação/Escolha/Round, wheel as Q-E-R arc with quick/confirm mark, both HP bars on top + enemy status icons only with line of sight, death cam + damage card without replay, remove headshot from spec, local telemetry JSON with lobby notice, draft fixed windows with confirmation, 15 s in round 1).
+- Test after each phase: `--import`, the godot-ai test suites in `tests/` (update/add tests for changed rules), and a headless LAN match: host `-- --host --bot` + client `-- --join 127.0.0.1 --bot` (both `--headless`). A dedicated check: `-- --server` + two `--join 127.0.0.1 --lobby --bot` clients (they auto-ready).
+- Bump version to `1.0.0` (project.godot `config/version`, export_presets file/product version `1.0.0.0`) and write the `v1.0.0-alpha` section at the top of `docs/release-notes.md` (Portuguese, player-facing).
+- Do not download export templates, install software or touch the network. You cannot commit: leave changes uncommitted, list them here, and set `Active agent: none (round 7 ...)` when you stop, noting anything left undone.
+
 
 Rodada 3 concluída em 2026-09-25, sem commit; arquivos, triângulos e pendências na seção 12. Round 2 (video settings, compose metrics, reconnect) was reviewed, tested (73/73 + bot match) and committed by Claude.
 
