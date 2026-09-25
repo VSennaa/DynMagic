@@ -64,9 +64,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (write th
 - [x] Element variants for Area row: Cone via params (range/slow/arc/knockback), Mark frost root + wind launch + storm fast delay, Wall fire contact burn / frost 180 HP opaque / storm non-solid contact damage / wind projectile-only (collision layer 2)
 - [x] `test_spell_resolution.gd`: all 36 combinations vs expected table
 - [x] Rune circle shader + glyph per form + ring per effect (spec 01 §5, spec 07 §2): procedural `shaders/rune_circle.gdshader` (arrow/circle/square glyphs; solid/toothed/dotted rings) on `RuneCircle` in front of the hands, visible to both players
-- [ ] Placeholder VFX per element (GPUParticles3D)
+- [x] Placeholder VFX per element (GPUParticles3D): `vfx/element_fx.gd` trails on projectiles and bursts on explosions; shared `SpellNode.floor_below()` keeps zones off bodies
 - [x] Training mode: pick element with keys 1-4 (fire, frost, storm, wind). A menu comes with M6 UI
-- [ ] Milestone review with user
+- [~] Milestone review with user — M2 done 2026-09-24, review pending (goal: keep going)
 
 ## M3 — Rede
 

@@ -89,7 +89,7 @@ func _detonate() -> void:
 		if launch > 0.0 and target.has_method(&"apply_knockback"):
 			target.call(&"apply_knockback", Vector3.UP * launch)
 	var fx: ExplosionFx = EXPLOSION_SCENE.instantiate() as ExplosionFx
-	fx.configure(_radius, spell.color)
+	fx.configure(_radius, spell.color, spell.element)
 	get_parent().add_child(fx)
 	fx.global_position = global_position
 	queue_free()

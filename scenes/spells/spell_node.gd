@@ -57,3 +57,21 @@ static func find_damageable(collider: Object) -> Node:
 			return node
 		node = node.get_parent()
 	return null
+
+
+## First non-damageable surface below a point: zones and marks land on the floor, never on a body.
+func floor_below(point: Vector3) -> Vector3:
+	var exclude: Array[RID] = []
+	var body: CollisionObject3D = caster as CollisionObject3D
+	if body != null:
+		exclude.append(body.get_rid())
+	for _attempt: int in 4:
+		var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(point + Vector3.UP * 0.2, point + Vector3.DOWN * 20.0)
+		query.exclude = exclude
+		var result: Dictionary = get_world_3d().direct_space_state.intersect_ray(query)
+		if result.is_empty():
+			return point
+		if find_damageable(result["collider"]) == null:
+			return result["position"]
+		exclude.append(result["rid"])
+	return point

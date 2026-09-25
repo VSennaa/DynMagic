@@ -32,6 +32,7 @@ func _ready() -> void:
 	if body != null:
 		_exclude.append(body.get_rid())
 	_apply_color(spell.color)
+	add_child(ElementFx.trail(spell.element, spell.color))
 
 
 func _physics_process(delta: float) -> void:

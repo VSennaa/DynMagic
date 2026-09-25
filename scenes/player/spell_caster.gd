@@ -37,7 +37,7 @@ func ground_target(max_range: float) -> Vector3:
 ## First non-damageable surface below a point (rays pass through players and dummies).
 func _floor_below(point: Vector3, fallback: Vector3) -> Vector3:
 	var exclude: Array[RID] = [player.get_rid()]
-	for attempt: int in 4:
+	for _attempt: int in 4:
 		var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(point + Vector3.UP * 0.5, point + Vector3.DOWN * 20.0)
 		query.exclude = exclude
 		var result: Dictionary = player.get_world_3d().direct_space_state.intersect_ray(query)

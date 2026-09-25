@@ -68,7 +68,8 @@ Chosen: **Godot AI** by hi-godot (https://github.com/hi-godot/godot-ai), plugin 
 | Design (SDD + specs 01–08) | Done, decisions validated by user |
 | M0 Setup | Done 2026-09-24: MCP verified, folder skeleton, 7 empty autoloads, 16 input actions, smoke suite 4/4 passing, first commit |
 | M1 Sandbox | Done 2026-09-24 (review pending with user): FPS controller, Stats, SpellDB, SpellComposer, all 9 fire spells, dummy, Arena A greybox, temporary HUD |
-| M2–M7 | Not started |
+| M2 Grimório | Done 2026-09-24 (review pending): 4 elements, 36 spells with element variants, status effects, rune circle, element VFX |
+| M3–M7 | Not started |
 
 ## 7. Next steps
 

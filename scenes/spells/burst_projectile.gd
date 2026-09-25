@@ -37,7 +37,7 @@ func _explode(center: Vector3) -> void:
 		_chain(center, targets, chain)
 	_leave_ground(center)
 	var fx: ExplosionFx = EXPLOSION_SCENE.instantiate() as ExplosionFx
-	fx.configure(radius, spell.color)
+	fx.configure(radius, spell.color, spell.element)
 	get_parent().add_child(fx)
 	fx.global_position = center
 	queue_free()
@@ -70,12 +70,5 @@ func _leave_ground(center: Vector3) -> void:
 	else:
 		overrides.merge({"zone_duration": frost_time, "zone_dps": 0.0, "zone_applies_status": true})
 	var zone: Zone = ZONE_SCENE.instantiate() as Zone
-	zone.setup(spell.with_params(overrides), caster, _ground_below(center), direction, center)
+	zone.setup(spell.with_params(overrides), caster, floor_below(center), direction, center)
 	get_parent().add_child(zone)
-
-
-func _ground_below(point: Vector3) -> Vector3:
-	var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(point + Vector3.UP * 0.2, point + Vector3.DOWN * 20.0)
-	query.exclude = _exclude
-	var result: Dictionary = get_world_3d().direct_space_state.intersect_ray(query)
-	return result["position"] if not result.is_empty() else point
