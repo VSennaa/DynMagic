@@ -1,0 +1,11 @@
+{
+  "asset": "pillar",
+  "triangles": 326,
+  "budget": 3000,
+  "size_xyz_m": [
+    3.0,
+    3.0,
+    3.0
+  ],
+  "mesh_objects": 3
+}

@@ -1,0 +1,11 @@
+{
+  "asset": "cover_low",
+  "triangles": 319,
+  "budget": 3000,
+  "size_xyz_m": [
+    1.5,
+    1.0,
+    1.5
+  ],
+  "mesh_objects": 3
+}

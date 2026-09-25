@@ -1,0 +1,11 @@
+{
+  "asset": "mage",
+  "triangles": 1304,
+  "budget": 15000,
+  "size_xyz_m": [
+    1.00894,
+    1.8,
+    0.76
+  ],
+  "mesh_objects": 36
+}

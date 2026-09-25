@@ -1,0 +1,11 @@
+{
+  "asset": "fp_arms",
+  "triangles": 2368,
+  "budget": 15000,
+  "size_xyz_m": [
+    0.89898,
+    0.3511,
+    0.77065
+  ],
+  "mesh_objects": 4
+}

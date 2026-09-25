@@ -1,0 +1,11 @@
+{
+  "asset": "spawn_arch",
+  "triangles": 646,
+  "budget": 3000,
+  "size_xyz_m": [
+    8.5,
+    5.0,
+    1.15875
+  ],
+  "mesh_objects": 15
+}

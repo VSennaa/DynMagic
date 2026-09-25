@@ -1,0 +1,11 @@
+{
+  "asset": "banner",
+  "triangles": 288,
+  "budget": 3000,
+  "size_xyz_m": [
+    1.24,
+    2.7,
+    0.65
+  ],
+  "mesh_objects": 13
+}

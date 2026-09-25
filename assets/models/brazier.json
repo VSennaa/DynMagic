@@ -1,0 +1,11 @@
+{
+  "asset": "brazier",
+  "triangles": 280,
+  "budget": 3000,
+  "size_xyz_m": [
+    0.86,
+    1.62,
+    0.81791
+  ],
+  "mesh_objects": 6
+}

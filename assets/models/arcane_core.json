@@ -1,0 +1,11 @@
+{
+  "asset": "arcane_core",
+  "triangles": 204,
+  "budget": 3000,
+  "size_xyz_m": [
+    0.86,
+    1.88,
+    0.86
+  ],
+  "mesh_objects": 9
+}
