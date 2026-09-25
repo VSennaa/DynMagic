@@ -41,7 +41,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (write th
 - [x] `SpellDB.resolve()` pure function + test for one element
 - [x] `SpellComposer` FSM: IDLE, SLOT_EFFECT, AIMING, CASTING, timeout, cancel, 150 ms buffer (spec 01 §1). Wired to `Player` (validator checks Stats; `Player.spell_cast` fires after paying mana/cooldown)
 - [x] `test_spell_composer.gd`: quick vs confirm, timeout, cancel, recast
-- [ ] Spell: Bolt (projectile/direct)
+- [x] Spell: Bolt (projectile/direct). Shared pieces: `SpellNode` base, ray-stepped `Projectile`, `SpellCaster` (aims at crosshair point), `receive_hit()` on group "damageable". Headshot ×1.5 still pending (needs hurtboxes)
 - [ ] Spell: Orb (projectile/burst) + aim preview
 - [ ] Spell: Seed (projectile/lingering) + arc preview + zone
 - [ ] Spell: Guard (self/direct)
@@ -50,7 +50,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (write th
 - [ ] Spell: Cone (area/direct)
 - [ ] Spell: Mark (area/burst) + ground preview
 - [ ] Spell: Wall (area/lingering) + ghost preview
-- [ ] Training dummy: infinite HP, damage numbers, DPS counter
+- [x] Training dummy: infinite HP, damage numbers, DPS counter
 - [ ] Greybox Arena A (spec 03 §3) for testing
 - [ ] Temporary HUD: HP, mana, composition trail, 3×3 cooldown grid
 - [ ] Milestone review with user

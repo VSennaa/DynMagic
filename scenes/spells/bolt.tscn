@@ -1,0 +1,20 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scenes/spells/projectile.gd" id="1_proj"]
+
+[sub_resource type="SphereMesh" id="Sphere_bolt"]
+radius = 0.08
+height = 0.16
+radial_segments = 12
+rings = 6
+
+[node name="Bolt" type="Node3D"]
+script = ExtResource("1_proj")
+
+[node name="Mesh" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 3, 0, 0, 0)
+mesh = SubResource("Sphere_bolt")
+
+[node name="Light" type="OmniLight3D" parent="."]
+light_energy = 1.5
+omni_range = 3.0

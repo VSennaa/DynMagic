@@ -38,6 +38,7 @@ func _ready() -> void:
 	_camera.current = is_local
 	_camera.fov = Settings.fov
 	Settings.changed.connect(_on_settings_changed)
+	add_to_group(&"damageable")
 	composer.read_input = is_local
 	composer.validator = _validate_cast
 	composer.cast_requested.connect(_on_cast_requested)
@@ -160,6 +161,13 @@ func _on_settings_changed(key: StringName) -> void:
 func get_aim_camera() -> Camera3D:
 	return _camera
 
+
+
+## Entry point for spell damage (group "damageable"). Host-only in multiplayer.
+func receive_hit(amount: float, spell: ResolvedSpell, _source: Node) -> void:
+	stats.take_damage(amount)
+	if spell != null and spell.status_id != &"" and bool(spell.param(&"applies_status", false)):
+		stats.apply_status(spell.status_id, spell.status_duration)
 
 
 func _validate_cast(spell: ResolvedSpell) -> StringName:
