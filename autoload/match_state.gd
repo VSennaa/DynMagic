@@ -10,6 +10,8 @@ var fsm: MatchFsm
 ## Client-side mirror of the host FSM (also filled on the host for uniform reads).
 var view: Dictionary = {}
 var active: bool = false
+## Host: per-player match statistics (spec 02 §7). id -> {dealt, taken, casts:{form:n}, hits:{form:n}, cores}
+var stats: Dictionary = {}
 
 
 func start_match(overtime_setting: StringName = &"random") -> void:
@@ -18,11 +20,18 @@ func start_match(overtime_setting: StringName = &"random") -> void:
 	fsm = MatchFsm.new()
 	fsm.phase_changed.connect(func(_p: MatchFsm.Phase) -> void: _broadcast())
 	fsm.round_ended.connect(func(w: int, r: StringName) -> void: _round_ended.rpc(w, r))
-	fsm.match_ended.connect(func(w: int, r: StringName) -> void: _match_ended.rpc(w, r))
+	fsm.match_ended.connect(func(w: int, r: StringName) -> void: _match_ended.rpc(w, r, stats))
 	var ids: Array[int] = []
 	for id: int in Net.players:
 		ids.append(id)
 	ids.sort()
+	var args: PackedStringArray = OS.get_cmdline_user_args()
+	var speed_index: int = args.find("--match-speed")
+	if speed_index >= 0 and speed_index + 1 < args.size():
+		fsm.speed = float(args[speed_index + 1])
+	stats.clear()
+	for id: int in ids:
+		stats[id] = {"dealt": 0.0, "taken": 0.0, "casts": {}, "hits": {}, "cores": 0}
 	active = true
 	if not Net.peer_left.is_connected(_on_peer_left):
 		Net.peer_left.connect(_on_peer_left)
@@ -99,7 +108,27 @@ func report_death(id: int) -> void:
 func report_core(id: int) -> void:
 	if fsm != null and Net.is_host():
 		fsm.core_captured(id)
+		if stats.has(id):
+			stats[id]["cores"] += 1
 		_broadcast()
+
+
+## Host: a spell was cast by id.
+func report_cast(id: int, form: StringName) -> void:
+	if stats.has(id):
+		var casts: Dictionary = stats[id]["casts"]
+		casts[form] = int(casts.get(form, 0)) + 1
+
+
+## Host: mount damage from source_id (0 = environment) to 	arget_id.
+func report_damage(source_id: int, target_id: int, amount: float, form: StringName) -> void:
+	if stats.has(target_id):
+		stats[target_id]["taken"] += amount
+	if stats.has(source_id) and source_id != target_id:
+		stats[source_id]["dealt"] += amount
+		if form != &"":
+			var hits: Dictionary = stats[source_id]["hits"]
+			hits[form] = int(hits.get(form, 0)) + 1
 
 
 func _sender() -> int:
@@ -125,6 +154,7 @@ func _broadcast() -> void:
 		"overtime_rule": fsm.overtime_rule,
 		"core_spawned": fsm.core_spawned,
 		"core_holder": fsm.core_holder,
+		"arena": fsm.arena,
 	}
 	_sync.rpc(state)
 
@@ -143,8 +173,9 @@ func _round_ended(winner_id: int, reason: StringName) -> void:
 
 
 @rpc("authority", "call_local", "reliable", Net.CHANNEL_RELIABLE)
-func _match_ended(winner_id: int, reason: StringName) -> void:
-	print("[match] match won by %d (%s)" % [winner_id, reason])
+func _match_ended(winner_id: int, reason: StringName, final_stats: Dictionary) -> void:
+	stats = final_stats
+	print("[match] match won by %d (%s) stats=%s" % [winner_id, reason, final_stats])
 	match_ended.emit(winner_id, reason)
 
 

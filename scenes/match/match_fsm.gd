@@ -21,6 +21,7 @@ const DISCONNECT_GRACE: float = 30.0
 const CORE_SPAWN_AT: float = 30.0
 const ELEMENTS: Array[StringName] = [&"fire", &"frost", &"storm", &"wind"]
 const OVERTIME_RULES: Array[StringName] = [&"collapse", &"sudden_death", &"mana_surge"]
+const ARENAS: Array[StringName] = [&"A", &"B", &"C"]
 const RUNES: Array[StringName] = [&"breath", &"haste", &"light_step", &"husk", &"focus", &"echo", &"cold_blood"]
 
 var phase: Phase = Phase.LOBBY
@@ -42,9 +43,14 @@ var decisive: bool = false
 ## "random" or a fixed rule id, chosen in the lobby.
 var overtime_setting: StringName = &"random"
 var overtime_rule: StringName = &""
+## "rotation" (default), "random", or a fixed variant id (spec 03 §3).
+var arena_setting: StringName = &"rotation"
+var arena: StringName = &"A"
 var core_holder: int = 0
 var core_spawned: bool = false
 var rng: RandomNumberGenerator = RandomNumberGenerator.new()
+## Debug: multiplies the clock (e.g. --match-speed 8 for automated full-match runs).
+var speed: float = 1.0
 
 var _loaded: Array[int] = []
 var _paused_phase: Phase = Phase.LOBBY
@@ -190,6 +196,7 @@ func forfeit(loser_id: int) -> void:
 
 ## Advances timers. `hp` (id -> hp) is needed for the overtime timeout decision.
 func tick(delta: float, hp: Dictionary = {}) -> void:
+	delta *= speed
 	match phase:
 		Phase.DRAFT:
 			time_left -= delta
@@ -227,11 +234,24 @@ func _choose_overtime() -> StringName:
 	return OVERTIME_RULES[rng.randi_range(0, OVERTIME_RULES.size() - 1)]
 
 
+## Decisive round: random arena, never the previous one (spec 02 §6).
+func _choose_arena() -> StringName:
+	if decisive or arena_setting == &"random":
+		var options: Array[StringName] = ARENAS.duplicate()
+		if decisive and round_number > 1:
+			options.erase(arena)
+		return options[rng.randi_range(0, options.size() - 1)]
+	if ARENAS.has(arena_setting):
+		return arena_setting
+	return ARENAS[(round_number - 1) % ARENAS.size()]
+
+
 func _begin_round() -> void:
 	round_number += 1
 	if round_number > 1:
 		north_id = other(north_id)  # sides swap every round, so first pick alternates
 	decisive = score[players[0]] == ROUNDS_TO_WIN - 1 and score[players[1]] == ROUNDS_TO_WIN - 1
+	arena = _choose_arena()
 	elements.clear()
 	runes.clear()
 	rune_offers.clear()

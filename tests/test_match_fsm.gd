@@ -186,3 +186,16 @@ func test_disconnect_pause_resume_and_forfeit() -> void:
 	fsm.forfeit(B)
 	assert_eq(fsm.phase, MatchFsm.Phase.MATCH_END)
 	assert_eq(match_winner, A)
+
+func test_arena_rotation_and_decisive_random() -> void:
+	_load_both()
+	assert_eq(fsm.arena, &"A")
+	var seen: Array[StringName] = [fsm.arena]
+	for i: int in 6:
+		_to_combat()
+		fsm.player_died(B if i % 2 == 0 else A)
+		_finish_round_end()
+		seen.append(fsm.arena)
+	assert_eq(seen.slice(0, 6), [&"A", &"B", &"C", &"A", &"B", &"C"] as Array[StringName])
+	assert_true(fsm.decisive)
+	assert_ne(fsm.arena, seen[5], "decisive arena differs from the previous round")

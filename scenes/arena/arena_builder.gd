@@ -32,7 +32,36 @@ const LAYOUTS: Dictionary = {
 		[-13.25, -14.0, 1.5, 2.2, 1.0, 90.0],
 		[13.25, -15.5, 1.5, 2.2, 1.0, 90.0],
 	],
+	&"B": [
+		# Small high box at the exact centre.
+		[0.0, 0.0, 1.5, 2.2, 1.5, 0.0],
+		# Bars across the lane in front of each spawn.
+		[0.0, -11.0, 4.5, 1.4, 1.2, 0.0],
+		# "L" group (bar + box), diagonal.
+		[-6.0, -6.0, 4.5, 1.4, 1.2, 30.0],
+		[-4.3, -4.4, 1.5, 2.2, 1.5, 30.0],
+		# Loose high box, opposite diagonal.
+		[7.0, -4.0, 1.5, 2.2, 1.5, 15.0],
+		# Large niche on one wall per side.
+		[-13.0, -14.0, 1.0, 2.2, 3.0, 0.0],
+	],
+	&"C": [
+		# Central spine along Z: 12 m with two 1 m gaps (3 + 1 + 4 + 1 + 3).
+		[0.0, 0.0, 0.8, 2.5, 4.0, 0.0],
+		[0.0, -4.5, 0.8, 2.5, 3.0, 0.0],
+		# "L" blocks glued to the spine on opposite sides.
+		[1.6, -4.5, 2.4, 1.4, 1.2, 0.0],
+		# "T" structures on the side walls beyond the balconies.
+		[-12.5, -15.5, 3.0, 2.2, 0.8, 0.0],
+		[-11.4, -15.5, 0.8, 2.2, 3.0, 0.0],
+		# Box pair and a loose high box in the quadrants.
+		[-6.0, -10.0, 1.5, 1.0, 1.5, 0.0],
+		[-4.5, -10.0, 1.5, 2.2, 1.5, 0.0],
+		[6.0, -9.0, 1.5, 2.2, 1.5, 20.0],
+	],
 }
+
+const VARIANTS: Array[StringName] = [&"A", &"B", &"C"]
 
 @export var variant: StringName = &"A":
 	set(value):

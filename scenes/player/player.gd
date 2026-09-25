@@ -289,6 +289,8 @@ func receive_hit(amount: float, spell: ResolvedSpell, source: Node) -> void:
 		return
 	var had_shield: bool = stats.shield > 0.0
 	stats.take_damage(amount)
+	if MatchState.active and Net.is_host():
+		MatchState.report_damage(int(String(source.name)) if source is Player else 0, int(String(name)), amount, spell.form if spell != null else &"")
 	if active_guard != null:
 		_guard_reactions(amount, source, had_shield)
 	if spell != null and bool(spell.param(&"applies_status", false)):

@@ -198,6 +198,7 @@ func _validate(player: Player, spell: ResolvedSpell, origin: Vector3) -> StringN
 
 
 func _broadcast_spawn(caster_id: int, spell: ResolvedSpell, origin: Vector3, direction: Vector3, target: Vector3) -> void:
+	MatchState.report_cast(caster_id, spell.form)
 	_spawn_spell.rpc(caster_id, spell.element, spell.form, spell.effect, origin, direction, target)
 
 
@@ -280,6 +281,10 @@ func _on_match_changed() -> void:
 	var round_number: int = int(view.get("round", 0))
 	if round_number != _last_round and MatchState.phase() == MatchFsm.Phase.DRAFT:
 		_last_round = round_number
+		var layout: ArenaBuilder = _arena.get_node(^"Layout") as ArenaBuilder
+		var arena_id: StringName = view.get("arena", &"A")
+		if layout.variant != arena_id:
+			layout.variant = arena_id  # setter rebuilds the greybox
 		_start_round(int(view.get("north", 1)))
 	var elements: Dictionary = view.get("elements", {})
 	for id: Variant in elements:
