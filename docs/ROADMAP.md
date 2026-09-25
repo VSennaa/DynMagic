@@ -115,7 +115,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (write th
 ## M6 — Polimento
 
 - [x] Main menu with animated 3D background (spec 06 §1); now the project main scene
-- [x] Host/Join screens + lobby screen (`play_lan`, `lobby_screen`, `Lobby` autoload with ready flags and rules). UI-driven two-instance run not yet tested; CLI `--host/--join` still skips the lobby
+- [x] Host/Join screens + lobby screen (`play_lan`, `lobby_screen`, `Lobby` autoload with ready flags and rules). UI flow verified 2026-09-24: menu → Jogar LAN → Criar sala → headless client `--join <ip> --lobby --bot` → both ready → Iniciar → draft panel. Fixed a host-side aliasing bug that wiped ready flags. Open: unexplained large white shapes near the host camera during the draft (screenshot), investigate
 - [x] Draft screen: element cards (disabled when taken or not your turn) + rune offer + timer, in `NetMatch._update_draft_panel`; headless run clean. Keys 1-7 still work
 - [~] Final HUD (spec 06 §2): temporary HUD + match line + rune/Overcharge/status line. directional damage arrow (points at the opponent), Core capture bar (1 Hz from host), Tab scoreboard added. Pending: final art
 - [x] Pause menu + forfeit (Esc in the match; online match keeps running)

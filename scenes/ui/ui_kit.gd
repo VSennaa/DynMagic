@@ -59,6 +59,10 @@ static func row(children: Array[Control]) -> HBoxContainer:
 	var h: HBoxContainer = HBoxContainer.new()
 	h.add_theme_constant_override(&"separation", 12)
 	for child: Control in children:
+		# Word wrap inside a row collapses labels to one letter per line.
+		if child is Label:
+			(child as Label).autowrap_mode = TextServer.AUTOWRAP_OFF
+			child.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		h.add_child(child)
 	return h
 

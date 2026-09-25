@@ -193,6 +193,8 @@ func _request_cast(form: StringName, effect: StringName, origin: Vector3, direct
 func _validate(player: Player, spell: ResolvedSpell, origin: Vector3, cost: float) -> StringName:
 	if player.stats.is_dead:
 		return &"dead"
+	if player.frozen:
+		return &"frozen"
 	if player.stats.is_on_cooldown(spell.key):
 		return &"cooldown"
 	if not player.stats.can_afford(cost):

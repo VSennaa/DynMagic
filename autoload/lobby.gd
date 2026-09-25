@@ -27,7 +27,10 @@ func reset() -> void:
 
 
 func set_ready(value: bool) -> void:
-	_request_ready.rpc_id(1, value)
+	if Net.is_host():
+		_request_ready(value)
+	else:
+		_request_ready.rpc_id(1, value)
 
 
 func set_rules(overtime: StringName, arena: StringName) -> void:
@@ -69,9 +72,11 @@ func _push() -> void:
 
 @rpc("authority", "call_local", "reliable", Net.CHANNEL_RELIABLE)
 func _sync(flags: Dictionary, overtime: StringName, arena: StringName) -> void:
+	# On the host (call_local) lags IS ready_flags: copy before clearing.
+	var incoming: Dictionary = flags.duplicate()
 	ready_flags.clear()
-	for id: Variant in flags:
-		ready_flags[int(id)] = bool(flags[id])
+	for id: Variant in incoming:
+		ready_flags[int(id)] = bool(incoming[id])
 	overtime_setting = overtime
 	arena_setting = arena
 	changed.emit()

@@ -371,6 +371,8 @@ func _update_statuses(delta: float) -> void:
 func _validate_cast(spell: ResolvedSpell) -> StringName:
 	if stats.is_dead:
 		return &"dead"
+	if frozen:
+		return &"frozen"
 	if stats.is_on_cooldown(spell.key):
 		return &"cooldown"
 	if not stats.can_afford(mana_cost_for(spell, composer.is_recasting)):

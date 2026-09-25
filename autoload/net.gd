@@ -313,7 +313,8 @@ func _parse_cli() -> void:
 			get_tree().change_scene_to_file(NET_MATCH_SCENE)
 	elif action == "join":
 		if join(address, port) == OK:
-			get_tree().change_scene_to_file(NET_MATCH_SCENE)
+			# --lobby waits in the lobby screen (UI flow tests); otherwise jump straight into the match.
+			get_tree().change_scene_to_file("res://scenes/ui/lobby_screen.tscn" if args.has("--lobby") else NET_MATCH_SCENE)
 
 
 func _log(message: String) -> void:

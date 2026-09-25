@@ -27,6 +27,11 @@ func _ready() -> void:
 	Net.peer_left.connect(func(_id: int) -> void: _refresh())
 	Net.disconnected.connect(func() -> void: SceneRouter.go_to(SceneRouter.MAIN_MENU))
 	_refresh()
+	if OS.get_cmdline_user_args().has("--bot"):
+		# Headless UI-flow tests: mark ready once the handshake finished.
+		while Net.players.size() < 2:
+			await get_tree().create_timer(0.5).timeout
+		_toggle_ready()
 
 
 func _refresh() -> void:
