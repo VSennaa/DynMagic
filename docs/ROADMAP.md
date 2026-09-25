@@ -74,7 +74,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (write th
 - [x] CLI args `--host` / `--join <ip>` (+ `--port`, `--name`, `--discover`)
 - [x] Handshake + protocol version check (spec 04 §3); verified host+client headless. Room-full and version reject paths not exercised yet
 - [x] LAN discovery broadcast on 7778 + lobby list (spec 04 §2); verified headless (lobby list UI lands in M6). Note: the broadcast source IP may be a VPN adapter (26.x seen on this PC)
-- [ ] `InputFrame` + `Snapshot` serialization + `test_net_serialization.gd`
+- [x] `InputFrame` + `Snapshot` serialization + `test_net_serialization.gd` (`NetCodec`: ~14 B per input frame, ~50 B per player entry)
 - [ ] Client prediction + reconciliation (spec 04 §5)
 - [ ] Remote player interpolation (100 ms buffer)
 - [ ] Cast request/validation/spawn flow (spec 04 §6)
