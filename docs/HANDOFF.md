@@ -8,6 +8,14 @@ Active agent: none (Codex round 5 done, 2026-09-25: textures, rig, animations an
 
 Rodada 3 concluída em 2026-09-25, sem commit; arquivos, triângulos e pendências na seção 12. Round 2 (video settings, compose metrics, reconnect) was reviewed, tested (73/73 + bot match) and committed by Claude.
 
+### Handoff brief for Codex (round 6 — elemental staffs, one-handed viewmodel, UI art; 2026-09-25)
+User feedback: the two-handed first-person arms look strange. Replace them with ONE right hand holding a staff (no left hand), staff style per element, with a left-handed option. Claude edits UI/menus/theme (`scenes/ui/*`, `autoload/settings.gd`, `autoload/scene_router.gd`, `ui/*`) in parallel — do not touch those.
+You may edit: `tools/blender/*`, `assets/*`, `scenes/assets/*`, `scenes/player/first_person_arms.gd`, `scenes/player/mage_animation.gd`, `scenes/player/player.gd` (remote body/staff only), `tools/verify_assets.gd`, `tools/assets_gallery.gd`, `docs/specs/07-art-pipeline.md`.
+1. Staffs (Blender, baked hand-painted textures like round 5, ≤ 3k tris each, ~1.6 m, grip origin): `staff_fire` (charred wood, ember crystal, flame-shaped head), `staff_frost` (pale wood, ice-shard crown), `staff_storm` (dark metal, forked prongs with a violet orb), `staff_wind` (light twisted wood, feathers/ribbons, green gem). Colours follow the element palette (fire #FF5A1F, frost #6FD3FF, storm #C98BFF, wind #7CF2B0).
+2. First-person viewmodel: right forearm + gloved hand gripping the staff (new `fp_staff_arm` asset with poses/animations: idle sway, compose (staff raised), aim (staff forward), cast (thrust/flash)). No left hand. Pick the staff from `player.composer.element_id` and swap it when the element changes. Keep the separate viewport/FOV (`Settings.viewmodel_fov`). **Left-handed**: when `Settings.left_handed` is true, mirror the viewmodel to the left side (mirror the node, fix face culling/normals), updating live on `Settings.changed`.
+3. Third-person mage: attach the element staff to the right hand bone; animations should read naturally with it (cast pose points the staff).
+4. UI art pack in `assets/ui/` (PNG, baked from Blender procedural materials): parchment panel 9-slice (with 32 px margins), button frames normal/hover/pressed/disabled (ink-and-gold, rune notches), 4 rune corner ornaments, a title banner, and a painted 1920×1080 menu backdrop (arcane courtyard at dusk, toon style). List each file and its 9-slice margins in `docs/specs/07-art-pipeline.md`.
+Verify with `--import`, `tools/verify_assets.tscn`. You cannot commit. Update this file (round 6 status) and set `Active agent: none` when done.
 ### Handoff brief for Codex (round 5 — textures, rig, animations; ROADMAP M8, 2026-09-25)
 **Rodada 5 concluída em 2026-09-25, sem commit.** Tarefas executadas na ordem: texturas, rig/animações, braços locais. Somente os caminhos autorizados foram editados; alterações paralelas de Claude preservadas.
 

@@ -59,6 +59,7 @@ func _ready() -> void:
 	body.add_child(UiKit.label("— Controles —", 22))
 	body.add_child(_slider("Sensibilidade", 0.0005, 0.008, 0.0001, Settings.mouse_sensitivity, func(v: float) -> void: Settings.mouse_sensitivity = v))
 	body.add_child(_check("Inverter Y", Settings.invert_y, func(v: bool) -> void: Settings.invert_y = v))
+	body.add_child(_check("Modo canhoto (cajado na mão esquerda)", Settings.left_handed, func(v: bool) -> void: Settings.left_handed = v))
 	for action: StringName in Settings.REMAPPABLE:
 		var button: Button = UiKit.button(_event_text(action), _start_rebind.bind(action))
 		button.custom_minimum_size = Vector2(220, 36)

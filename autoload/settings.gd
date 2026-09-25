@@ -66,6 +66,12 @@ var viewmodel_fov: float = 60.0:
 		viewmodel_fov = clampf(value, 54.0, 68.0)
 		changed.emit(&"viewmodel_fov")
 
+## Left-handed: the first-person staff hand is mirrored to the left side.
+var left_handed: bool = false:
+	set(value):
+		left_handed = value
+		changed.emit(&"left_handed")
+
 var show_fps: bool = false:
 	set(value):
 		show_fps = value
@@ -100,6 +106,7 @@ func load_settings(path: String = PATH) -> void:
 		return
 	fov = cfg.get_value("video", "fov", fov)
 	viewmodel_fov = cfg.get_value("video", "viewmodel_fov", viewmodel_fov)
+	left_handed = cfg.get_value("controls", "left_handed", left_handed)
 	video.read_config(cfg)
 	fullscreen = cfg.get_value("video", "fullscreen", fullscreen)
 	vsync = cfg.get_value("video", "vsync", vsync)
@@ -122,6 +129,7 @@ func save_settings(path: String = PATH) -> Error:
 	video.write_config(cfg)
 	cfg.set_value("video", "fov", fov)
 	cfg.set_value("video", "viewmodel_fov", viewmodel_fov)
+	cfg.set_value("controls", "left_handed", left_handed)
 	cfg.set_value("video", "fullscreen", fullscreen)
 	cfg.set_value("video", "vsync", vsync)
 	cfg.set_value("video", "max_fps", max_fps)
