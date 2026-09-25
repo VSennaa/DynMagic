@@ -20,6 +20,7 @@ var _mana_label: Label
 var _status_label: Label
 var _cooldown_cells: Dictionary[StringName, Label] = {}
 var _damage_arrow: Label
+var _fps_label: Label
 var _core_bar: ProgressBar
 var _last_hp: float = -1.0
 var _arrow_time: float = 0.0
@@ -40,6 +41,8 @@ func _process(delta: float) -> void:
 		return
 	var stats: Stats = player.stats
 	_update_damage_arrow(delta, stats.hp + stats.shield)
+	_fps_label.visible = Settings.show_fps or OS.get_cmdline_user_args().has("--fps")
+	_fps_label.text = "%d FPS" % Engine.get_frames_per_second()
 	_hp_bar.max_value = stats.max_hp
 	_hp_bar.value = stats.hp
 	_shield_bar.max_value = stats.max_hp
@@ -105,6 +108,11 @@ func _build() -> void:
 	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_hint.modulate = Color(1, 1, 1, 0.7)
 	trail_box.add_child(_hint)
+
+	_fps_label = _label("", 18)
+	_fps_label.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+	_fps_label.position = Vector2(-120, 12)
+	root.add_child(_fps_label)
 
 	_damage_arrow = _label("▲", 48)
 	_damage_arrow.add_theme_color_override(&"font_color", Color(1.0, 0.25, 0.25))

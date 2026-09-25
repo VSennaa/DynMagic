@@ -60,6 +60,7 @@ func _ready() -> void:
 	name_edit.custom_minimum_size = Vector2(260, 36)
 	body.add_child(UiKit.row([UiKit.label("Nome", 18), name_edit]))
 	body.add_child(_check("Números de dano", Settings.show_damage_numbers, func(v: bool) -> void: Settings.show_damage_numbers = v))
+	body.add_child(_check("Mostrar FPS", Settings.show_fps, func(v: bool) -> void: Settings.show_fps = v))
 
 	body.add_child(UiKit.label("— Acessibilidade —", 22))
 	var palette: OptionButton = OptionButton.new()

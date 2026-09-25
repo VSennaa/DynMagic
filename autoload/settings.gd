@@ -58,6 +58,11 @@ var colorblind_mode: int = 0:
 		SpellDB.apply_palette(colorblind_mode)
 		changed.emit(&"colorblind_mode")
 
+var show_fps: bool = false:
+	set(value):
+		show_fps = value
+		changed.emit(&"show_fps")
+
 ## Bus name -> linear volume 0..1.
 var volumes: Dictionary[String, float] = {"Master": 1.0, "Music": 0.8, "SFX": 1.0, "UI": 1.0}
 
@@ -88,6 +93,7 @@ func load_settings() -> void:
 	player_name = cfg.get_value("game", "player_name", player_name)
 	show_damage_numbers = cfg.get_value("game", "show_damage_numbers", show_damage_numbers)
 	colorblind_mode = cfg.get_value("accessibility", "colorblind_mode", colorblind_mode)
+	show_fps = cfg.get_value("game", "show_fps", show_fps)
 	for bus: String in volumes.keys():
 		volumes[bus] = cfg.get_value("audio", bus, volumes[bus])
 	_load_bindings(cfg)
@@ -105,6 +111,7 @@ func save_settings() -> void:
 	cfg.set_value("game", "player_name", player_name)
 	cfg.set_value("game", "show_damage_numbers", show_damage_numbers)
 	cfg.set_value("accessibility", "colorblind_mode", colorblind_mode)
+	cfg.set_value("game", "show_fps", show_fps)
 	for bus: String in volumes:
 		cfg.set_value("audio", bus, volumes[bus])
 	for action: StringName in REMAPPABLE:
