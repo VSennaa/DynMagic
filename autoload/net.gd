@@ -18,6 +18,7 @@ const LOBBY_TIMEOUT: float = 3.0
 ## Two players plus room for spectators later (spec 04 §1).
 const MAX_CLIENTS: int = 5
 const NET_MATCH_SCENE: String = "res://scenes/net/net_match.tscn"
+const SERVER_SCENE: String = "res://scenes/net/server_lobby.tscn"
 
 ## ENet channels (spec 04 §8).
 const CHANNEL_RELIABLE: int = 0
@@ -25,6 +26,8 @@ const CHANNEL_INPUT: int = 1
 const CHANNEL_SNAPSHOT: int = 2
 
 var player_name: String = "Mago"
+## True on a dedicated server (--server): the host is not a player.
+var dedicated: bool = false
 ## Network simulator for unreliable streams (spec 04 §9): added one-way delay, jitter and loss.
 var sim_latency_ms: float = 0.0
 var sim_jitter_ms: float = 0.0
@@ -71,7 +74,8 @@ func is_host() -> bool:
 	return is_online() and multiplayer.is_server()
 
 
-func host(p_port: int = DEFAULT_PORT, p_lobby_name: String = "") -> Error:
+## dedicated: headless server with no local player; both players are clients (M9).
+func host(p_port: int = DEFAULT_PORT, p_lobby_name: String = "", p_dedicated: bool = false) -> Error:
 	close()
 	var peer: ENetMultiplayerPeer = ENetMultiplayerPeer.new()
 	var err: Error = peer.create_server(p_port, MAX_CLIENTS, 3)
@@ -81,9 +85,12 @@ func host(p_port: int = DEFAULT_PORT, p_lobby_name: String = "") -> Error:
 	port = p_port
 	lobby_name = p_lobby_name if p_lobby_name != "" else "Sala de %s" % player_name
 	multiplayer.multiplayer_peer = peer
-	players = {1: player_name}
+	dedicated = p_dedicated
+	players.clear()
+	if not dedicated:
+		players[1] = player_name
 	_start_broadcast()
-	_log("hosting on port %d as '%s'" % [port, lobby_name])
+	_log("%s on port %d as '%s'" % ["dedicated server" if dedicated else "hosting", port, lobby_name])
 	hosted.emit()
 	return OK
 
@@ -108,6 +115,7 @@ func close() -> void:
 		multiplayer.multiplayer_peer.close()
 	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
 	players.clear()
+	dedicated = false
 	MatchState.active = false
 
 
@@ -264,6 +272,7 @@ func _broadcast() -> void:
 		"port": port,
 		"players": players.size(),
 		"state": "lobby",
+		"dedicated": dedicated,
 	}
 	_broadcaster.put_packet(JSON.stringify(info).to_utf8_buffer())
 
@@ -291,7 +300,7 @@ func _poll_discovery() -> void:
 		lobbies_changed.emit()
 
 
-# --- CLI (spec 08 §4): --host | --join <ip> [--port N] [--name X] [--discover] ---
+# --- CLI (spec 08 §4): --host | --server | --join <ip> [--port N] [--name X] [--discover] ---
 
 func _parse_cli() -> void:
 	var args: PackedStringArray = OS.get_cmdline_user_args()
@@ -302,6 +311,8 @@ func _parse_cli() -> void:
 		match args[i]:
 			"--host":
 				action = "host"
+			"--server":
+				action = "server"
 			"--join":
 				action = "join"
 				if i + 1 < args.size() and not args[i + 1].begins_with("--"):
@@ -334,6 +345,10 @@ func _parse_cli() -> void:
 	if action == "host":
 		if host(port) == OK:
 			get_tree().change_scene_to_file(NET_MATCH_SCENE)
+	elif action == "server":
+		# Dedicated server: wait in the lobby; Lobby starts the match when both players are ready.
+		if host(port, "" if player_name == "Mago" else player_name, true) == OK:
+			get_tree().change_scene_to_file(SERVER_SCENE)
 	elif action == "join":
 		if join(address, port) == OK:
 			# --lobby waits in the lobby screen (UI flow tests); otherwise jump straight into the match.

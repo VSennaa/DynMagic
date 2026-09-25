@@ -148,15 +148,15 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (write th
 
 ## M8 — Arte final 2: texturas, animação e som (user decisions 2026-09-25)
 
-- [ ] (Codex) Hand-painted textures baked from procedural Blender nodes for every asset (stone, cloth, wood, straw, metal, crystal); PNG ≤ 1024², UV unwrap in the generators; Godot toon shader samples the albedo texture
-- [ ] (Codex) Mage rig + animations: idle, walk, cast, dash, death; `AnimationPlayer` on the remote mage driven by velocity/composer/Stats
-- [ ] (Codex) First-person arms on the local camera (own render layer, no wall clipping), poses/animations driven by `SpellComposer` state
-- [ ] (Claude) Audio mix: CC0 packs for UI clicks, footsteps and impacts; improved synthesis for element spells (layers, reverb, random variation); music loop placeholder
+- [x] (Codex) Hand-painted textures baked from procedural Blender nodes for every asset (stone, cloth, wood, straw, metal, crystal); PNG ≤ 1024², UV unwrap in the generators; Godot toon shader samples the albedo texture
+- [x] (Codex) Mage rig + animations: idle, walk, cast, dash, death; `AnimationPlayer` on the remote mage driven by velocity/composer/Stats
+- [x] (Codex) First-person arms on the local camera (own render layer, no wall clipping), poses/animations driven by `SpellComposer` state
+- [x] (Claude) Audio mix: CC0 packs for UI clicks, footsteps and impacts; improved synthesis for element spells (layers, reverb, random variation); music loop placeholder
 - [ ] Milestone review with user
 
 ## M9 — Servidor dedicado (user decision 2026-09-25: LAN + VPS Linux)
 
-- [ ] (Claude) `--server` headless mode: hosts without a local player, accepts two clients, auto-starts the match when both are ready, returns everyone to the lobby after results, loops forever
-- [ ] (Claude) Linux x86_64 server export preset + CI artifact (`DynMagic-server-linux-x64.tar.gz`) with a systemd unit and README (ports UDP 7777/7778, firewall, `--port`, `--name`)
-- [ ] (Claude) Headless test: dedicated server + two bot clients play a full match
+- [x] (Claude) `--server` headless mode: hosts without a local player, accepts two clients, auto-starts the match when both are ready, returns everyone to the lobby after results, loops forever
+- [x] (Claude) Linux x86_64 server export preset + CI artifact (`DynMagic-server-linux-x64.tar.gz`) with a systemd unit and README (ports UDP 7777/7778, firewall, `--port`, `--name`)
+- [x] (Claude) Headless test: dedicated server + two bot clients play a full match, return to the lobby and auto-start the next one; LAN discovery finds the dedicated server
 - [ ] Milestone review with user

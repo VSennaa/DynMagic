@@ -1,6 +1,7 @@
 name: Release
 
-# Pushing a tag like v0.1.0 builds the Windows executable and publishes it as a GitHub release.
+# Pushing a tag like v0.1.0 builds the Windows client and the Linux dedicated server,
+# smoke-tests the server and publishes both as a GitHub release.
 on:
   push:
     tags: ["v*"]
@@ -38,15 +39,27 @@ jobs:
           mkdir -p build/windows
           ./godot --headless --path . --export-release "Windows Desktop" build/windows/DynMagic.exe
           test -s build/windows/DynMagic.exe
+          mkdir -p build/linux
+          ./godot --headless --path . --export-release "Linux Server" build/linux/DynMagic-server.x86_64
+          test -s build/linux/DynMagic-server.x86_64
+
+      - name: Smoke test the dedicated server
+        run: |
+          chmod +x build/linux/DynMagic-server.x86_64
+          timeout 20 build/linux/DynMagic-server.x86_64 --headless -- --server --name CI > server.log 2>&1 || true
+          cat server.log
+          grep -q "\[server\] lobby 'CI'" server.log
 
       - name: Package
         run: |
           cp docs/release-notes.md build/windows/LEIA-ME.md
-          cd build/windows && zip -r "../../DynMagic-${GITHUB_REF_NAME}-windows-x64.zip" .
+          (cd build/windows && zip -r "../../DynMagic-${GITHUB_REF_NAME}-windows-x64.zip" .)
+          cp server/README.md server/dynmagic.service build/linux/
+          tar -C build/linux -czf "DynMagic-server-${GITHUB_REF_NAME}-linux-x64.tar.gz" .
 
       - name: Publish release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" "DynMagic-${GITHUB_REF_NAME}-windows-x64.zip" \
+          gh release create "$GITHUB_REF_NAME" "DynMagic-${GITHUB_REF_NAME}-windows-x64.zip" "DynMagic-server-${GITHUB_REF_NAME}-linux-x64.tar.gz" \
             --title "DynMagic ${GITHUB_REF_NAME}" --notes-file docs/release-notes.md

@@ -1,15 +1,17 @@
-# DynMagic v0.1.1 — correções da primeira build (Windows x64)
+# DynMagic v0.2.0 — arte, som e servidor dedicado
 
-## Novidades na 0.1.1
+## Novidades na 0.2.0
 
-- **Menu do Esc** funcionando no treino e na partida: Voltar ao jogo, Configurações (abre por cima do jogo) e Sair/Desistir com confirmação.
-- **Círculo de composição na mira**: três setores seguindo as teclas (Q em cima, E à esquerda, R à direita). Primeira tecla escolhe a forma — **P** Projétil, **S** Pessoal, **A** Área; a segunda escolhe o efeito — **D** Direto, **X** Explosivo, **P** Persistente. A cor segue o elemento, setores em recarga ficam apagados e, na mira, a combinação aparece no centro.
-- **Modo treino** com 6 bonecos de treino (modelo novo): perto, meia distância, atrás de cobertura, na varanda, longe e dois que se movem de lado. Balançam ao receber dano e mostram DPS só quando atingidos.
-- Removidos os placeholders do treino (cilindro e personagem).
+- **Servidor dedicado** (Windows ou Linux): `DynMagic.exe --headless -- --server --name "Minha Arena"`. Os jogadores entram pela lista de salas (LAN) ou por IP (VPS), clicam em Pronto e a partida começa sozinha; depois do resultado todos voltam ao lobby. Pacote Linux separado nesta release com `README` e unidade systemd.
+- **Texturas pintadas à mão** em todos os modelos (geradas proceduralmente no Blender).
+- **Mago animado** (parado, andando, conjurando, dash, morte) e **braços em primeira pessoa** que mudam de pose com a composição da magia.
+- **Som**: cliques de menu, passos na pedra, impactos, sino de fim de round, pano no dash, pedra na muralha (Kenney, CC0), magias sintetizadas com variação e reverb, música ambiente provisória.
+
+## Da 0.1.1
+
+- Menu do Esc, círculo de composição na mira (P/S/A, D/X/P), bonecos de treino.
 
 ---
-
-
 Arena 1v1 de magia dinâmica em primeira pessoa, multiplayer por LAN.
 
 ## Como jogar

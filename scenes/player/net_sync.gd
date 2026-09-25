@@ -87,6 +87,9 @@ func _process(_delta: float) -> void:
 # --- Local client: send + predict --------------------------------------------
 
 func _on_input_sampled(frame: Dictionary) -> void:
+	# Leaving the match (back to lobby): stop streaming so no input hits a freed node.
+	if not MatchState.active:
+		return
 	if not Net.is_online() or not multiplayer.get_peers().has(1):
 		return
 	_seq += 1

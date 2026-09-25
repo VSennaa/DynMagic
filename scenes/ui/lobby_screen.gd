@@ -48,6 +48,8 @@ func _refresh() -> void:
 		_players.add_child(UiKit.label("Aguardando oponente...", 18))
 	_rules.text = "Overtime: %s   Arena: %s" % [String(Lobby.overtime_setting), String(Lobby.arena_setting)]
 	_start_button.disabled = not Lobby.can_start()
+	if Lobby.dedicated:
+		_rules.text += "\n\nServidor dedicado: a partida começa sozinha quando os dois estiverem prontos."
 
 
 func _toggle_ready() -> void:

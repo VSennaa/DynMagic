@@ -233,3 +233,9 @@ func _hp_by_player() -> Dictionary:
 func _core_progress() -> Dictionary:
 	var net_match: Node = get_tree().get_first_node_in_group(&"net_match")
 	return net_match.call(&"core_progress") if net_match != null else {}
+
+## Back to the lobby after a match: drop the FSM and the mirrored view.
+func reset_for_lobby() -> void:
+	fsm = null
+	view = {}
+	active = false

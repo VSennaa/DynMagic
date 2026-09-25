@@ -10,6 +10,11 @@ var overtime_setting: StringName = &"random"
 var arena_setting: StringName = &"rotation"
 ## peer id -> ready
 var ready_flags: Dictionary[int, bool] = {}
+## Mirrors Net.dedicated for clients: the server starts the match by itself.
+var dedicated: bool = false
+
+const AUTO_START_DELAY: float = 2.0
+var _auto_start_pending: bool = false
 
 
 func _ready() -> void:
@@ -66,12 +71,24 @@ func _request_ready(value: bool) -> void:
 
 
 func _push() -> void:
-	if Net.is_host():
-		_sync.rpc(ready_flags, overtime_setting, arena_setting)
+	if not Net.is_host():
+		return
+	_sync.rpc(ready_flags, overtime_setting, arena_setting, Net.dedicated)
+	if Net.dedicated and can_start() and not _auto_start_pending:
+		_auto_start()
+
+
+## Dedicated server: start shortly after both players are ready (re-checked after the delay).
+func _auto_start() -> void:
+	_auto_start_pending = true
+	print("[lobby] both players ready; starting in %.0f s" % AUTO_START_DELAY)
+	await get_tree().create_timer(AUTO_START_DELAY).timeout
+	_auto_start_pending = false
+	start_match()
 
 
 @rpc("authority", "call_local", "reliable", Net.CHANNEL_RELIABLE)
-func _sync(flags: Dictionary, overtime: StringName, arena: StringName) -> void:
+func _sync(flags: Dictionary, overtime: StringName, arena: StringName, is_dedicated: bool = false) -> void:
 	# On the host (call_local) lags IS ready_flags: copy before clearing.
 	var incoming: Dictionary = flags.duplicate()
 	ready_flags.clear()
@@ -79,6 +96,7 @@ func _sync(flags: Dictionary, overtime: StringName, arena: StringName) -> void:
 		ready_flags[int(id)] = bool(incoming[id])
 	overtime_setting = overtime
 	arena_setting = arena
+	dedicated = is_dedicated
 	changed.emit()
 
 
@@ -86,3 +104,16 @@ func _sync(flags: Dictionary, overtime: StringName, arena: StringName) -> void:
 func _begin() -> void:
 	match_starting.emit()
 	SceneRouter.go_to(SceneRouter.MATCH)
+
+## Server after results: everyone goes back to the lobby with fresh ready flags.
+func return_to_lobby() -> void:
+	if Net.is_host():
+		ready_flags.clear()
+		_return.rpc()
+
+
+@rpc("authority", "call_local", "reliable", Net.CHANNEL_RELIABLE)
+func _return() -> void:
+	ready_flags.clear()
+	MatchState.reset_for_lobby()
+	SceneRouter.go_to(Net.SERVER_SCENE if Net.dedicated else SceneRouter.LOBBY)

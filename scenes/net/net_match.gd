@@ -5,6 +5,8 @@ extends Node3D
 
 const PLAYER_SCENE: PackedScene = preload("res://scenes/player/player.tscn")
 const SNAPSHOT_RATE: float = 30.0
+## Dedicated server: seconds on the results screen before everyone returns to the lobby.
+const RESULTS_TIME: int = 15
 ## Host rejects casts whose origin is farther than this from the caster's cast origin.
 const MAX_ORIGIN_ERROR: float = 1.5
 
@@ -37,6 +39,7 @@ func _ready() -> void:
 	Net.joined.connect(_sync_players)
 	Net.disconnected.connect(func() -> void: SceneRouter.go_to(SceneRouter.MAIN_MENU))
 	MatchState.match_ended.connect(_show_results)
+	MatchState.round_ended.connect(func(_w: int, _r: StringName) -> void: AudioBus.play_ui("bell", -8.0))
 	_bot = OS.get_cmdline_user_args().has("--bot")
 	_hud = Hud.new()
 	add_child(_hud)
@@ -105,6 +108,7 @@ func _sync_players() -> void:
 		player.name = str(id)
 		player.is_local = id == multiplayer.get_unique_id()
 		_players_root.add_child(player)
+		player.add_child(Footsteps.new())
 		var sync: NetSync = NetSync.new()
 		sync.name = "NetSync"
 		player.add_child(sync)
@@ -123,7 +127,8 @@ func _sync_players() -> void:
 		_loaded_sent = true
 		if Net.is_host() and not MatchState.active:
 			MatchState.start_match(Lobby.overtime_setting, Lobby.arena_setting)
-		MatchState.mark_loaded()
+		if not Net.dedicated:
+			MatchState.mark_loaded()
 
 
 func get_player(id: int) -> Player:
@@ -180,6 +185,8 @@ func _restore_client(state: Array[Dictionary], round_number: int, arena_id: Stri
 # --- Snapshots (host -> clients) -------------------------------------------------
 
 func _send_snapshot() -> void:
+	if not MatchState.active:
+		return
 	var entries: Array[Dictionary] = []
 	for child: Node in _players_root.get_children():
 		var sync: NetSync = child.get_node_or_null(^"NetSync") as NetSync
@@ -292,6 +299,7 @@ func _bot_step(delta: float) -> void:
 			Input.action_press(&"move_right")
 	var me: Player = _player(multiplayer.get_unique_id())
 	_bot_draft()
+	_bot_aim(me)
 	if me != null and not me.frozen and fmod(_bot_clock, 2.0) < delta:
 		me.composer.press_slot(0)
 		me.composer.press_slot(0)
@@ -518,6 +526,12 @@ var _pause: PauseMenu
 
 
 func _show_results(winner_id: int, reason: StringName) -> void:
+	if Net.dedicated:
+		# Dedicated server: no UI; give players time to read the results, then back to the lobby.
+		print("[server] match over: winner %d (%s); returning to lobby in %d s" % [winner_id, reason, RESULTS_TIME])
+		await get_tree().create_timer(RESULTS_TIME).timeout
+		Lobby.return_to_lobby()
+		return
 	_pause.close()
 	if _menu != null:
 		_menu.queue_free()
@@ -572,6 +586,8 @@ var _draft_panel: Control
 
 ## Four element cards (taken/other-turn cards disabled) plus the rune offer, over the frozen arena.
 func _update_draft_panel(view: Dictionary) -> void:
+	if Net.dedicated:
+		return
 	var drafting: bool = MatchState.phase() == MatchFsm.Phase.DRAFT
 	if not drafting:
 		if _draft_panel != null:
@@ -643,3 +659,15 @@ func _scoreboard_input(event: InputEvent) -> void:
 		elif not event.is_pressed() and _scoreboard != null:
 			_scoreboard.queue_free()
 			_scoreboard = null
+
+## Bot: face the opponent so its Bolts can actually land (full-match tests end by kills).
+func _bot_aim(me: Player) -> void:
+	if me == null or me.frozen:
+		return
+	for child: Node in _players_root.get_children():
+		var other: Player = child as Player
+		if other == null or other == me:
+			continue
+		var to: Vector3 = other.global_position - me.global_position
+		me.set_look(atan2(-to.x, -to.z), 0.0)
+		return
