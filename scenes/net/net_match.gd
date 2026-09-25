@@ -35,7 +35,8 @@ func _ready() -> void:
 	Net.peer_joined.connect(func(_id: int, _name: String) -> void: _sync_players())
 	Net.peer_left.connect(func(_id: int) -> void: _sync_players())
 	Net.joined.connect(_sync_players)
-	Net.disconnected.connect(func() -> void: get_tree().quit())
+	Net.disconnected.connect(func() -> void: SceneRouter.go_to(SceneRouter.MAIN_MENU))
+	MatchState.match_ended.connect(_show_results)
 	_bot = OS.get_cmdline_user_args().has("--bot")
 	_hud = Hud.new()
 	add_child(_hud)
@@ -113,7 +114,7 @@ func _sync_players() -> void:
 	if Net.players.size() >= 2 and not _loaded_sent and _players_root.get_child_count() >= 2:
 		_loaded_sent = true
 		if Net.is_host() and not MatchState.active:
-			MatchState.start_match()
+			MatchState.start_match(Lobby.overtime_setting, Lobby.arena_setting)
 		MatchState.mark_loaded()
 
 
@@ -254,6 +255,8 @@ func _log_state() -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed(&"net_overlay"):
 		_overlay.visible = not _overlay.visible
+	elif event.is_action_pressed(&"pause"):
+		_toggle_pause_menu()
 
 
 func _process(_delta: float) -> void:
@@ -444,3 +447,75 @@ func _set_overtime_flags(sudden: bool, surge: bool) -> void:
 		if player != null:
 			player.sudden_death = sudden
 			player.mana_surge = surge
+
+# --- Pause and results (spec 06 §1) ------------------------------------------------------
+
+var _menu: Control
+
+
+## Esc: the match keeps running online; the menu only frees the mouse.
+func _toggle_pause_menu() -> void:
+	if _menu != null:
+		_menu.queue_free()
+		_menu = null
+		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+		return
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	_menu = _panel("Pausa")
+	var column: VBoxContainer = _menu.get_node(^"Column") as VBoxContainer
+	column.add_child(UiKit.button("Voltar ao jogo", _toggle_pause_menu))
+	column.add_child(UiKit.button("Desistir", _confirm_forfeit))
+
+
+func _confirm_forfeit() -> void:
+	var column: VBoxContainer = _menu.get_node(^"Column") as VBoxContainer
+	column.add_child(UiKit.label("Desistir encerra a partida para você. Confirmar?", 18))
+	column.add_child(UiKit.button("Sim, desistir", func() -> void:
+		Net.close()
+		SceneRouter.go_to(SceneRouter.MAIN_MENU)))
+
+
+func _show_results(winner_id: int, reason: StringName) -> void:
+	if _menu != null:
+		_menu.queue_free()
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	var me: int = multiplayer.get_unique_id()
+	_menu = _panel("Vitória!" if winner_id == me else "Derrota")
+	var column: VBoxContainer = _menu.get_node(^"Column") as VBoxContainer
+	var score: Dictionary = MatchState.view.get("score", {})
+	column.add_child(UiKit.label("Placar: %s   (%s)" % [" × ".join(PackedStringArray(score.values().map(func(v: Variant) -> String: return str(v)))), String(reason)], 20))
+	for id: Variant in MatchState.stats:
+		var s: Dictionary = MatchState.stats[id]
+		var casts: Dictionary = s.get("casts", {})
+		var hits: Dictionary = s.get("hits", {})
+		var accuracy: PackedStringArray = PackedStringArray()
+		for form: Variant in casts:
+			accuracy.append("%s %d%%" % [form, roundi(100.0 * float(hits.get(form, 0)) / maxf(float(casts[form]), 1.0))])
+		column.add_child(UiKit.label("%s — dano causado %d, recebido %d, Núcleos %d\nprecisão: %s" % [
+			Net.players.get(int(id), str(id)), roundi(float(s["dealt"])), roundi(float(s["taken"])), int(s["cores"]), ", ".join(accuracy)], 18))
+	column.add_child(UiKit.button("Voltar ao lobby", func() -> void:
+		MatchState.active = false
+		Lobby.ready_flags.clear()
+		SceneRouter.go_to(SceneRouter.LOBBY)))
+	column.add_child(UiKit.button("Menu principal", func() -> void:
+		Net.close()
+		SceneRouter.go_to(SceneRouter.MAIN_MENU)))
+
+
+func _panel(heading: String) -> Control:
+	var panel: PanelContainer = PanelContainer.new()
+	panel.set_anchors_preset(Control.PRESET_CENTER)
+	panel.position = Vector2(-320, -240)
+	panel.custom_minimum_size = Vector2(640, 0)
+	var style: StyleBoxFlat = StyleBoxFlat.new()
+	style.bg_color = Color(UiKit.INK, 0.92)
+	style.set_corner_radius_all(8)
+	style.set_content_margin_all(24)
+	panel.add_theme_stylebox_override(&"panel", style)
+	var column: VBoxContainer = VBoxContainer.new()
+	column.name = "Column"
+	column.add_theme_constant_override(&"separation", 12)
+	panel.add_child(column)
+	column.add_child(UiKit.title(heading, 40))
+	_hud.add_child(panel)
+	return panel

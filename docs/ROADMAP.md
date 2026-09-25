@@ -97,9 +97,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (write th
 - [x] Overtime timeout + tie-break rules (in `MatchFsm`, tested)
 - [x] Decisive round at 3-3 (spec 02 §6) in `MatchFsm` (tested). Random arena for it waits for arenas B/C (M5)
 - [x] Disconnect pause 30 s + forfeit (`MatchState._on_peer_left`). Rejoin into the same slot not implemented yet
-- [ ] Match stats collection (spec 02 §7)
-- [ ] Full best-of-7 LAN match end to end
-- [ ] Milestone review with user
+- [x] Match stats collection (spec 02 §7): damage dealt/taken, casts and hits per form, Core captures (compose time not tracked yet); sent to clients at match end
+- [x] Full best-of-7 LAN match end to end: headless bots with `--match-speed 10`, 13 rounds (kill/hp/draw) to MATCH_END 4-0, stats on both peers, 0 errors
+- [~] Milestone review with user — M4 done 2026-09-24 (review pending)
 
 ## M5 — Arenas
 
@@ -114,15 +114,15 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (write th
 
 ## M6 — Polimento
 
-- [ ] Main menu with animated 3D background (spec 06 §1)
-- [ ] Host/Join screens + lobby screen
+- [x] Main menu with animated 3D background (spec 06 §1); now the project main scene
+- [x] Host/Join screens + lobby screen (`play_lan`, `lobby_screen`, `Lobby` autoload with ready flags and rules). UI-driven two-instance run not yet tested; CLI `--host/--join` still skips the lobby
 - [ ] Draft screen
 - [ ] Final HUD (spec 06 §2)
-- [ ] Pause menu + forfeit
-- [ ] Results screen + rematch
-- [ ] Grimório screen (36-spell reference)
-- [ ] Settings screens + `user://settings.cfg` persistence (spec 06 §3)
-- [ ] Input remapping with conflict detection
+- [x] Pause menu + forfeit (Esc in the match; online match keeps running)
+- [x] Results screen + rematch (panel with score, damage, accuracy, Cores; "Voltar ao lobby" = rematch path)
+- [x] Grimório screen (36-spell reference; text only, no preview video)
+- [x] Settings screens + `user://settings.cfg` persistence (spec 06 §3): video (fullscreen, vsync, FOV, FPS cap), audio buses, sensitivity, invert Y, name, damage numbers. Resolution/render scale/shadows/AA not exposed yet
+- [x] Input remapping with conflict detection (conflicting action loses the key and the player is told)
 - [ ] Accessibility: colorblind palettes, reduce shake, sound captions
 - [ ] Toon + outline shaders on everything (spec 07 §2)
 - [ ] Audio: 3-layer spell sounds, menu and combat music

@@ -14,7 +14,7 @@ var active: bool = false
 var stats: Dictionary = {}
 
 
-func start_match(overtime_setting: StringName = &"random") -> void:
+func start_match(overtime_setting: StringName = &"random", arena_setting: StringName = &"rotation") -> void:
 	if not Net.is_host():
 		return
 	fsm = MatchFsm.new()
@@ -32,6 +32,7 @@ func start_match(overtime_setting: StringName = &"random") -> void:
 	stats.clear()
 	for id: int in ids:
 		stats[id] = {"dealt": 0.0, "taken": 0.0, "casts": {}, "hits": {}, "cores": 0}
+	fsm.arena_setting = arena_setting
 	active = true
 	if not Net.peer_left.is_connected(_on_peer_left):
 		Net.peer_left.connect(_on_peer_left)
