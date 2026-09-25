@@ -30,6 +30,7 @@ func _ready() -> void:
 	tween.tween_property(mat, ^"albedo_color:a", 0.0, DURATION)
 	tween.chain().tween_interval(0.6)
 	tween.chain().tween_callback(queue_free)
+	AudioBus.play_impact.call_deferred(_element, global_position, get_parent())
 	var particles: GPUParticles3D = ElementFx.burst(_element, _color, _radius)
 	add_child(particles)
 	particles.emitting = true

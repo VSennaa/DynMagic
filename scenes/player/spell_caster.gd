@@ -103,3 +103,4 @@ func spawn(spell: ResolvedSpell, origin: Vector3, direction: Vector3, target: Ve
 	node.rewind = rewind
 	# Spells live at the scene root, never beside players (NetMatch owns the Players node).
 	get_tree().current_scene.add_child(node)
+	AudioBus.play_spell(spell, origin, get_tree().current_scene)

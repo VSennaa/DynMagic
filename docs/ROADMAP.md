@@ -125,7 +125,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (write th
 - [x] Input remapping with conflict detection (conflicting action loses the key and the player is told)
 - [ ] Accessibility: colorblind palettes, reduce shake, sound captions
 - [x] Toon + outline shaders on everything (spec 07 §2): `shaders/toon.gdshader` (3 bands, rim, block specular, painted noise) on arena geometry and remote bodies; screen-space ink outline (`shaders/outline.gdshader`) on the local camera and menu camera via `Toon`. Spell VFX stay unshaded by design
-- [ ] Audio: 3-layer spell sounds, menu and combat music
+- [~] Audio: 3-layer spell sounds synthesised in `AudioBus` (element timbre, form attack, effect tail; impact boom), buses Music/SFX/UI created at runtime. Not listened to by a human yet. Music missing (needs CC0 assets)
 - [ ] Screen transitions (ink brush)
 - [ ] Performance pass: 144 FPS target on GTX 1660 at 1080p
 - [ ] Windows export preset + build
