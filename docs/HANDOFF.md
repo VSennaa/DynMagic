@@ -54,6 +54,7 @@ Chosen: **Godot AI** by hi-godot (https://github.com/hi-godot/godot-ai), plugin 
 - Client registration: open the "Godot AI" dock in the editor and press **Configure** next to your client. Do not hand-write a bare HTTP URL; it cannot authenticate. Claude Code is already configured (user scope).
 - Tests: the Godot AI `test_run` tool runs `res://tests/test_*.gd` suites that extend `McpTestSuite` (`addons/godot_ai/testing/test_suite.gd`: `assert_true`, `assert_eq`, `assert_ne`, `assert_gt`, `setup`, `teardown`). GUT is not installed. **Every test suite must start with `@tool`**, otherwise the runner reports it as "cannot instantiate". Run `filesystem_manage(op="scan")` after adding a suite.
 - Editor quirks: autoloads added while the editor runs are not visible to editor-side script compilation until the editor restarts. In the editor, `can_instantiate()` is false for non-@tool scripts and `InputMap` holds editor actions only; tests must read `ProjectSettings` (`input/<action>`) and script method lists instead. `--check-only --script` does not load autoloads, so it reports false "Identifier not found" errors for autoload names.
+- Logic classes that editor tests instantiate (e.g. `Stats`) must be `@tool` and guard `_ready`/`_process` with `Engine.is_editor_hint()`; otherwise `.new()` returns a placeholder instance with no behavior.
 - Input bindings use `keycode` (not `physical_keycode`). Revisit in M6 remapping if non-QWERTY layouts matter.
 
 ## 6. Status by milestone (SDD §6)
