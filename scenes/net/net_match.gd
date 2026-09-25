@@ -90,6 +90,8 @@ func _physics_process(delta: float) -> void:
 func _sync_players() -> void:
 	for child: Node in _players_root.get_children():
 		if not Net.players.has(int(String(child.name))):
+			if Net.is_host() and MatchState.active and MatchState.fsm != null and MatchState.fsm.players.has(int(String(child.name))):
+				continue
 			child.queue_free()
 	var ids: Array = Net.players.keys()
 	ids.sort()
@@ -110,7 +112,7 @@ func _sync_players() -> void:
 		if player.is_local:
 			_hud.bind(player)
 		if Net.is_host():
-			player.stats.died.connect(MatchState.report_death.bind(id))
+			player.stats.died.connect(func() -> void: MatchState.report_death(int(String(player.name))))
 	for child: Node in _players_root.get_children():
 		if child is Player and not (child as Player).is_local:
 			_hud.threat = child as Node3D
@@ -127,6 +129,49 @@ func get_player(id: int) -> Player:
 
 func _player(id: int) -> Player:
 	return _players_root.get_node_or_null(str(id)) as Player
+
+
+func reassign_player(old_id: int, new_id: int) -> void:
+	var player: Player = _player(old_id)
+	player.name = str(new_id)
+	(player.get_node(^"NetSync") as NetSync).reset_transport(new_id)
+	if _core != null:
+		_core.replace_player(old_id, new_id)
+
+
+## Reliable bootstrap precedes the phase-resume RPC and the first live snapshot.
+func restore_client(id: int) -> void:
+	var state: Array[Dictionary] = []
+	for child: Node in _players_root.get_children():
+		var player: Player = child as Player
+		state.append({"id": int(String(player.name)), "transform": player.transform,
+			"velocity": player.velocity, "pitch": player.get_pitch(), "rune": player.rune,
+			"stats": player.stats.export_state(), "runtime": ReconnectState.player_state(player)})
+	_restore_client.rpc_id(id, state, MatchState.fsm.round_number, MatchState.fsm.arena, _runes_applied_round,
+		_core_granted_round, ReconnectState.capture_world(self), _collapse.elapsed if _collapse != null else -1.0)
+
+
+@rpc("authority", "call_remote", "reliable", Net.CHANNEL_RELIABLE)
+func _restore_client(state: Array[Dictionary], round_number: int, arena_id: StringName, runes_round: int, core_round: int, spells: Array[Dictionary], collapse_elapsed: float) -> void:
+	_last_round = round_number
+	_runes_applied_round = runes_round
+	_core_granted_round = core_round
+	(_arena.get_node(^"Layout") as ArenaBuilder).variant = arena_id
+	for entry: Dictionary in state:
+		var player: Player = _player(int(entry["id"]))
+		if player == null:
+			continue
+		player.apply_rune(entry["rune"])
+		player.transform = entry["transform"]
+		player.velocity = entry["velocity"]
+		player.set_look(player.rotation.y, float(entry["pitch"]))
+		player.stats.import_state(entry["stats"])
+		ReconnectState.restore_player(player, entry["runtime"])
+	ReconnectState.restore_world(self, spells)
+	if collapse_elapsed >= 0.0:
+		_collapse = CollapseZone.new()
+		add_child(_collapse)
+		_collapse.elapsed = collapse_elapsed
 
 
 # --- Snapshots (host -> clients) -------------------------------------------------
@@ -164,13 +209,13 @@ func _receive_snapshot(data: PackedByteArray) -> void:
 ## Called by SpellCaster after the caster's composer paid mana and cooldown locally.
 func request_cast(player: Player, spell: ResolvedSpell, origin: Vector3, direction: Vector3, target: Vector3) -> void:
 	if Net.is_host():
-		_broadcast_spawn(int(String(player.name)), spell, origin, direction, target)
+		_broadcast_spawn(int(String(player.name)), spell, origin, direction, target, player.composer.compose_seconds)
 	else:
-		_request_cast.rpc_id(1, spell.form, spell.effect, origin, direction, target, player.composer.is_recasting)
+		_request_cast.rpc_id(1, spell.form, spell.effect, origin, direction, target, player.composer.is_recasting, player.composer.compose_seconds)
 
 
 @rpc("any_peer", "call_remote", "reliable", Net.CHANNEL_RELIABLE)
-func _request_cast(form: StringName, effect: StringName, origin: Vector3, direction: Vector3, target: Vector3, is_recast: bool) -> void:
+func _request_cast(form: StringName, effect: StringName, origin: Vector3, direction: Vector3, target: Vector3, is_recast: bool, compose_seconds: float) -> void:
 	if not Net.is_host():
 		return
 	var caster_id: int = multiplayer.get_remote_sender_id()
@@ -187,7 +232,8 @@ func _request_cast(form: StringName, effect: StringName, origin: Vector3, direct
 		return
 	player.stats.spend_mana(cost)
 	player.stats.start_cooldown(spell.key, player.cooldown_for(spell))
-	_broadcast_spawn(caster_id, spell, origin, direction, target)
+	player.composer.last_spell = spell
+	_broadcast_spawn(caster_id, spell, origin, direction, target, -1.0 if is_recast else compose_seconds)
 
 
 func _validate(player: Player, spell: ResolvedSpell, origin: Vector3, cost: float) -> StringName:
@@ -204,8 +250,8 @@ func _validate(player: Player, spell: ResolvedSpell, origin: Vector3, cost: floa
 	return &""
 
 
-func _broadcast_spawn(caster_id: int, spell: ResolvedSpell, origin: Vector3, direction: Vector3, target: Vector3) -> void:
-	MatchState.report_cast(caster_id, spell.form)
+func _broadcast_spawn(caster_id: int, spell: ResolvedSpell, origin: Vector3, direction: Vector3, target: Vector3, compose_seconds: float = -1.0) -> void:
+	MatchState.report_cast(caster_id, spell.form, compose_seconds)
 	_spawn_spell.rpc(caster_id, spell.element, spell.form, spell.effect, origin, direction, target)
 
 
@@ -286,6 +332,13 @@ func _process(_delta: float) -> void:
 # --- Match flow (M4) ------------------------------------------------------------------
 
 func _on_match_changed() -> void:
+	var paused: bool = MatchState.phase() == MatchFsm.Phase.PAUSED
+	process_mode = Node.PROCESS_MODE_DISABLED if paused else Node.PROCESS_MODE_INHERIT
+	if paused:
+		_match_label.text = _match_text()
+		for child: Node in _players_root.get_children():
+			(child as Player).frozen = true
+		return
 	var view: Dictionary = MatchState.view
 	var round_number: int = int(view.get("round", 0))
 	if round_number != _last_round and MatchState.phase() == MatchFsm.Phase.DRAFT:
@@ -495,6 +548,8 @@ func _show_results(winner_id: int, reason: StringName) -> void:
 	column.add_child(UiKit.label("Placar: %s   (%s)" % [" × ".join(PackedStringArray(score.values().map(func(v: Variant) -> String: return str(v)))), String(reason)], 20))
 	for id: Variant in MatchState.stats:
 		var s: Dictionary = MatchState.stats[id]
+		var compose_text: String = "%.2f s" % ComposeMetrics.average(s) if int(s.get("compose_count", 0)) > 0 else "—"
+		column.add_child(UiKit.label("%s · Composição média: %s" % [Net.players.get(int(id), str(id)), compose_text], 18))
 		var casts: Dictionary = s.get("casts", {})
 		var hits: Dictionary = s.get("hits", {})
 		var accuracy: PackedStringArray = PackedStringArray()

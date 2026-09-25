@@ -9,11 +9,15 @@ const ZONE_SCENE: PackedScene = preload("res://scenes/spells/zone.tscn")
 const TRAIL_POINTS: int = 3
 
 var _life: float = 0.4
+var restoring: bool = false
 
 @onready var _shell: MeshInstance3D = $Shell
 
 
 func _ready() -> void:
+	if restoring:
+		_style_shell()
+		return
 	var player: Player = caster as Player
 	match spell.effect:
 		&"direct":

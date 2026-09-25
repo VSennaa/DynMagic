@@ -9,7 +9,7 @@ signal peer_left(peer_id: int)
 signal disconnected
 signal lobbies_changed
 
-const PROTOCOL_VERSION: int = 1
+const PROTOCOL_VERSION: int = 2
 const GAME_TAG: String = "dynmagic"
 const DEFAULT_PORT: int = 7777
 const DISCOVERY_PORT: int = 7778
@@ -40,6 +40,7 @@ var _broadcaster: PacketPeerUDP
 var _listener: PacketPeerUDP
 var _broadcast_timer: float = 0.0
 var _clock: float = 0.0
+var _session: int = 0
 
 
 func _ready() -> void:
@@ -101,11 +102,13 @@ func join(address: String, p_port: int = DEFAULT_PORT) -> Error:
 
 
 func close() -> void:
+	_session += 1
 	_stop_broadcast()
 	if multiplayer.multiplayer_peer != null and is_online():
 		multiplayer.multiplayer_peer.close()
 	multiplayer.multiplayer_peer = OfflineMultiplayerPeer.new()
 	players.clear()
+	MatchState.active = false
 
 
 # --- Handshake (spec 04 §3) -------------------------------------------------
@@ -119,6 +122,8 @@ func _rpc_hello(version: int, name: String) -> void:
 	if not multiplayer.is_server():
 		return
 	var peer_id: int = multiplayer.get_remote_sender_id()
+	if players.has(peer_id):
+		return
 	if version != PROTOCOL_VERSION:
 		_rpc_reject.rpc_id(peer_id, "Versão diferente (host %d, você %d)" % [PROTOCOL_VERSION, version])
 		_kick_later(peer_id)
@@ -127,20 +132,33 @@ func _rpc_hello(version: int, name: String) -> void:
 		_rpc_reject.rpc_id(peer_id, "Sala cheia")
 		_kick_later(peer_id)
 		return
-	players[peer_id] = name.strip_edges().left(24) if name.strip_edges() != "" else "Mago %d" % peer_id
+	var clean_name: String = name.strip_edges().left(24) if name.strip_edges() != "" else "Mago %d" % peer_id
+	var old_id: int = MatchState.reconnect_slot(clean_name)
+	if MatchState.active and old_id == 0:
+		_rpc_reject.rpc_id(peer_id, "Partida em andamento; vaga reservada ao jogador desconectado")
+		_kick_later(peer_id)
+		return
+	if old_id != 0 and not MatchState.begin_reconnect(old_id, peer_id):
+		_rpc_reject.rpc_id(peer_id, "Prazo de reconexão encerrado")
+		_kick_later(peer_id)
+		return
+	players[peer_id] = clean_name
 	_log("peer %d joined as '%s'" % [peer_id, players[peer_id]])
-	_rpc_welcome.rpc(players)
+	_rpc_welcome.rpc(players, old_id != 0)
 	peer_joined.emit(peer_id, players[peer_id])
 
 
 @rpc("authority", "call_remote", "reliable", CHANNEL_RELIABLE)
-func _rpc_welcome(all_players: Dictionary) -> void:
+func _rpc_welcome(all_players: Dictionary, reconnecting: bool = false) -> void:
 	var first_time: bool = players.is_empty()
 	players.clear()
 	for id: Variant in all_players:
 		players[int(id)] = str(all_players[id])
 	if first_time:
 		_log("joined; players %s" % [players])
+		if reconnecting and get_tree().get_first_node_in_group(&"net_match") == null:
+			SceneRouter.go_to(SceneRouter.MATCH)
+			return
 		joined.emit()
 
 
@@ -184,13 +202,18 @@ func _on_server_disconnected() -> void:
 
 ## Sends through the simulator: may drop, or delay by latency ± jitter. Used for inputs and snapshots.
 func simulate_send(send: Callable) -> void:
+	if not is_online():
+		return
 	if sim_loss > 0.0 and randf() < sim_loss:
 		return
 	var delay: float = (sim_latency_ms + randf_range(-sim_jitter_ms, sim_jitter_ms)) / 1000.0
 	if delay <= 0.0:
 		send.call()
 	else:
-		get_tree().create_timer(delay, true, true).timeout.connect(send)
+		var session: int = _session
+		get_tree().create_timer(delay, true, true).timeout.connect(func() -> void:
+			if session == _session and is_online() and send.is_valid():
+				send.call())
 
 
 ## Round-trip time to a peer in ms as ENet measures it (host side), or to the host (client side).

@@ -20,6 +20,8 @@ Cliente: escuta 7778, lista lobbies com v igual e remove os que somem por 3 s.
 - Também existe entrada manual por IP.
 - Versão do protocolo (`NET_PROTOCOL_VERSION`) diferente: o lobby aparece desabilitado com o aviso "versão diferente".
 
+Protocolo atual: **2** (tempo de composição no pedido de conjuração e recuperação de estado na reconexão).
+
 ## 3. Handshake
 
 1. O cliente conecta. O host recebe `peer_connected`.
@@ -90,6 +92,8 @@ Cliente → host: ~64 B × 60 Hz ≈ 4 KB/s. Host → cliente: snapshot ~200 B �
 - Overlay de rede (`F3`): ping, perda, erro de reconciliação, tick.
 
 ## 10. Critérios de aceite
+
+Reconexão: o host reserva o slot pelo nome normalizado do handshake (espaços externos removidos, até 24 caracteres; comparação exata). Durante os 30 s, pausa a simulação da arena e mantém jogador, magias e estatísticas. Outro nome é rejeitado. O novo peer assume o slot; após carregar a arena, recebe estado autoritativo de jogadores, efeitos e objetos ativos antes da retomada. O prazo não é acelerado por `--match-speed`; expiração resulta em W.O. Não há migração de host.
 
 - [ ] O cliente encontra o host pela descoberta LAN em menos de 2 s.
 - [ ] Versão incompatível é rejeitada com mensagem clara.

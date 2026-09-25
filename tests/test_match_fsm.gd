@@ -199,3 +199,43 @@ func test_arena_rotation_and_decisive_random() -> void:
 	assert_eq(seen.slice(0, 6), [&"A", &"B", &"C", &"A", &"B", &"C"] as Array[StringName])
 	assert_true(fsm.decisive)
 	assert_ne(fsm.arena, seen[5], "decisive arena differs from the previous round")
+
+
+func test_reconnect_moves_entire_slot_and_restores_clock() -> void:
+	_load_both()
+	_to_combat()
+	fsm.score[B] = 2
+	fsm.core_holder = B
+	fsm.last_round_loser = B
+	fsm.runes[B] = &"haste"
+	fsm.rune_offers[B] = [&"haste"]
+	fsm.tick(12.0)
+	fsm.player_disconnected(B)
+	fsm.speed = 10.0
+	fsm.tick(5.0)
+	assert_eq(fsm.time_left, 25.0, "grace is wall time even with debug speed")
+	assert_false(fsm.replace_player(B, A))
+	assert_true(fsm.replace_player(B, 88))
+	assert_eq(fsm.score[88], 2)
+	assert_eq(fsm.core_holder, 88)
+	assert_eq(fsm.last_round_loser, 88)
+	assert_eq(fsm.elements[88], &"frost")
+	assert_eq(fsm.runes[88], &"haste")
+	assert_false(fsm.score.has(B))
+	fsm.player_reconnected()
+	assert_eq(fsm.phase, MatchFsm.Phase.COMBAT)
+	assert_eq(fsm.time_left, 78.0)
+
+
+func test_expired_slot_cannot_resume_and_unknown_loading_is_ignored() -> void:
+	fsm.mark_loaded(999)
+	fsm.mark_loaded(A)
+	assert_eq(fsm.phase, MatchFsm.Phase.LOADING)
+	fsm.mark_loaded(B)
+	fsm.player_disconnected(B)
+	fsm.tick(30.0)
+	assert_false(fsm.replace_player(B, 88))
+	fsm.player_reconnected()
+	assert_eq(fsm.phase, MatchFsm.Phase.PAUSED)
+	fsm.forfeit(B)
+	assert_eq(match_winner, A)

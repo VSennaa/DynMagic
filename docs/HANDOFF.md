@@ -1,12 +1,21 @@
 # DynMagic — Handoff Notes for AI Agents
 
-Last update: 2026-09-24. Written so any AI agent (Claude, Codex, Gemini, etc.) can continue work without the original conversation.
+Last update: 2026-09-25. Written so any AI agent (Claude, Codex, Gemini, etc.) can continue work without the original conversation.
 
 ## 0. Active agent
 
-Active agent: Claude (2026-09-24 ~23:55). Codex session 1 finished: toon specular fix (white blobs), directional sound captions (`SoundCaption`, Settings toggle, test), F8 stress load in training (351–352 FPS at 1080p on the RX 580). Codex cannot commit (its sandbox makes `.git` read-only); Claude reviewed and committed its work.
+Active agent: none — BUT Codex round 2 stopped on its usage limit (2026-09-25 ~00:00; Codex quota back at 02:47) with UNCOMMITTED, possibly incomplete work: video settings (`autoload/video_settings.gd`), compose-time metrics (`scenes/match/compose_metrics.gd`), reconnect slot restore (`scenes/net/reconnect_state.gd`, changes in net.gd, match_state.gd, match_fsm.gd, net_match.gd, net_sync.gd, arcane_core.gd, self_spell.gd) plus tests. Next agent: restart the editor (class cache), run `test_run` and a headless host/--bot client match, fix or finish what is broken, then commit in three commits (video settings, compose metrics, reconnect). Do not discard this work.
 
-### Handoff brief for Codex
+### Handoff brief for Codex (round 2)
+
+**Conclu?do em 2026-09-25; altera??es sem commit para revis?o do Claude. Evid?ncias e arquivos na se??o 11.**
+- Codex cannot commit (read-only .git in its sandbox): leave changes uncommitted and list them in this file; Claude commits after review.
+- Round 2 tasks, in order:
+  1. Settings: add resolution, render scale (50–100%), shadow quality and antialiasing (off/FXAA/MSAA 2x/4x) to the Video tab, persisted in user://settings.cfg (spec 06 §3).
+  2. Match stats: track average compose time per player (first slot key to cast) on each client and send it to the host with the cast request; show it in the results panel (spec 02 §7).
+  3. Reconnect: a player who reconnects within the 30 s pause with the same name takes back their slot (spec 04 §10, spec 02 §2). Keep it host-authoritative.
+  4. Add tests where the logic is pure (settings round trip, compose-time averaging).
+- Round 1 brief (done) kept below for reference.
 - Current milestone: M6 Polimento (see ROADMAP M6). M0–M5 are done; milestone reviews are pending with the user (do not stop for them).
 - Progresso desta sessão: formas brancas corrigidas no especular toon; legendas implementadas; carga de 20 zonas + 20 projéteis medida. Detalhes e evidências na seção 10.
 - Próximos passos:
@@ -16,7 +25,7 @@ Active agent: Claude (2026-09-24 ~23:55). Codex session 1 finished: toon specula
   4. Música: pasta `audio/` sem assets; pergunta sobre download CC0 enviada, sem resposta até este registro. Manter bloqueada até autorização.
 - Tools: Godot console binary at `C:\Users\vinic\Downloads\Godot_v4.7.2-stable_win64.exe\Godot_v4.7.2-stable_win64_console.exe`. Without the Godot AI MCP, check scripts with `--headless --path D:\DynMagic --import` and run tests by opening the editor only if needed; multiplayer smoke tests are headless (see §5 notes).
 - Do not touch: `addons/godot_ai/` (vendored plugin), `project.godot` autoload/plugin sections, `.claude/`.
-- Do not download export templates or install paid services. Commit per finished task (Conventional Commits). Update this file and set `Active agent: Claude (2026-09-24 ~23:55). Codex session 1 finished: toon specular fix (white blobs), directional sound captions (`SoundCaption`, Settings toggle, test), F8 stress load in training (351–352 FPS at 1080p on the RX 580). Codex cannot commit (its sandbox makes `.git` read-only); Claude reviewed and committed its work.` before stopping.
+- Do not download export templates or install paid services. Codex must leave changes uncommitted. Update this file and set `Active agent: none — BUT Codex round 2 stopped on its usage limit (2026-09-25 ~00:00; Codex quota back at 02:47) with UNCOMMITTED, possibly incomplete work: video settings (`autoload/video_settings.gd`), compose-time metrics (`scenes/match/compose_metrics.gd`), reconnect slot restore (`scenes/net/reconnect_state.gd`, changes in net.gd, match_state.gd, match_fsm.gd, net_match.gd, net_sync.gd, arcane_core.gd, self_spell.gd) plus tests. Next agent: restart the editor (class cache), run `test_run` and a headless host/--bot client match, fix or finish what is broken, then commit in three commits (video settings, compose metrics, reconnect). Do not discard this work.` before stopping.
 
 ## 1. What this project is
 
@@ -131,3 +140,17 @@ $g = "$env:USERPROFILE\Downloads\Godot_v4.7.2-stable_win64.exe\Godot_v4.7.2-stab
 - **Ferramentas:** MCP `editor_state` exige aprovação, indisponível com política `never`. CLI renderiza normalmente. Use `--log-file D:\DynMagic\build\<name>.log`; não alterar plugins/autoloads. `.git` somente leitura: `git add` falhou ao criar `index.lock`; **nenhum commit desta sessão**. Mudanças prontas no workspace; separar commits de legendas, carga e shader quando permitido, preservando o handoff preexistente.
 - **Pendência encontrada:** ao fechar o host, o cliente emite `RPC 'receive_inputs' on yourself is not allowed` durante o fade para menu. `NetSync._on_input_sampled` continua enviando após `Net.close`; conferir também callbacks atrasados de `simulate_send`. Reprodução/log em `build/draft-client.log`. Nenhum ajuste fora do escopo foi feito.
 - **Música:** nenhum asset CC0 no repositório. Download perguntado ao usuário, ainda sem resposta; nada baixado. Templates de exportação e Blender/Tripo também não foram instalados.
+
+## 11. Codex round 2 ? conclu?do (2026-09-25)
+
+- **V?deo:** resolu??o (720p?4K), escala 50?100% com valor vis?vel, sombras baixa/m?dia/alta e Off/FXAA/MSAA 2?/4? na se??o V?deo. `VideoSettings` cont?m os dados puros; `Settings` aplica na hora e grava/carrega em `user://settings.cfg`. Padr?o 1080p preservado. Tela cheia mant?m o modo do desktop e usa a resolu??o-base 3D documentada na spec 06. N?o alterados plugins nem se??es de autoload de `project.godot`.
+- **Composi??o:** primeira tecla de forma at? conjura??o, incluindo mira/buffer; dura??o enviada no RPC. Host acumula apenas casts aceitos, valida amostras finitas e plaus?veis e exibe m?dia por jogador nos resultados. Recast, cancelamento, timeout e rejei??o n?o entram; aus?ncia de amostras mostra `?`. Protocolo de rede incrementado para **2**: os dois execut?veis devem usar esta vers?o.
+- **Reconex?o:** nome normalizado exato recupera o slot dentro da pausa de 30 s. Host mant?m a inst?ncia do jogador, remapeia peer/FSM/estat?sticas/progresso do N?cleo, espera carregamento e envia bootstrap autoritativo de posi??o, HP/mana/escudo, runas, status/cooldowns, buffs, ?ltima magia, objetos ativos e colapso. Simula??o da arena para durante a pausa. Nomes diferentes e entradas ap?s expira??o s?o rejeitados; prazo n?o escala com `--match-speed`. W.O. continua autoritativo; sem migra??o do host.
+- **Desconex?o:** `NetSync` n?o envia input sem servidor; callbacks do simulador carregam a gera??o da sess?o e s?o descartados ap?s `Net.close`. `MatchState` s? processa partidas ativas do host. Estas prote??es cobrem a causa descrita na se??o 10; o smoke visual com host fechado durante fade/lat?ncia ainda deve ser repetido.
+- **Valida??o:** **73 testes, 0 falhas** (`build/round2-tests.log`), incluindo ConfigFile round trip/defaults/limites, m?dia por jogador/amostras inv?lidas, composi??o com mira/buffer/cancelamento/recast, remapeamento de slot, prazo e bootstrap de Stats. Import sem erros de scripts do projeto; `git diff --check` passou.
+- **Integra??o real ENet:** `build/r2_probe.py` / `probe-*.log`: host e cliente mediram aproximadamente **0,40 s**, transmitidos por RPC; reconex?o preservou identidade da inst?ncia, HP 37, mana 42, cooldown/status, score, m?dia, buffs e quatro objetos ativos (zona, parede, proj?til, aura). `build/r2_smoke.py` / `r2-*.log`: bots voltaram a mover/conjurar ap?s reconectar e outro nome foi recusado. `build/r2_forfeit.py` / `forfeit-*.log`: pausa expirada levou a W.O. e reconex?o tardia foi rejeitada.
+- **V?deo em runtime:** grava??o e leitura de `Settings` em processos separados com caminho de teste `build/r2-settings.cfg` (mesma implementa??o de ConfigFile; n?o foi escrito o arquivo pessoal em `user://` por restri??o do sandbox). Assertions de escala/AA passaram. Tela renderizada em Vulkan Forward+ na RX 580 e inspecionada a 1280?720: `build/r2-settings.png`; logs `r2-video-write.log` e `r2-video-read.log`. N?o substitui compara??o visual de sombras/AA em todas as resolu??es/GPU-alvo.
+- **Avisos ambientais:** certificados do Windows, cache de shaders/configura??o do editor sem permiss?o e os mesmos 7 objetos/3 recursos retidos no runner ao sair. N?o houve erros de script/RPC nas execu??es finais de integra??o. Harnesses/capturas em `build/` s?o locais e ignorados pelo Git.
+- **Arquivos sem commit ? v?deo:** `autoload/settings.gd`, novo `autoload/video_settings.gd`, `scenes/ui/settings_screen.gd`, novo `tests/test_video_settings.gd` e spec 06.
+- **Arquivos sem commit ? composi??o/rede:** `autoload/match_state.gd`, `autoload/net.gd`, `scenes/net/net_match.gd`, novos `scenes/net/reconnect_state.gd` e `scenes/match/compose_metrics.gd`, `scenes/match/match_fsm.gd`, `scenes/match/arcane_core.gd`, `scenes/player/spell_composer.gd`, `scenes/player/net_sync.gd`, `scenes/player/stats.gd`, `scenes/spells/self_spell.gd`, novos testes `test_compose_metrics.gd`/`test_reconnect_stats.gd`, testes existentes `test_spell_composer.gd`/`test_match_fsm.gd`, specs 02/04, este handoff e `.uid` dos novos scripts.
+- **Pr?ximo agente:** revisar o diff e commitar; continuar as pend?ncias de M6 acima. Nenhum commit, download, instala??o ou altera??o em `addons/godot_ai/`, `.claude/` ou `project.godot` nesta rodada. As altera??es preexistentes deste handoff foram preservadas, com status atualizado.

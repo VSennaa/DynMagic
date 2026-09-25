@@ -47,6 +47,29 @@ func _physics_process(delta: float) -> void:
 	tick(delta)
 
 
+## Reconnect bootstrap; only the host sends this state.
+func export_state() -> Dictionary:
+	return {"hp": hp, "max_hp": max_hp, "mana": mana, "max_mana": max_mana,
+		"shield": shield, "shield_time_left": shield_time_left, "is_dead": is_dead,
+		"regen_pause": _regen_pause_left, "statuses": _statuses.duplicate(), "cooldowns": _cooldowns.duplicate()}
+
+
+func import_state(state: Dictionary) -> void:
+	hp = state["hp"]
+	max_hp = state["max_hp"]
+	mana = state["mana"]
+	max_mana = state["max_mana"]
+	shield = state["shield"]
+	shield_time_left = state["shield_time_left"]
+	is_dead = state["is_dead"]
+	_regen_pause_left = state["regen_pause"]
+	_statuses.assign(state["statuses"])
+	_cooldowns.assign(state["cooldowns"])
+	hp_changed.emit(hp, max_hp)
+	mana_changed.emit(mana, max_mana)
+	shield_changed.emit(shield)
+
+
 ## Restores full HP and mana and clears shield, statuses and cooldowns (round start).
 func reset() -> void:
 	hp = max_hp

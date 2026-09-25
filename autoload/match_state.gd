@@ -12,6 +12,9 @@ var view: Dictionary = {}
 var active: bool = false
 ## Host: per-player match statistics (spec 02 §7). id -> {dealt, taken, casts:{form:n}, hits:{form:n}, cores}
 var stats: Dictionary = {}
+var participant_names: Dictionary = {}
+var disconnected_id: int = 0
+var reconnecting_id: int = 0
 
 
 func start_match(overtime_setting: StringName = &"random", arena_setting: StringName = &"rotation") -> void:
@@ -30,6 +33,9 @@ func start_match(overtime_setting: StringName = &"random", arena_setting: String
 	if speed_index >= 0 and speed_index + 1 < args.size():
 		fsm.speed = float(args[speed_index + 1])
 	stats.clear()
+	participant_names = Net.players.duplicate()
+	disconnected_id = 0
+	reconnecting_id = 0
 	for id: int in ids:
 		stats[id] = {"dealt": 0.0, "taken": 0.0, "casts": {}, "hits": {}, "cores": 0}
 	fsm.arena_setting = arena_setting
@@ -41,19 +47,42 @@ func start_match(overtime_setting: StringName = &"random", arena_setting: String
 
 ## Disconnect: pause, then forfeit if the player is still gone after the grace period.
 func _on_peer_left(id: int) -> void:
-	if fsm == null or not fsm.players.has(id):
+	if not Net.is_host() or not active or fsm == null or not fsm.players.has(id) or fsm.phase == MatchFsm.Phase.MATCH_END:
 		return
+	disconnected_id = id
+	reconnecting_id = 0
 	fsm.player_disconnected(id)
-	await get_tree().create_timer(MatchFsm.DISCONNECT_GRACE).timeout
-	if fsm.phase == MatchFsm.Phase.PAUSED and not Net.players.has(id):
-		fsm.forfeit(id)
+
+
+func reconnect_slot(player_name: String) -> int:
+	if not Net.is_host() or not active or fsm == null or fsm.phase != MatchFsm.Phase.PAUSED or fsm.time_left <= 0.0 or reconnecting_id != 0:
+		return 0
+	return disconnected_id if participant_names.get(disconnected_id, "") == player_name else 0
+
+
+func begin_reconnect(old_id: int, new_id: int) -> bool:
+	if not Net.is_host() or not fsm.replace_player(old_id, new_id):
+		return false
+	stats[new_id] = stats[old_id]
+	stats.erase(old_id)
+	participant_names[new_id] = participant_names[old_id]
+	participant_names.erase(old_id)
+	disconnected_id = new_id
+	reconnecting_id = new_id
+	var arena: Node = get_tree().get_first_node_in_group(&"net_match")
+	arena.call(&"reassign_player", old_id, new_id)
+	return true
 
 
 func _physics_process(delta: float) -> void:
-	if fsm == null or not Net.is_host():
+	if not active or fsm == null or not Net.is_host():
 		return
 	var before: int = int(fsm.time_left)
 	fsm.tick(delta, _hp_by_player())
+	if fsm.phase == MatchFsm.Phase.PAUSED and fsm.time_left <= 0.0:
+		fsm.forfeit(disconnected_id)
+		disconnected_id = 0
+		reconnecting_id = 0
 	# Keep clients' clocks honest once per second without spamming reliable RPCs.
 	if int(fsm.time_left) != before:
 		_broadcast()
@@ -85,6 +114,13 @@ func pick_rune(rune: StringName) -> void:
 @rpc("any_peer", "call_local", "reliable", Net.CHANNEL_RELIABLE)
 func _request_loaded() -> void:
 	if fsm != null and Net.is_host():
+		if _sender() == reconnecting_id and fsm.phase == MatchFsm.Phase.PAUSED and fsm.time_left > 0.0:
+			var arena: Node = get_tree().get_first_node_in_group(&"net_match")
+			arena.call(&"restore_client", reconnecting_id)
+			reconnecting_id = 0
+			disconnected_id = 0
+			fsm.player_reconnected()
+			print("[match] reconnected; phase=%s players=%s" % [MatchFsm.Phase.keys()[fsm.phase], fsm.players])
 		fsm.mark_loaded(_sender())
 
 
@@ -115,10 +151,11 @@ func report_core(id: int) -> void:
 
 
 ## Host: a spell was cast by id.
-func report_cast(id: int, form: StringName) -> void:
-	if stats.has(id):
+func report_cast(id: int, form: StringName, compose_seconds: float = -1.0) -> void:
+	if Net.is_host() and stats.has(id):
 		var casts: Dictionary = stats[id]["casts"]
 		casts[form] = int(casts.get(form, 0)) + 1
+		ComposeMetrics.record(stats[id], compose_seconds)
 
 
 ## Host: mount damage from source_id (0 = environment) to 	arget_id.

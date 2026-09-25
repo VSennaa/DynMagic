@@ -52,6 +52,14 @@ func configure(p_player: Player, p_peer_id: int) -> void:
 		player.input_sampled.connect(_on_input_sampled)
 
 
+func reset_transport(new_id: int) -> void:
+	peer_id = new_id
+	last_processed_seq = 0
+	_pending_inputs.clear()
+	_last_frame.clear()
+	_pos_history.clear()
+
+
 func _physics_process(delta: float) -> void:
 	_clock += delta
 	if role == Role.HOST_REMOTE:
@@ -79,6 +87,8 @@ func _process(_delta: float) -> void:
 # --- Local client: send + predict --------------------------------------------
 
 func _on_input_sampled(frame: Dictionary) -> void:
+	if not Net.is_online() or not multiplayer.get_peers().has(1):
+		return
 	_seq += 1
 	var entry: Dictionary = frame.duplicate()
 	entry["seq"] = _seq

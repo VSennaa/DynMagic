@@ -83,3 +83,10 @@ func host_tick(delta: float, players: Dictionary) -> void:
 
 func progress_ratio(id: int) -> float:
 	return clampf(progress.get(id, 0.0) / CAPTURE_TIME, 0.0, 1.0)
+
+
+func replace_player(old_id: int, new_id: int) -> void:
+	for mapping: Dictionary in [progress, _hp_seen]:
+		if mapping.has(old_id):
+			mapping[new_id] = mapping[old_id]
+			mapping.erase(old_id)

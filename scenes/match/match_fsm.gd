@@ -71,7 +71,7 @@ func start(p_players: Array[int], p_overtime_setting: StringName = &"random") ->
 
 
 func mark_loaded(id: int) -> void:
-	if phase != Phase.LOADING or _loaded.has(id):
+	if phase != Phase.LOADING or not players.has(id) or _loaded.has(id):
 		return
 	_loaded.append(id)
 	if _loaded.size() >= players.size():
@@ -173,8 +173,8 @@ func overtime_timeout(hp: Dictionary) -> void:
 		_end_round(0, &"draw")
 
 
-func player_disconnected(_id: int) -> void:
-	if phase == Phase.PAUSED or phase == Phase.MATCH_END or phase == Phase.LOBBY:
+func player_disconnected(id: int) -> void:
+	if not players.has(id) or phase == Phase.PAUSED or phase == Phase.MATCH_END or phase == Phase.LOBBY:
 		return
 	_paused_phase = phase
 	_paused_time = time_left
@@ -182,9 +182,29 @@ func player_disconnected(_id: int) -> void:
 
 
 func player_reconnected() -> void:
-	if phase == Phase.PAUSED:
+	if phase == Phase.PAUSED and time_left > 0.0:
 		var resume_time: float = _paused_time
 		_set_phase(_paused_phase, resume_time)
+
+
+## The host moves the disconnected slot to the new transport id without restarting it.
+func replace_player(old_id: int, new_id: int) -> bool:
+	if phase != Phase.PAUSED or time_left <= 0.0 or not players.has(old_id) or players.has(new_id):
+		return false
+	players[players.find(old_id)] = new_id
+	for mapping: Dictionary in [score, elements, rune_offers, runes]:
+		if mapping.has(old_id):
+			mapping[new_id] = mapping[old_id]
+			mapping.erase(old_id)
+	if _loaded.has(old_id):
+		_loaded[_loaded.find(old_id)] = new_id
+	if north_id == old_id:
+		north_id = new_id
+	if last_round_loser == old_id:
+		last_round_loser = new_id
+	if core_holder == old_id:
+		core_holder = new_id
+	return true
 
 
 ## Returns the id that forfeits when the pause ends, so the caller can pass it in.
@@ -196,7 +216,8 @@ func forfeit(loser_id: int) -> void:
 
 ## Advances timers. `hp` (id -> hp) is needed for the overtime timeout decision.
 func tick(delta: float, hp: Dictionary = {}) -> void:
-	delta *= speed
+	if phase != Phase.PAUSED:
+		delta *= speed
 	match phase:
 		Phase.DRAFT:
 			time_left -= delta
