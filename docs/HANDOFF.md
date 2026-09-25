@@ -4,10 +4,21 @@ Last update: 2026-09-25. Written so any AI agent (Claude, Codex, Gemini, etc.) c
 
 ## 0. Active agent
 
-Active agent: none (round 3 Blender assets reviewed and committed by Claude, 2026-09-25: 73/73 tests, verify_assets 0 failures, in-game check OK)
+Active agent: none (round 4 training dummy model completed by Codex, 2026-09-25: 1,992 triangles, verify_assets 0 failures, no commit)
 
 Rodada 3 concluída em 2026-09-25, sem commit; arquivos, triângulos e pendências na seção 12. Round 2 (video settings, compose metrics, reconnect) was reviewed, tested (73/73 + bot match) and committed by Claude.
 
+### Handoff brief for Codex (round 4 — training dummy model, 2026-09-25)
+**Concluído em 2026-09-25, sem commit.** Modelo com **1.992 triângulos** (limite 3.000), dimensões **1,229 × 1,80 × 0,80 m**, origem no centro da base e frente −Z. Poste/braços de madeira, base redonda de pedra, saco com palha, amarras/costuras, alvo rúnico plano no peito e pequeno chapéu pontudo; GLB Y-up e cores planas.
+
+- **Arquivos entregues:** `tools/blender/training_dummy.py`, `assets/models/training_dummy.glb`, `assets/models/training_dummy.json`, `scenes/assets/training_dummy.tscn`; somente listas de assets em `tools/verify_assets.gd` e `tools/assets_gallery.gd`, linha na tabela “Assets gerados” da spec 07 e este status no handoff. Helpers, gameplay e UI preservados.
+- **Validação:** gerador Blender headless com config/scripts em `.blender_tmp/`; import Godot concluído sem erros de importação/scripts; `ASSET_OK training_dummy 1992 tris bounds=(1.229, 1.8, 0.8)` e `ASSET_CHECKS: 0 failures`. Validados toon por superfície, dimensões/contagem, origem no solo e ausência de colisões importadas; verificações existentes das arenas A/B/C também passaram. `git diff --check` passou. Sem revisão visual nesta rodada.
+- **Ambiente:** persistem erros de certificados e permissões de logs/configuração do Godot em AppData. O `.glb.import` criado automaticamente foi removido após a verificação para manter a entrega nos caminhos autorizados; o próximo `--import` o recria. Nenhum commit; integração do boneco ao treino fica com o agente de gameplay.
+
+Claude is editing gameplay/UI files in parallel. Touch ONLY these paths: `tools/blender/training_dummy.py`, `assets/models/training_dummy.glb` (+ its .json report), `scenes/assets/training_dummy.tscn`, the asset list in `tools/verify_assets.gd` / `tools/assets_gallery.gd`, and the "Assets gerados" table in `docs/specs/07-art-pipeline.md`.
+- Model a stylised training dummy (Witch Hat Atelier workshop feel, Sea of Thieves proportions): wooden post on a round stone base, straw/cloth torso sack tied with rope, crossbar arms, a painted rune target on the chest, small pointed hat. 1.8 m tall, origin at the base centre, facing −Z, ≤ 3 000 triangles, flat colours only.
+- Same pipeline as round 3: `common.py` helpers, headless Blender with `BLENDER_USER_CONFIG`/`BLENDER_USER_SCRIPTS` under `.blender_tmp/`, GLB Y-up, geometry JSON report, Godot wrapper applying `Toon.material` via `asset_visual.gd`.
+- Run `--import` and `tools/verify_assets.tscn` until 0 failures. You cannot commit. Update this file (files + triangle count) and set `Active agent: none` for round 4 when done.
 ### Handoff brief for Codex (round 3 — Blender assets, user-approved 2026-09-25)
 **Concluído no escopo autorizado; ver seção 12 antes de continuar.**
 The user asked for Codex to generate the art assets in Blender. Blender 5.2.1 LTS is installed at `C:\Program Files\Blender Foundation\Blender 5.2\blender.exe` (verified headless). No paid services (no Tripo/Meshy): model procedurally with Blender Python.

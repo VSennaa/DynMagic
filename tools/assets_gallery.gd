@@ -8,7 +8,7 @@ func _ready() -> void:
 	grid.add_theme_constant_override("h_separation", 0)
 	grid.add_theme_constant_override("v_separation", 0)
 	add_child(grid)
-	var entries: Array[String] = ["mage", "fp_arms:OpenPalm", "fp_arms:Fist", "fp_arms:PalmDown", "fp_arms:Cast", "cover_low", "cover_high", "cover_bar", "pillar", "banner", "brazier", "spawn_arch", "arcane_core"]
+	var entries: Array[String] = ["mage", "fp_arms:OpenPalm", "fp_arms:Fist", "fp_arms:PalmDown", "fp_arms:Cast", "cover_low", "cover_high", "cover_bar", "pillar", "banner", "brazier", "spawn_arch", "arcane_core", "training_dummy"]
 	for entry: String in entries:
 		var parts: PackedStringArray = entry.split(":")
 		var asset: String = parts[0]

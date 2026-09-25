@@ -1,0 +1,11 @@
+{
+  "asset": "training_dummy",
+  "triangles": 1992,
+  "budget": 3000,
+  "size_xyz_m": [
+    1.229,
+    1.8,
+    0.8
+  ],
+  "mesh_objects": 87
+}

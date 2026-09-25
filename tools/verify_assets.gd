@@ -1,7 +1,7 @@
 extends Node
 ## Runtime import contract and collision regression check. Run tools/verify_assets.tscn.
 
-const ASSETS: Array[String] = ["mage", "fp_arms", "cover_low", "cover_high", "cover_bar", "pillar", "banner", "brazier", "spawn_arch", "arcane_core"]
+const ASSETS: Array[String] = ["mage", "fp_arms", "cover_low", "cover_high", "cover_bar", "pillar", "banner", "brazier", "spawn_arch", "arcane_core", "training_dummy"]
 var _failures: int = 0
 
 

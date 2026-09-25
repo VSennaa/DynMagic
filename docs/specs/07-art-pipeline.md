@@ -82,6 +82,7 @@ Rodada 3, 2026-09-25. Fontes: `tools/blender/`; binários e relatórios: `assets
 | `brazier.glb` | 280 | Base de pedra, cuba dourada e chama facetada estática; 1,62 m de altura. |
 | `spawn_arch.glb` | 646 | Portal de pedra, pilares com runas escavadas, lintel e sigilo; 8,5 × 5 × 1,159. |
 | `arcane_core.glb` | 204 | Cristal facetado suspenso sobre pedestal rúnico; 1,88 m de altura. Só o cristal gira/flutua em runtime. |
+| `training_dummy.glb` | 1.992 | Rodada 4: boneco de oficina arcana, poste e braços de madeira, base redonda de pedra, saco de tecido com palha e cordas, alvo rúnico pintado e chapéu pontudo. 1,229 × 1,80 × 0,80; origem no centro da base, frente −Z, cores planas, wrapper toon sem colisão. |
 
 Integração: `Player._add_nameplate()` usa o mago apenas no jogador remoto; `ArcaneCore.create()` instancia cristal/pedestal; `ArenaBuilder` troca somente visuais de coberturas com tamanho exato. As caixas CSG mantêm `use_collision = true` e `visible = true`, mas usam `layers = 0`; o wrapper visual é um irmão com a mesma rotação e origem no chão. Nichos e peças de medidas especiais continuam no greybox. Nenhum GLB contém colisão.
 
