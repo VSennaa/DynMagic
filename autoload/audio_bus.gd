@@ -3,6 +3,8 @@
 ## (spec 01 §5): element timbre, form attack and effect tail. Results are cached per spell.
 extends Node
 
+signal spell_played(spell: ResolvedSpell, position: Vector3)
+
 const MIX_RATE: int = 22050
 const BUSES: Array[String] = ["Music", "SFX", "UI"]
 
@@ -21,6 +23,7 @@ func _ready() -> void:
 
 ## Plays the cast sound of a spell at a world position.
 func play_spell(spell: ResolvedSpell, position: Vector3, parent: Node) -> void:
+	spell_played.emit(spell, position)
 	var key: String = "%s_%s" % [spell.element, spell.key]
 	if not _cache.has(key):
 		_cache[key] = _synth(spell.element, spell.form, spell.effect)

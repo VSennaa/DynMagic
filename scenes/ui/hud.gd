@@ -21,6 +21,8 @@ var _status_label: Label
 var _cooldown_cells: Dictionary[StringName, Label] = {}
 var _damage_arrow: Label
 var _fps_label: Label
+var _caption_label: Label
+var _captions: Array[Dictionary] = []
 var _core_bar: ProgressBar
 var _last_hp: float = -1.0
 var _arrow_time: float = 0.0
@@ -30,6 +32,8 @@ var threat: Node3D
 
 func _ready() -> void:
 	_build()
+	AudioBus.spell_played.connect(_on_spell_sound)
+	Settings.changed.connect(_on_caption_setting)
 
 
 func bind(p_player: Player) -> void:
@@ -37,6 +41,7 @@ func bind(p_player: Player) -> void:
 
 
 func _process(delta: float) -> void:
+	_update_captions(delta)
 	if player == null or not is_instance_valid(player):
 		return
 	var stats: Stats = player.stats
@@ -90,6 +95,13 @@ func _build() -> void:
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(root)
+
+	_caption_label = _label("", 20)
+	_caption_label.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	_caption_label.position = Vector2(-260, 130)
+	_caption_label.custom_minimum_size.x = 520
+	_caption_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	root.add_child(_caption_label)
 
 	var crosshair: Label = _label("+", 28)
 	crosshair.set_anchors_preset(Control.PRESET_CENTER)
@@ -210,3 +222,33 @@ func _update_damage_arrow(delta: float, total_hp: float) -> void:
 func set_core_progress(ratio: float) -> void:
 	_core_bar.visible = ratio > 0.0
 	_core_bar.value = ratio
+
+
+func _on_spell_sound(spell: ResolvedSpell, source: Vector3) -> void:
+	if not Settings.sound_captions or not is_instance_valid(player):
+		return
+	var text: String = SoundCaption.describe(spell, source, player.get_aim_camera().global_transform)
+	if text.is_empty():
+		return
+	if _captions.size() == 3:
+		_captions.pop_front()
+	_captions.append({"text": text, "remaining": 2.5})
+	_update_captions(0.0)
+
+
+func _on_caption_setting(key: StringName) -> void:
+	if key == &"sound_captions" and not Settings.sound_captions:
+		_captions.clear()
+		_update_captions(0.0)
+
+
+func _update_captions(delta: float) -> void:
+	var lines: PackedStringArray = PackedStringArray()
+	for i: int in range(_captions.size() - 1, -1, -1):
+		_captions[i]["remaining"] -= delta
+		if float(_captions[i]["remaining"]) <= 0.0:
+			_captions.remove_at(i)
+	for entry: Dictionary in _captions:
+		lines.append(entry["text"])
+	_caption_label.text = "\n".join(lines)
+	_caption_label.visible = Settings.sound_captions and not lines.is_empty()

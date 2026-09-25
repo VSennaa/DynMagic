@@ -67,6 +67,7 @@ func _ready() -> void:
 	for text: String in ["Padrão", "Deuteranopia", "Protanopia", "Tritanopia"]:
 		palette.add_item(text)
 	palette.selected = Settings.colorblind_mode
+	body.add_child(_check("Legendas de sons de magia", Settings.sound_captions, func(v: bool) -> void: Settings.sound_captions = v))
 	palette.item_selected.connect(func(i: int) -> void: Settings.colorblind_mode = i)
 	body.add_child(UiKit.row([UiKit.label("Paleta de cores", 18), palette]))
 

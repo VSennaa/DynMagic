@@ -63,6 +63,11 @@ var show_fps: bool = false:
 		show_fps = value
 		changed.emit(&"show_fps")
 
+var sound_captions: bool = false:
+	set(value):
+		sound_captions = value
+		changed.emit(&"sound_captions")
+
 ## Bus name -> linear volume 0..1.
 var volumes: Dictionary[String, float] = {"Master": 1.0, "Music": 0.8, "SFX": 1.0, "UI": 1.0}
 
@@ -93,6 +98,7 @@ func load_settings() -> void:
 	player_name = cfg.get_value("game", "player_name", player_name)
 	show_damage_numbers = cfg.get_value("game", "show_damage_numbers", show_damage_numbers)
 	colorblind_mode = cfg.get_value("accessibility", "colorblind_mode", colorblind_mode)
+	sound_captions = cfg.get_value("accessibility", "sound_captions", sound_captions)
 	show_fps = cfg.get_value("game", "show_fps", show_fps)
 	for bus: String in volumes.keys():
 		volumes[bus] = cfg.get_value("audio", bus, volumes[bus])
@@ -111,6 +117,7 @@ func save_settings() -> void:
 	cfg.set_value("game", "player_name", player_name)
 	cfg.set_value("game", "show_damage_numbers", show_damage_numbers)
 	cfg.set_value("accessibility", "colorblind_mode", colorblind_mode)
+	cfg.set_value("accessibility", "sound_captions", sound_captions)
 	cfg.set_value("game", "show_fps", show_fps)
 	for bus: String in volumes:
 		cfg.set_value("audio", bus, volumes[bus])
