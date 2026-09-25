@@ -93,6 +93,19 @@ func test_element_variants_from_spec() -> void:
 	assert_eq(wind_bolt.status_id, &"knockback")
 
 
+func test_with_params_copies_and_overrides() -> void:
+	var orb: ResolvedSpell = db.call(&"resolve", &"fire", &"projectile", &"burst")
+	var copy: ResolvedSpell = orb.with_params({"zone_dps": 8.0}).with_status(&"slow", 0.6)
+	assert_eq(copy.key, orb.key)
+	assert_eq(copy.damage, orb.damage)
+	assert_eq(copy.color, orb.color)
+	assert_eq(copy.param(&"zone_dps"), 8.0)
+	assert_eq(copy.param(&"radius"), 3.0)
+	assert_eq(copy.status_id, &"slow")
+	assert_eq(orb.status_id, &"burn", "original untouched")
+	assert_true(orb.param(&"zone_dps") == null, "original params untouched")
+
+
 func test_resolution_does_not_mutate_base() -> void:
 	db.call(&"resolve", &"fire", &"area", &"direct")
 	var bases: Dictionary = db.get(&"bases")

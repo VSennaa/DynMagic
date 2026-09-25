@@ -58,6 +58,7 @@ Chosen: **Godot AI** by hi-godot (https://github.com/hi-godot/godot-ai), plugin 
 - Injecting input into the running game: separate `input_key` calls take seconds each, longer than the 2.5 s composer timeout. Use `game_manage(op="input_sequence")` with steps `{action, pressed, at_frame}` (frame-timed). Presses a few frames apart can still be missed by `is_action_just_pressed`; space steps ~10+ frames. `SpellComposer` polls actions in `_process` (only while the mouse is captured).
 - Player children run `_ready` before `Player`, so they must use `player.get_node(...)` instead of the player's `@onready` vars.
 - Confirm spells expire after 4 s of aiming: put the whole compose + `cast` timeline in one `input_sequence` call.
+- Collision layers: layer 1 = world, players and solid spells; layer 2 = barriers that stop projectiles but not players (wind Wall). Players mask layer 1 only; projectile rays use the default all-layers mask.
 - Input bindings use `keycode` (not `physical_keycode`). Revisit in M6 remapping if non-QWERTY layouts matter.
 
 ## 6. Status by milestone (SDD §6)

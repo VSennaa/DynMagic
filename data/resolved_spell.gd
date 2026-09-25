@@ -38,5 +38,13 @@ func with_params(overrides: Dictionary) -> ResolvedSpell:
 	return copy
 
 
+## Copy carrying a different status (e.g. a frost Mark rooting with a short full slow).
+func with_status(id: StringName, duration: float) -> ResolvedSpell:
+	var copy: ResolvedSpell = with_params({})
+	copy.status_id = id
+	copy.status_duration = duration
+	return copy
+
+
 func is_quick() -> bool:
 	return cast_mode == SpellBase.CastMode.QUICK

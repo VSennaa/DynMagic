@@ -61,7 +61,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (write th
 - [x] Status effects: burn, slow, shock, knockback (`Player.receive_status`; verified burn and knockback in game on the offline `Target` player)
 - [x] Element variants for Projectile row (spec 01 §3 table): fire/frost Bolt status, storm speed, wind homing; Orb burning/frozen ground, storm chain (verified), wind pull; Seed zones incl. wind deflect. Frozen ground uses slow (low friction not modelled)
 - [x] Element variants for Self row: Guard reflect/no-sprint/shock-on-break/deflect-next (`Player.active_guard`), Impulse fire trail/frost slide/storm teleport (verified)/wind lift+glide, Aura damage/slow-immune+shield/cooldown+projectile speed/move speed+double jump
-- [ ] Element variants for Area row
+- [x] Element variants for Area row: Cone via params (range/slow/arc/knockback), Mark frost root + wind launch + storm fast delay, Wall fire contact burn / frost 180 HP opaque / storm non-solid contact damage / wind projectile-only (collision layer 2)
 - [x] `test_spell_resolution.gd`: all 36 combinations vs expected table
 - [ ] Rune circle shader + glyph per form + ring per effect (spec 01 §5, spec 07 §2)
 - [ ] Placeholder VFX per element (GPUParticles3D)

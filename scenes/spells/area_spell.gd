@@ -77,8 +77,17 @@ func _place_mark() -> void:
 
 
 func _detonate() -> void:
+	var root_time: float = float(spell.param(&"root_duration", 0.0))
+	var launch: float = float(spell.param(&"launch_up", 0.0))
 	for target: Node in overlap_damageables(global_position + Vector3.UP * 0.9, _radius):
 		hit(target)
+		if target == caster:
+			continue
+		# Frost Mark roots (a full slow); wind Mark launches upward.
+		if root_time > 0.0 and target.has_method(&"receive_status"):
+			target.call(&"receive_status", spell.with_params({"slow_override": 1.0}).with_status(&"slow", root_time), caster)
+		if launch > 0.0 and target.has_method(&"apply_knockback"):
+			target.call(&"apply_knockback", Vector3.UP * launch)
 	var fx: ExplosionFx = EXPLOSION_SCENE.instantiate() as ExplosionFx
 	fx.configure(_radius, spell.color)
 	get_parent().add_child(fx)
