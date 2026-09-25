@@ -27,5 +27,16 @@ func param(name: StringName, default: Variant = null) -> Variant:
 	return params.get(String(name), params.get(name, default))
 
 
+## Copy with some params replaced (e.g. an Orb leaving a burning-ground Zone).
+func with_params(overrides: Dictionary) -> ResolvedSpell:
+	var copy: ResolvedSpell = ResolvedSpell.new()
+	for prop: Dictionary in get_property_list():
+		if int(prop["usage"]) & PROPERTY_USAGE_SCRIPT_VARIABLE:
+			copy.set(prop["name"], get(prop["name"]))
+	copy.params = params.duplicate(true)
+	copy.params.merge(overrides, true)
+	return copy
+
+
 func is_quick() -> bool:
 	return cast_mode == SpellBase.CastMode.QUICK

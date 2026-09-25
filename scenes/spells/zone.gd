@@ -19,6 +19,8 @@ func _ready() -> void:
 	radius = float(spell.param(&"zone_radius", 3.5))
 	duration = float(spell.param(&"zone_duration", 4.0))
 	dps = float(spell.param(&"zone_dps", 0.0))
+	if bool(spell.param(&"deflect", false)):
+		add_to_group(&"deflect_zone")
 	_disc.scale = Vector3(radius, 1.0, radius)
 	var mat: StandardMaterial3D = StandardMaterial3D.new()
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
