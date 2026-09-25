@@ -124,7 +124,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (write th
 - [x] Settings screens + `user://settings.cfg` persistence (spec 06 §3): video (fullscreen, vsync, FOV, FPS cap), audio buses, sensitivity, invert Y, name, damage numbers. Resolution/render scale/shadows/AA not exposed yet
 - [x] Input remapping with conflict detection (conflicting action loses the key and the player is told)
 - [ ] Accessibility: colorblind palettes, reduce shake, sound captions
-- [ ] Toon + outline shaders on everything (spec 07 §2)
+- [x] Toon + outline shaders on everything (spec 07 §2): `shaders/toon.gdshader` (3 bands, rim, block specular, painted noise) on arena geometry and remote bodies; screen-space ink outline (`shaders/outline.gdshader`) on the local camera and menu camera via `Toon`. Spell VFX stay unshaded by design
 - [ ] Audio: 3-layer spell sounds, menu and combat music
 - [ ] Screen transitions (ink brush)
 - [ ] Performance pass: 144 FPS target on GTX 1660 at 1080p

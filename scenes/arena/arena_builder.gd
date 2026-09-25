@@ -182,9 +182,7 @@ func _box(box_name: String, pos: Vector3, size: Vector3, color: Color) -> CSGBox
 	box.size = size
 	box.position = pos
 	box.use_collision = true
-	var mat: StandardMaterial3D = StandardMaterial3D.new()
-	mat.albedo_color = color
-	box.material = mat
+	box.material = Toon.material(color)
 	_adopt(box)
 	return box
 

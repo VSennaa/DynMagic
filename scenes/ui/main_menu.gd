@@ -46,6 +46,7 @@ func _build_background() -> void:
 	camera.rotation_degrees = Vector3(-30, 0, 0)
 	_pivot.add_child(camera)
 	camera.current = true
+	Toon.add_outline(camera)
 	var shade: ColorRect = ColorRect.new()
 	shade.color = Color(UiKit.INK, 0.55)
 	shade.set_anchors_preset(Control.PRESET_FULL_RECT)

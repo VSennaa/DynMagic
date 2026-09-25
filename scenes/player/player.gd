@@ -91,6 +91,7 @@ func _ready() -> void:
 	stats.died.connect(composer.reset)
 	if is_local:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
+		Toon.add_outline(_camera)
 	else:
 		_add_nameplate()
 
@@ -432,6 +433,7 @@ func _add_nameplate() -> void:
 	capsule.radius = tuning.capsule_radius
 	capsule.height = tuning.stand_height
 	body.mesh = capsule
+	body.material_override = Toon.material(Color(0.9, 0.85, 0.75))
 	body.position.y = tuning.stand_height * 0.5
 	add_child(body)
 
