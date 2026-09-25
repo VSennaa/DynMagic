@@ -61,6 +61,14 @@ func _ready() -> void:
 	body.add_child(UiKit.row([UiKit.label("Nome", 18), name_edit]))
 	body.add_child(_check("Números de dano", Settings.show_damage_numbers, func(v: bool) -> void: Settings.show_damage_numbers = v))
 
+	body.add_child(UiKit.label("— Acessibilidade —", 22))
+	var palette: OptionButton = OptionButton.new()
+	for text: String in ["Padrão", "Deuteranopia", "Protanopia", "Tritanopia"]:
+		palette.add_item(text)
+	palette.selected = Settings.colorblind_mode
+	palette.item_selected.connect(func(i: int) -> void: Settings.colorblind_mode = i)
+	body.add_child(UiKit.row([UiKit.label("Paleta de cores", 18), palette]))
+
 	_status = UiKit.label("", 18)
 	column.add_child(_status)
 	column.add_child(UiKit.row([

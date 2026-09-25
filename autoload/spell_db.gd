@@ -7,8 +7,18 @@ const EFFECTS: Array[StringName] = [&"direct", &"burst", &"lingering"]
 const BASES_DIR: String = "res://data/spells/"
 const ELEMENTS_DIR: String = "res://data/elements/"
 
+## Colour-blind palettes (Okabe-Ito based). Index 0 keeps each ElementDef's own colour.
+const PALETTES: Array[Dictionary] = [
+	{},
+	{&"fire": Color("#E69F00"), &"frost": Color("#56B4E9"), &"storm": Color("#CC79A7"), &"wind": Color("#F0E442")},
+	{&"fire": Color("#E69F00"), &"frost": Color("#56B4E9"), &"storm": Color("#CC79A7"), &"wind": Color("#F0E442")},
+	{&"fire": Color("#D55E00"), &"frost": Color("#009E73"), &"storm": Color("#CC79A7"), &"wind": Color("#DDDDDD")},
+]
+
 var bases: Dictionary[StringName, SpellBase] = {}
 var elements: Dictionary[StringName, ElementDef] = {}
+var _default_colors: Dictionary[StringName, Color] = {}
+var _palette: int = 0
 
 
 func _ready() -> void:
@@ -26,6 +36,16 @@ func load_all() -> void:
 		var element: ElementDef = res as ElementDef
 		if element != null:
 			elements[element.id] = element
+			_default_colors[element.id] = element.color
+	apply_palette(_palette)
+
+
+## Recolours elements for a colour-blind palette; resolved spells pick the colour up.
+func apply_palette(index: int) -> void:
+	_palette = index
+	var palette: Dictionary = PALETTES[clampi(index, 0, PALETTES.size() - 1)]
+	for id: StringName in elements:
+		elements[id].color = palette.get(id, _default_colors.get(id, elements[id].color))
 
 
 ## Slot index (0, 1, 2 for Q, E, R) to form or effect id.

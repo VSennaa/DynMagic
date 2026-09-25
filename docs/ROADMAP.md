@@ -117,13 +117,13 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (write th
 - [x] Main menu with animated 3D background (spec 06 §1); now the project main scene
 - [x] Host/Join screens + lobby screen (`play_lan`, `lobby_screen`, `Lobby` autoload with ready flags and rules). UI-driven two-instance run not yet tested; CLI `--host/--join` still skips the lobby
 - [x] Draft screen: element cards (disabled when taken or not your turn) + rune offer + timer, in `NetMatch._update_draft_panel`; headless run clean. Keys 1-7 still work
-- [ ] Final HUD (spec 06 §2)
+- [~] Final HUD (spec 06 §2): temporary HUD + match line + rune/Overcharge/status line. Pending: directional damage indicator, Core capture bar on clients, Tab scoreboard, final art
 - [x] Pause menu + forfeit (Esc in the match; online match keeps running)
 - [x] Results screen + rematch (panel with score, damage, accuracy, Cores; "Voltar ao lobby" = rematch path)
 - [x] Grimório screen (36-spell reference; text only, no preview video)
 - [x] Settings screens + `user://settings.cfg` persistence (spec 06 §3): video (fullscreen, vsync, FOV, FPS cap), audio buses, sensitivity, invert Y, name, damage numbers. Resolution/render scale/shadows/AA not exposed yet
 - [x] Input remapping with conflict detection (conflicting action loses the key and the player is told)
-- [ ] Accessibility: colorblind palettes, reduce shake, sound captions
+- [~] Accessibility: colour-blind palettes done (Okabe-Ito based, recolours elements live; glyph shapes already encode form/effect). No camera shake exists yet; sound captions pending
 - [x] Toon + outline shaders on everything (spec 07 §2): `shaders/toon.gdshader` (3 bands, rim, block specular, painted noise) on arena geometry and remote bodies; screen-space ink outline (`shaders/outline.gdshader`) on the local camera and menu camera via `Toon`. Spell VFX stay unshaded by design
 - [~] Audio: 3-layer spell sounds synthesised in `AudioBus` (element timbre, form attack, effect tail; impact boom), buses Music/SFX/UI created at runtime. Not listened to by a human yet. Music missing (needs CC0 assets)
 - [ ] Screen transitions (ink brush)

@@ -52,6 +52,10 @@ func _process(_delta: float) -> void:
 		parts.append("%s %.1fs" % [id, stats.status_time_left(id)])
 	if player.invulnerable_time > 0.0:
 		parts.append("invulnerável")
+	if player.rune != &"":
+		parts.append("runa: %s" % player.rune)
+	if player.has_overcharge():
+		parts.append("SOBRECARGA %d" % player.overcharge_casts)
 	_status_label.text = "  ".join(parts)
 
 
