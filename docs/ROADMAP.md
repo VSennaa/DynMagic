@@ -70,10 +70,10 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (write th
 
 ## M3 — Rede
 
-- [ ] `Net` autoload: host/join by IP, ENet 7777, channels (spec 04 §1, §8)
-- [ ] CLI args `--host` / `--join <ip>`
-- [ ] Handshake + protocol version check (spec 04 §3)
-- [ ] LAN discovery broadcast on 7778 + lobby list (spec 04 §2)
+- [x] `Net` autoload: host/join by IP, ENet 7777, channels (spec 04 §1, §8)
+- [x] CLI args `--host` / `--join <ip>` (+ `--port`, `--name`, `--discover`)
+- [x] Handshake + protocol version check (spec 04 §3); verified host+client headless. Room-full and version reject paths not exercised yet
+- [x] LAN discovery broadcast on 7778 + lobby list (spec 04 §2); verified headless (lobby list UI lands in M6). Note: the broadcast source IP may be a VPN adapter (26.x seen on this PC)
 - [ ] `InputFrame` + `Snapshot` serialization + `test_net_serialization.gd`
 - [ ] Client prediction + reconciliation (spec 04 §5)
 - [ ] Remote player interpolation (100 ms buffer)
