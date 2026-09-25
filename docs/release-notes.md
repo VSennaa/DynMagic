@@ -1,6 +1,13 @@
-# DynMagic v0.3.0 — cajados e menus de grimório
+# DynMagic v0.3.1 — símbolos de magia
 
-## Novidades na 0.3.0
+## Novidades na 0.3.1
+
+- **Símbolos** para forma e efeito na roda da mira e na HUD: Projétil ↗, Pessoal (figura), Área (anel no chão); Direto (losango), Explosivo (estrela), Contínuo (anel pontilhado).
+- **Configurações → Roda de magias**: alterne entre **Significado** (símbolos) e **Atalhos** (suas teclas).
+- **Grade de recarga** gráfica: célula na cor do elemento quando pronta, relógio esvaziando e segundos restantes em recarga.
+- "Persistente" agora se chama **Contínuo**.
+
+## Da 0.3.0
 
 - **Cajado em primeira pessoa**: uma mão só segurando um cajado que muda com o elemento do round (Fogo, Gelo, Tempestade, Vento). O mago em 3ª pessoa também carrega o cajado.
 - **Modo canhoto** em Configurações: espelha o cajado para o lado esquerdo.
