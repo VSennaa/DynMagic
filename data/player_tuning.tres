@@ -1,0 +1,20 @@
+[gd_resource type="Resource" script_class="PlayerTuning" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scenes/player/player_tuning.gd" id="1_tuning"]
+
+[resource]
+script = ExtResource("1_tuning")
+capsule_radius = 0.35
+stand_height = 1.8
+crouch_height = 1.2
+eye_height_ratio = 0.89
+walk_speed = 5.5
+sprint_speed = 7.5
+crouch_speed = 3.0
+ground_acceleration = 60.0
+air_acceleration = 15.0
+jump_height = 1.2
+gravity = 22.0
+coyote_time = 0.1
+step_height = 0.35
+crouch_transition_time = 0.12

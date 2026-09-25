@@ -32,7 +32,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (write th
 
 ## M1 — Sandbox (offline, 1 element)
 
-- [ ] `PlayerTuning.tres` with every value from spec 05 §2
+- [x] `PlayerTuning.tres` with every value from spec 05 §2
 - [ ] `Player` scene: CharacterBody3D, head, camera, FOV from settings (spec 05 §1)
 - [ ] First-person movement: walk, sprint, crouch, jump, coyote time, step-up (spec 05 §2)
 - [ ] Mouse look with sensitivity and invert Y
