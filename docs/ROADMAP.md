@@ -51,7 +51,7 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (write th
 - [x] Spell: Mark (area/burst) + ground preview (`SpellCaster.ground_target`)
 - [x] Spell: Wall (area/lingering) + ghost preview (`Wall` StaticBody with HP; `SpellCaster.wall_transform`). All 3 verified in game: Cone 23, Mark 44 + burn, Wall blocked a Bolt
 - [x] Training dummy: infinite HP, damage numbers, DPS counter
-- [ ] Greybox Arena A (spec 03 §3) for testing
+- [x] Greybox Arena A (spec 03 §3) for testing — `ArenaBuilder` (@tool) builds shell, balconies with ramps, cover and spawn markers from a half-map table mirrored 180°. Main scene is now `scenes/sandbox/training.tscn` (Arena A + dummy)
 - [ ] Temporary HUD: HP, mana, composition trail, 3×3 cooldown grid
 - [ ] Milestone review with user
 
