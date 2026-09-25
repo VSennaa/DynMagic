@@ -29,6 +29,8 @@ func hit(target: Node, damage_scale: float = 1.0) -> void:
 func hit_amount(target: Node, amount: float) -> void:
 	if target == null or target == caster or not target.is_in_group(&"damageable"):
 		return
+	if caster != null and caster.has_method(&"damage_mult"):
+		amount *= float(caster.call(&"damage_mult"))
 	target.call(&"receive_hit", amount, spell, caster)
 
 

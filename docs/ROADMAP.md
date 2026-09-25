@@ -44,9 +44,9 @@ Legend: `[ ]` todo · `[x]` done · `[~]` in progress · `[!]` blocked (write th
 - [x] Spell: Bolt (projectile/direct). Shared pieces: `SpellNode` base, ray-stepped `Projectile`, `SpellCaster` (aims at crosshair point), `receive_hit()` on group "damageable". Headshot ×1.5 still pending (needs hurtboxes)
 - [x] Spell: Orb (projectile/burst) + aim preview (`AimPreview` ring aligned to the hit surface; also serves Mark). Fire burning ground variant pending (M2)
 - [x] Spell: Seed (projectile/lingering) + arc preview + zone (`Zone` ticks every 0.5 s; reused later by other lingering effects)
-- [ ] Spell: Guard (self/direct)
-- [ ] Spell: Impulse (self/burst) with i-frames
-- [ ] Spell: Aura (self/lingering)
+- [x] Spell: Guard (self/direct) — `SelfSpell` shared by the 3 self spells
+- [x] Spell: Impulse (self/burst) with i-frames (`Player.start_dash`; verified in game)
+- [x] Spell: Aura (self/lingering) — status `aura` + `Player.active_aura`; `damage_mult()`/`speed_mult()` read element bonuses. Guard/Aura not yet checked in game (no HUD); verify with the HUD task
 - [ ] Spell: Cone (area/direct)
 - [ ] Spell: Mark (area/burst) + ground preview
 - [ ] Spell: Wall (area/lingering) + ghost preview

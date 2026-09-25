@@ -17,6 +17,15 @@ var sprint_blocked: bool = false
 var is_sprinting: bool = false
 var is_crouching: bool = false
 
+## Last movement input, used as the Impulse direction.
+var move_input: Vector2 = Vector2.ZERO
+## Seconds of damage immunity left (Impulse i-frames).
+var invulnerable_time: float = 0.0
+## Active Aura spell (self/lingering) while its status lasts.
+var active_aura: ResolvedSpell
+
+var _dash_velocity: Vector3 = Vector3.ZERO
+var _dash_time: float = 0.0
 var _coyote_timer: float = 0.0
 var _current_height: float = 1.8
 var _pitch: float = 0.0
@@ -73,7 +82,18 @@ func _physics_process(delta: float) -> void:
 
 ## One movement tick. Kept free of Input reads so the host can replay client inputs (M3).
 func simulate(delta: float, input_dir: Vector2, want_jump: bool, want_crouch: bool, want_sprint: bool) -> void:
+	move_input = input_dir
+	invulnerable_time = maxf(invulnerable_time - delta, 0.0)
+	if active_aura != null and not stats.has_status(&"aura"):
+		active_aura = null
 	_update_crouch(delta, want_crouch)
+	if _dash_time > 0.0:
+		_dash_time -= delta
+		velocity = _dash_velocity
+		move_and_slide()
+		if _dash_time <= 0.0:
+			velocity = _dash_velocity.normalized() * tuning.walk_speed
+		return
 
 	if is_on_floor():
 		_coyote_timer = tuning.coyote_time
@@ -95,7 +115,7 @@ func simulate(delta: float, input_dir: Vector2, want_jump: bool, want_crouch: bo
 
 	var wish: Vector3 = (transform.basis * Vector3(input_dir.x, 0.0, input_dir.y))
 	wish.y = 0.0
-	wish = wish.normalized() * speed
+	wish = wish.normalized() * speed * speed_mult()
 	var accel: float = tuning.ground_acceleration if is_on_floor() else tuning.air_acceleration
 	var horizontal: Vector3 = Vector3(velocity.x, 0.0, velocity.z).move_toward(wish, accel * delta)
 	velocity.x = horizontal.x
@@ -165,6 +185,8 @@ func get_aim_camera() -> Camera3D:
 
 ## Entry point for spell damage (group "damageable"). Host-only in multiplayer.
 func receive_hit(amount: float, spell: ResolvedSpell, _source: Node) -> void:
+	if invulnerable_time > 0.0:
+		return
 	stats.take_damage(amount)
 	if spell != null and spell.status_id != &"" and bool(spell.param(&"applies_status", false)):
 		stats.apply_status(spell.status_id, spell.status_duration)
@@ -184,3 +206,23 @@ func _on_cast_requested(spell: ResolvedSpell) -> void:
 	stats.spend_mana(spell.mana_cost)
 	stats.start_cooldown(spell.key, spell.cooldown)
 	spell_cast.emit(spell)
+
+
+## Impulse: dash along the movement input (forward when idle) over dash_time seconds.
+func start_dash(distance: float, duration: float, iframes: float, lift: float = 0.0) -> void:
+	var input: Vector2 = move_input if move_input.length() > 0.1 else Vector2(0.0, -1.0)
+	var dir: Vector3 = (transform.basis * Vector3(input.x, 0.0, input.y))
+	dir.y = 0.0
+	_dash_velocity = dir.normalized() * (distance / maxf(duration, 0.01)) + Vector3.UP * lift
+	_dash_time = duration
+	invulnerable_time = maxf(invulnerable_time, iframes)
+
+
+## Outgoing damage multiplier (Aura, runes later).
+func damage_mult() -> float:
+	return 1.0 + (float(active_aura.param(&"damage_bonus", 0.0)) if active_aura != null else 0.0)
+
+
+## Movement speed multiplier (Aura, status effects later).
+func speed_mult() -> float:
+	return 1.0 + (float(active_aura.param(&"move_speed_bonus", 0.0)) if active_aura != null else 0.0)
