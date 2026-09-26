@@ -219,3 +219,25 @@ Feedback da sessão LAN
 - [ ] Animações e projéteis melhores
 - [ ] Música e efeitos sonoros melhores
 - [x] Grimório vira tabela de referência: atalho, magia, efeito e conjuração das 9 magias por elemento (user 2026-09-25)
+
+## M12 — Rodada 2: design e modos em time (decisions: docs/reviews/r2-decisions.md)
+
+Codex (critical), in order:
+- [ ] R1 one cover contract for projectiles, area effects and the Core (line of sight from effect centre)
+- [ ] R3 ArenaBuilder driven by spaces and metrics (corridor widths, cover heights, max sightline, jump heights); keep current arenas as a test control
+- [ ] Arena A rebuilt as greybox from R5 on top of R3
+- [ ] R2 four elemental combat plans and nine purposeful functions
+- [ ] R4 G as readable preparation, V as short-range commitment
+- [ ] Team framework: N players per side, team draft (no duplicate per team; 5v5 max 2 per element), friendly fire off, spawns per team, HUD/scoreboard for teams
+- [ ] 2v2 on small arenas (elimination rounds, best-of-7, rune + Core kept)
+- [ ] 3v3 on expanded arenas (x1.5 with extra flank routes)
+- [ ] 5v5 Control: one point to 100%, best-of-3 rounds, 10 s wave respawn, no rune (Core becomes the point); LAN/listen server only
+- [ ] R8 round in three acts; R9 match memory (spatial rematch, adaptation runes)
+DeepSeek (simple):
+- [ ] R6/R7 arenas B and C greybox on R3 metrics
+- [ ] A03/A07 wire unused art (parchment panel, title banner, banner/brazier/spawn arch props); A06 docs drift
+
+## M13 — Gauntlet visual e level design (bar B: Valorant Skirmish maps for layout, Sea of Thieves for look)
+- [ ] Live progress page (artifact) with blind critic verdicts per piece
+- [ ] Visual pieces: toon lighting (A01), sky/ambient per arena, materials and textures, outline (A10), spell VFX identity per element (A02), dissolve (A05), viewmodel, post-processing
+- [ ] Level pieces (after M12 R3): each arena's layout, cover rhythm, sightlines, landmarks
