@@ -197,9 +197,12 @@ Phase 4 — balance (user decisions D1, D2)
 - [x] D12 local telemetry JSON with lobby notice; remove headshot from spec (D9)
 - [x] C18 docs aligned; release v1.0.0-alpha
 
-## M11 — Antes da tag v1.0.0-alpha (1ª sessão de teste LAN, 2026-09-25)
+## M11 — Alfa 1.1 (1ª sessão de teste LAN, 2026-09-25; user: lançar como v1.1.0-alpha, pré-conjuração no G, uma por vez)
 
-Tag `v1.0.0-alpha` segurada até fechar este bloco. Revisão do trabalho DeepSeek (commit `def9b2a`) incluída.
+### Pós-alfa 1.1
+- [ ] Rota web no nginx da VPS via SSH (site `web/`); depois DNS dedicado
+
+Tag `v1.1.0-alpha` sai quando este bloco fechar. Revisão do trabalho DeepSeek (commit `def9b2a`) incluída.
 
 Revisão DeepSeek (corrigir)
 - [ ] Seta sem recarga entre cargas: 3 tiros saem em ~0,45 s (só o lockout de 0,15 s). Definir intervalo mínimo entre cargas

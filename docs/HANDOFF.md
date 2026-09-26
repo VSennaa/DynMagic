@@ -6,6 +6,20 @@ Last update: 2026-09-25. Written so any AI agent (Claude, Codex, Gemini, etc.) c
 
 Active agent: none (round 7 DeepSeek fallback DONE — alpha 1.0 / M10 phases 1–4 implemented and tested; changes uncommitted, ready for Claude review/commit). Pending: VPS 1 h load test, `status.json` queue and `web/` site (no VPS/network access); true third-person death cam; snapshot payload over ENet MTU when gameplay state is included (LAN accepted, worth compacting).
 
+### Handoff brief for DeepSeek (round 8 — alpha 1.1, ROADMAP M11; 2026-09-25)
+Active agent while running: DeepSeek (openclaude). Claude reviews, commits, tags `v1.1.0-alpha` and then sets up the web route on the VPS.
+Rules: same as round 7 (no git commit/push, no `.git`/`addons/`/`.github/`, no downloads/installs, static typing, UI text in Portuguese). Godot console: `C:\Users\vinic\Downloads\Godot_v4.7.2-stable_win64.exe\Godot_v4.7.2-stable_win64_console.exe`. After EACH task: `--import`, `res://build/check_suites.tscn` (must stay 0 failures), and for gameplay tasks the headless LAN pair `-- --host --bot --match-speed 10` + `-- --join 127.0.0.1 --bot --match-speed 10`. Tick the item in ROADMAP M11 and add a line here.
+Tasks, in order (user decisions are binding):
+1. **Hit / damage feedback** (`scenes/ui/hud.gd`, `autoload/audio_bus.gd`): stronger hit sound, bigger damage number, red screen-edge flash + short camera shake (new Settings toggle `screen_shake`, default on) when taking damage, distinct kill marker when a hit kills.
+2. **Arrow pacing** (`scenes/player/player.gd`, `scenes/net/net_match.gd`): keep 3 charges / 1.2 s but add a minimum 0.3 s between Arrow shots (local and host); show the Arrow charges (3 pips) in its HUD cooldown grid cell.
+3. **Melee on V** (new input action `melee`, key V, remappable in settings): staff swing, 1.8 m range, 70° cone, 12 damage, 0.8 s cooldown, no mana, host-authoritative like casts (request -> validate -> apply), first-person arm thrust + sound.
+4. **Pre-cast on G** (new action `precast`, key G): once a spell is fully composed (quick spell right after the effect key, or while AIMING), G stores it instead of casting; its mana cost is reserved (not spendable, drawn as a striped segment on the mana bar); G again fires it (confirm spells enter aiming); F cancels and releases the mana. One stored spell at a time. Host validates the reservation like a cast. Add tests for the reservation math.
+5. **Area vs Lingering readability**: area spells get a sharp one-shot ground ring flash; lingering effects keep a pulsing dotted ring plus a visible remaining-time ring. Keep VFX unshaded.
+6. **Snapshot size**: replace the `put_var` gameplay blob in `autoload/net_codec.gd` with compact fields (status ids + remaining as half floats, non-zero cooldowns only, arrow charges, overcharge, is_dead bit). Target < 600 B for 2 players; keep `tests/test_net_serialization.gd` passing and extend it.
+7. Version `1.1.0` (project.godot, export_presets `1.1.0.0`) and a `v1.1.0-alpha` section at the top of `docs/release-notes.md` (Portuguese, player-facing).
+Leave for Claude: sound/music quality, animation and projectile art, spell identity pass, release tag, VPS web route.
+Set `Active agent: none (round 8 DeepSeek ...)` when you stop, listing what is undone.
+
 ### Round 7 result — DeepSeek fallback (2026-09-25)
 
 Resumed the Codex round 7 brief from phase 1. Codex had already landed C1/C6/C7/C8/C9/C11/C12/C16/C17 (commit `42f141b`) plus uncommitted HUD work; each M10 item was audited against the code, the done ones ticked in `docs/ROADMAP.md`, and the rest implemented in phase order (1→4). No commit, no `.git`/`addons/`/`.github/` changes, no downloads.
