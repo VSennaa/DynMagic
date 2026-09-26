@@ -54,6 +54,14 @@ var _feedback_time: float = 0.0
 var _banner: Label
 var _banner_time: float = 0.0
 var _death_card: Label
+## Round 8: damage flash, kill marker and their timers.
+var _flash_rect: ColorRect
+var _flash_material: ShaderMaterial
+var _flash_strength: float = 0.0
+var _kill_marker: Label
+var _kill_time: float = 0.0
+## True once the kill marker was shown for the opponent's current death.
+var _kill_shown: bool = false
 ## Where hits most likely came from (1v1: the opponent). Set by the match scene.
 var threat: Node3D
 
@@ -81,6 +89,10 @@ func _process(delta: float) -> void:
 	_feedback.modulate.a = clampf(_feedback_time * 1.5, 0.0, 1.0)
 	_banner_time = maxf(_banner_time - delta, 0.0)
 	_banner.modulate.a = clampf(_banner_time, 0.0, 1.0)
+	_flash_strength = maxf(_flash_strength - delta * 3.2, 0.0)
+	_flash_material.set_shader_parameter(&"strength", _flash_strength)
+	_kill_time = maxf(_kill_time - delta, 0.0)
+	_kill_marker.modulate.a = clampf(_kill_time * 1.6, 0.0, 1.0)
 	var has_player: bool = player != null and is_instance_valid(player)
 	for widget: Control in _player_widgets:
 		widget.visible = has_player
@@ -98,6 +110,8 @@ func _process(delta: float) -> void:
 	_hp_bar.max_value = stats.max_hp
 	_hp_bar.value = stats.hp
 	_enemy_box.visible = is_instance_valid(threat) and threat is Player
+	if _enemy_box.visible and not (threat as Player).stats.is_dead:
+		_kill_shown = false
 	if _enemy_box.visible:
 		var enemy: Player = threat as Player
 		_enemy_hp.max_value = enemy.stats.max_hp
@@ -131,12 +145,26 @@ func _on_cast_rejected(_spell: ResolvedSpell, reason: StringName) -> void:
 
 
 ## C2: our hits are confirmed with a hitmarker, a sound and (optionally) the total damage.
+## Round 8: the number is bigger and louder, and a killing hit gets its own marker.
 func on_damage_dealt(amount: float, _hits: int) -> void:
 	_hitmarker_time = 0.45
+	var killed: bool = threat is Player and (threat as Player).stats.is_dead
 	if Settings.show_damage_numbers:
 		_feedback.text = "%d" % roundi(amount)
-		_feedback_time = 0.9
-	AudioBus.play_ui("hit", -8.0)
+		_feedback.add_theme_font_size_override(&"font_size", 52 if killed else 40)
+		_feedback.add_theme_color_override(&"font_color", Color(1.0, 0.35, 0.25) if killed else Color(1.0, 0.85, 0.4))
+		_feedback_time = 1.2 if killed else 0.9
+	if killed and not _kill_shown:
+		_kill_shown = true
+		_kill_time = 1.4
+		_hitmarker.text = "☠"
+		_hitmarker.add_theme_color_override(&"font_color", Color(1.0, 0.3, 0.25))
+		_hitmarker_time = 1.0
+		AudioBus.play_ui("kill", -2.0)
+	else:
+		_hitmarker.text = "✕"
+		_hitmarker.add_theme_color_override(&"font_color", Color(1.0, 0.95, 0.85))
+		AudioBus.play_ui("hit_strong", -4.0)
 
 
 ## C3: big centre message for round and death events.
@@ -163,6 +191,26 @@ func _build() -> void:
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(root)
+
+	# Round 8: red screen-edge flash on taking damage. Added first so it sits behind the HUD.
+	_flash_material = ShaderMaterial.new()
+	var flash_shader: Shader = Shader.new()
+	flash_shader.code = """
+shader_type canvas_item;
+uniform float strength : hint_range(0.0, 1.0) = 0.0;
+void fragment() {
+	vec2 d = UV - vec2(0.5);
+	float edge = smoothstep(0.16, 0.62, length(d));
+	COLOR = vec4(0.78, 0.06, 0.06, edge * strength * 0.85);
+}
+"""
+	_flash_material.shader = flash_shader
+	_flash_material.set_shader_parameter(&"strength", 0.0)
+	_flash_rect = ColorRect.new()
+	_flash_rect.set_anchors_preset(Control.PRESET_FULL_RECT)
+	_flash_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_flash_rect.material = _flash_material
+	root.add_child(_flash_rect)
 
 	_caption_label = _label("", 20)
 	_caption_label.set_anchors_preset(Control.PRESET_CENTER_TOP)
@@ -253,6 +301,16 @@ func _build() -> void:
 	_feedback.modulate.a = 0.0
 	root.add_child(_feedback)
 
+	# Round 8: distinct "kill" marker (bigger than the hitmarker) when a hit kills.
+	_kill_marker = _label("ABATE", 30)
+	_kill_marker.set_anchors_preset(Control.PRESET_CENTER)
+	_kill_marker.position = Vector2(-100, -140)
+	_kill_marker.custom_minimum_size = Vector2(200, 0)
+	_kill_marker.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_kill_marker.add_theme_color_override(&"font_color", Color(1.0, 0.35, 0.25))
+	_kill_marker.modulate.a = 0.0
+	root.add_child(_kill_marker)
+
 	# C3: centre banner (round/death) and the damage card.
 	_banner = _label("", 46)
 	_banner.set_anchors_preset(Control.PRESET_CENTER)
@@ -319,7 +377,11 @@ func _bar(color: Color) -> ProgressBar:
 func _update_damage_arrow(delta: float, total_hp: float) -> void:
 	if _last_hp >= 0.0 and total_hp < _last_hp - 0.5:
 		_arrow_time = 1.0
-		AudioBus.play_ui("hit", -6.0)
+		# Round 8: taking damage now flashes the screen edge and shakes the camera.
+		var taken: float = _last_hp - total_hp
+		_flash_strength = minf(_flash_strength + 0.35 + taken / maxf(player.stats.max_hp, 1.0) * 1.6, 1.0)
+		player.add_camera_shake(0.7 + taken / maxf(player.stats.max_hp, 1.0) * 1.2)
+		AudioBus.play_ui("hurt", -3.0)
 	_last_hp = total_hp
 	_arrow_time = maxf(_arrow_time - delta, 0.0)
 	_damage_arrow.visible = _arrow_time > 0.0 and threat != null and is_instance_valid(threat)

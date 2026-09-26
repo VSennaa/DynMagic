@@ -24,6 +24,10 @@ const SAMPLE_GROUPS: Dictionary = {
 	"open": ["ui/open_001.ogg"],
 	"footstep": ["footsteps/footstep_concrete_000.ogg", "footsteps/footstep_concrete_001.ogg", "footsteps/footstep_concrete_002.ogg", "footsteps/footstep_concrete_003.ogg", "footsteps/footstep_concrete_004.ogg"],
 	"hit": ["impacts/impactPunch_medium_000.ogg", "impacts/impactPunch_medium_001.ogg", "impacts/impactPunch_medium_002.ogg"],
+	## Round 8: own hit and own kill are louder/weightier than a plain impact (user feedback).
+	"hit_strong": ["impacts/impactSoft_heavy_000.ogg", "impacts/impactSoft_heavy_002.ogg"],
+	"kill": ["impacts/impactBell_heavy_000.ogg", "impacts/impactSoft_heavy_002.ogg"],
+	"hurt": ["impacts/impactSoft_heavy_000.ogg", "impacts/impactSoft_heavy_001.ogg"],
 	"thud": ["impacts/impactSoft_heavy_000.ogg", "impacts/impactSoft_heavy_001.ogg", "impacts/impactSoft_heavy_002.ogg"],
 	"shatter": ["impacts/impactGlass_light_000.ogg", "impacts/impactGlass_light_001.ogg"],
 	"stone": ["impacts/impactMining_000.ogg", "impacts/impactMining_001.ogg"],

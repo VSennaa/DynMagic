@@ -272,7 +272,8 @@ func _request_cast(form: StringName, effect: StringName, origin: Vector3, direct
 	if is_recast and spell.is_quick():
 		_cast_rejected.rpc_id(caster_id, spell.key, &"invalid", player.stats.export_state())
 		return
-	if spell.key == Player.ARROW_KEY and player.arrow_charges() <= 0:
+	# D1 + round 8: the Arrow needs a charge and the 0.3 s minimum spacing between shots.
+	if spell.key == Player.ARROW_KEY and not player.arrow_ready():
 		_cast_rejected.rpc_id(caster_id, spell.key, &"cooldown", player.stats.export_state())
 		return
 	player.set_look(atan2(-direction.x, -direction.z), asin(clampf(direction.normalized().y, -1.0, 1.0)))

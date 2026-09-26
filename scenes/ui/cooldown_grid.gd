@@ -45,6 +45,10 @@ func _draw() -> void:
 
 
 func _draw_cell(rect: Rect2, key: StringName, color: Color) -> void:
+	# Round 8: the Arrow has charges instead of a cooldown, so its cell shows 3 pips.
+	if key == Player.ARROW_KEY:
+		_draw_arrow_cell(rect, color)
+		return
 	var left: float = player.stats.cooldown_left(key)
 	if left <= 0.0:
 		_totals.erase(key)
@@ -69,3 +73,31 @@ func _draw_cell(rect: Rect2, key: StringName, color: Color) -> void:
 	var baseline: Vector2 = center + Vector2(-text_size.x * 0.5, text_size.y * 0.3)
 	draw_string_outline(_font, baseline, text, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, 4, Color.BLACK)
 	draw_string(_font, baseline, text, HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color.WHITE)
+
+
+## Round 8: Arrow cell. Three pips along the bottom (the one being recharged fills up) and a
+## draining bar while the 0.3 s minimum spacing between shots is still running.
+func _draw_arrow_cell(rect: Rect2, color: Color) -> void:
+	var charges: int = player.arrow_charges()
+	var interval: float = player.arrow_interval_left()
+	var ready: bool = charges > 0 and interval <= 0.0
+	draw_rect(rect, Color(color, 0.45) if ready else Color(0.05, 0.06, 0.09, 0.75))
+	draw_rect(rect, color.lightened(0.35) if ready else Color(color, 0.5), false, 2.0 if ready else 1.0)
+	var progress: float = player.arrow_recharge_progress()
+	var margin: float = 5.0
+	var gap: float = 3.0
+	var pip: Vector2 = Vector2((CELL - 2.0 * margin - 2.0 * gap) / 3.0, 7.0)
+	var base_y: float = rect.end.y - margin - pip.y
+	for i: int in 3:
+		var pip_rect: Rect2 = Rect2(Vector2(rect.position.x + margin + i * (pip.x + gap), base_y), pip)
+		draw_rect(pip_rect, Color(0.1, 0.11, 0.15, 0.9))
+		var fill: float = 1.0
+		if i >= charges:
+			# The first empty pip is the one charging: partial fill shows the recharge progress.
+			fill = progress if i == charges else 0.0
+		if fill > 0.0:
+			draw_rect(Rect2(pip_rect.position, Vector2(pip.x * fill, pip.y)), color.lightened(0.15))
+		draw_rect(pip_rect, Color(0.0, 0.0, 0.0, 0.5), false, 1.0)
+	if interval > 0.0:
+		var fraction: float = clampf(interval / Player.ARROW_MIN_INTERVAL, 0.0, 1.0)
+		draw_rect(Rect2(rect.position, Vector2(CELL * fraction, 3.0)), Color(1.0, 0.75, 0.35, 0.85))

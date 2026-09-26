@@ -53,6 +53,12 @@ var show_damage_numbers: bool = true:
 		show_damage_numbers = value
 		changed.emit(&"show_damage_numbers")
 
+## Round 8: short camera shake when the local player takes damage.
+var screen_shake: bool = true:
+	set(value):
+		screen_shake = value
+		changed.emit(&"screen_shake")
+
 ## 0 default, 1 deuteranopia, 2 protanopia, 3 tritanopia (spec 06 §3 accessibility).
 var colorblind_mode: int = 0:
 	set(value):
@@ -122,6 +128,7 @@ func load_settings(path: String = PATH) -> void:
 	invert_y = cfg.get_value("controls", "invert_y", invert_y)
 	player_name = cfg.get_value("game", "player_name", player_name)
 	show_damage_numbers = cfg.get_value("game", "show_damage_numbers", show_damage_numbers)
+	screen_shake = cfg.get_value("game", "screen_shake", screen_shake)
 	colorblind_mode = cfg.get_value("accessibility", "colorblind_mode", colorblind_mode)
 	sound_captions = cfg.get_value("accessibility", "sound_captions", sound_captions)
 	show_fps = cfg.get_value("game", "show_fps", show_fps)
@@ -145,6 +152,7 @@ func save_settings(path: String = PATH) -> Error:
 	cfg.set_value("controls", "invert_y", invert_y)
 	cfg.set_value("game", "player_name", player_name)
 	cfg.set_value("game", "show_damage_numbers", show_damage_numbers)
+	cfg.set_value("game", "screen_shake", screen_shake)
 	cfg.set_value("accessibility", "colorblind_mode", colorblind_mode)
 	cfg.set_value("accessibility", "sound_captions", sound_captions)
 	cfg.set_value("game", "show_fps", show_fps)

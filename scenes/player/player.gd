@@ -12,10 +12,15 @@ const PITCH_LIMIT: float = deg_to_rad(89.0)
 const KNOCKBACK_DECAY: float = 18.0
 const BURN_TICK: float = 0.5
 const GLIDE_GRAVITY_SCALE: float = 0.25
+## Round 8: damage feedback. Shake decays over SHAKE_TIME (Settings.screen_shake gates it).
+const SHAKE_TIME: float = 0.25
+const SHAKE_AMPLITUDE: float = 0.045
 ## D1: the Arrow (projectile/direct) uses 3 charges instead of a per-cast cooldown.
 const ARROW_KEY: StringName = &"projectile_direct"
 const ARROW_CHARGES: int = 3
 const ARROW_RECHARGE: float = 1.2
+## Round 8: minimum spacing between Arrow shots, so the 3 charges cannot be emptied in one burst.
+const ARROW_MIN_INTERVAL: float = 0.3
 
 @export var tuning: PlayerTuning = preload("res://data/player_tuning.tres")
 ## Only the local player reads input. Remote players are driven by NetSync (M3).
@@ -73,6 +78,12 @@ var cast_lockout: float = 0.0
 ## D1: Arrow charges and the 1.2 s recharge timer (replicated with the player runtime).
 var _arrow_charges: int = ARROW_CHARGES
 var _arrow_recharge: float = 0.0
+## Round 8: seconds left of the minimum spacing between Arrow shots.
+var _arrow_interval: float = 0.0
+## Round 8: camera shake (damage feedback).
+var _shake_time: float = 0.0
+var _shake_strength: float = 0.0
+var _shake_phase: float = 0.0
 
 @onready var stats: Stats = $Stats
 @onready var composer: SpellComposer = $SpellComposer
@@ -170,6 +181,7 @@ func simulate(delta: float, input_dir: Vector2, want_jump: bool, want_crouch: bo
 		velocity = Vector3.ZERO
 		return
 	move_input = input_dir
+	_arrow_interval = maxf(_arrow_interval - delta, 0.0)
 	# D1: recharge one Arrow charge every 1.2 s up to 3.
 	if _arrow_charges < ARROW_CHARGES:
 		_arrow_recharge += delta
@@ -376,6 +388,30 @@ func apply_knockback(impulse: Vector3) -> void:
 		velocity.y = maxf(velocity.y, impulse.y)
 
 
+## Round 8: short camera shake when the local player takes damage. No-op when
+## Settings.screen_shake is off, and it never accumulates more than one hit's worth.
+func add_camera_shake(strength: float = 1.0) -> void:
+	if not Settings.screen_shake:
+		return
+	_shake_strength = maxf(_shake_strength, SHAKE_AMPLITUDE * clampf(strength, 0.2, 2.0))
+	_shake_time = SHAKE_TIME
+
+
+func _update_shake(delta: float) -> void:
+	if _shake_time <= 0.0:
+		if _camera.position != Vector3.ZERO:
+			_camera.position = Vector3.ZERO
+		return
+	_shake_time = maxf(_shake_time - delta, 0.0)
+	_shake_phase += delta * 38.0
+	var fade: float = _shake_time / SHAKE_TIME
+	var offset: Vector3 = Vector3(sin(_shake_phase * 1.7), sin(_shake_phase * 2.3 + 1.1), 0.0) * _shake_strength * fade
+	if _shake_time <= 0.0:
+		_shake_strength = 0.0
+		offset = Vector3.ZERO
+	_camera.position = offset
+
+
 func _update_statuses(delta: float) -> void:
 	if stats.has_status(&"burn") and not sudden_death and (not Net.is_online() or Net.is_host()):
 		_burn_tick += delta
@@ -394,7 +430,7 @@ func _validate_cast(spell: ResolvedSpell) -> StringName:
 		return &"dead"
 	if frozen:
 		return &"frozen"
-	if spell.key == ARROW_KEY and _arrow_charges <= 0:
+	if spell.key == ARROW_KEY and not arrow_ready():
 		return &"cooldown"
 	if stats.is_on_cooldown(spell.key):
 		return &"cooldown"
@@ -423,12 +459,30 @@ func arrow_charges() -> int:
 	return _arrow_charges
 
 
+## Round 8: an Arrow may fire when a charge is available and the 0.3 s spacing has elapsed.
+func arrow_ready() -> bool:
+	return _arrow_charges > 0 and _arrow_interval <= 0.0
+
+
+## Round 8: seconds left of the minimum spacing (HUD lockout feedback).
+func arrow_interval_left() -> float:
+	return _arrow_interval
+
+
+## D1: progress (0-1) of the charge being recharged; 0 when the magazine is full.
+func arrow_recharge_progress() -> float:
+	if _arrow_charges >= ARROW_CHARGES:
+		return 0.0
+	return clampf(_arrow_recharge / ARROW_RECHARGE, 0.0, 1.0)
+
+
 func consume_arrow_charge() -> void:
 	if _arrow_charges <= 0:
 		return
 	if _arrow_charges == ARROW_CHARGES:
 		_arrow_recharge = 0.0
 	_arrow_charges -= 1
+	_arrow_interval = ARROW_MIN_INTERVAL
 
 
 ## Impulse: dash along the movement input (forward when idle) over dash_time seconds.
@@ -477,6 +531,8 @@ func _add_nameplate() -> void:
 
 
 func _process(_delta: float) -> void:
+	if is_local:
+		_update_shake(_delta)
 	if _nameplate == null:
 		return
 	var parts: PackedStringArray = PackedStringArray()
@@ -542,6 +598,10 @@ func reset_round() -> void:
 	cast_lockout = 0.0
 	_arrow_charges = ARROW_CHARGES
 	_arrow_recharge = 0.0
+	_arrow_interval = 0.0
+	_shake_time = 0.0
+	_shake_strength = 0.0
+	_camera.position = Vector3.ZERO
 	_burn_dps = 0.0
 	_burn_tick = 0.0
 	_slow_strength = 0.0

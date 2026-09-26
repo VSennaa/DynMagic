@@ -76,6 +76,7 @@ func _ready() -> void:
 	name_edit.custom_minimum_size = Vector2(260, 36)
 	body.add_child(UiKit.row([UiKit.label("Nome", 18), name_edit]))
 	body.add_child(_check("Números de dano", Settings.show_damage_numbers, func(v: bool) -> void: Settings.show_damage_numbers = v))
+	body.add_child(_check("Tremor de câmera ao levar dano", Settings.screen_shake, func(v: bool) -> void: Settings.screen_shake = v))
 	var wheel: OptionButton = OptionButton.new()
 	for text: String in ["Significado (símbolos)", "Atalhos (teclas)"]:
 		wheel.add_item(text)
