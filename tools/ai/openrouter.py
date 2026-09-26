@@ -39,8 +39,15 @@ def main() -> None:
     parser.add_argument("-i", "--image", action="append", default=[])
     parser.add_argument("-s", "--system", default="")
     parser.add_argument("--max-tokens", type=int, default=1500)
-    parser.add_argument("prompt")
+    parser.add_argument("--credits", action="store_true", help="print total usage in USD and exit")
+    parser.add_argument("prompt", nargs="?", default="")
     args = parser.parse_args()
+    if args.credits:
+        request = urllib.request.Request("https://openrouter.ai/api/v1/credits", headers={"Authorization": f"Bearer {api_key()}"})
+        with urllib.request.urlopen(request, timeout=60) as response:
+            data = json.load(response)["data"]
+        print(f"{data['total_usage']:.4f} {data['total_credits']:.4f}")
+        return
     content: list = [{"type": "text", "text": args.prompt}] + [image_part(p) for p in args.image]
     messages = ([{"role": "system", "content": args.system}] if args.system else []) + [{"role": "user", "content": content}]
     body = json.dumps({"model": args.model, "messages": messages, "max_tokens": args.max_tokens}).encode()
