@@ -13,7 +13,9 @@ EnvironmentFile=-/etc/dynmagic/%i.env
 Environment=DYNMAGIC_PORT=7777
 Environment=DYNMAGIC_NAME=DynMagic
 Environment=DYNMAGIC_EXTRA=
-ExecStart=/opt/dynmagic/DynMagic-server.x86_64 --headless -- --server --port ${DYNMAGIC_PORT} --name "${DYNMAGIC_NAME}" ${DYNMAGIC_EXTRA}
+# stdbuf: Godot block-buffers stdout without a TTY, so logs would never reach the journal.
+# ${DYNMAGIC_NAME} is passed as ONE argument (keeps spaces); $DYNMAGIC_EXTRA is split into words.
+ExecStart=/usr/bin/stdbuf -oL -eL /opt/dynmagic/DynMagic-server.x86_64 --headless -- --server --port ${DYNMAGIC_PORT} --name ${DYNMAGIC_NAME} $DYNMAGIC_EXTRA
 Restart=on-failure
 RestartSec=5
 # D13/C15: cap each room so three rooms fit on the 2 GB VPS with headroom.

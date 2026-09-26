@@ -237,6 +237,7 @@ $g = "$env:USERPROFILE\Downloads\Godot_v4.7.2-stable_win64.exe\Godot_v4.7.2-stab
 ## 9. Rules for the next agent
 
 - Website (2026-09-25): `web/` is published at **http://vsennaa.duckdns.org/dynmagic/** (VPS `vinicios@45.39.210.28`, key `~/.ssh/id_ed25519`, nginx route `location /dynmagic/` with `alias /var/www/dynmagic/` inside the first server block of `/etc/nginx/sites-enabled/default`; backups in `/root/default.bak.*`). Redeploy: scp `web/` to `/tmp/dynmagic-web` and copy into `/var/www/dynmagic/`. A dedicated DNS name comes later.
+- VPS game server (2026-09-26): `dynmagic@room1` runs v1.1.0-alpha on **vsennaa.duckdns.org UDP 7777**, name "DynMagic VPS", Colapso + arena rotation (`/etc/dynmagic/room1.env`), ~55 MB RSS, enabled at boot. Update with `server/install.sh <tag>` (see server/README.md). Tested: two bot clients from Windows joined, auto-started and played. The provider firewall already lets UDP 7777 through (no ufw on the box).
 - License (user 2026-09-25): PolyForm Noncommercial 1.0.0 (`LICENSE.md`) + `NOTICE.md` (required notice, extra permission for monetized videos/streams, third-party components).
 
 - Update this file at the end of every work session: status table, next steps, any new decision.

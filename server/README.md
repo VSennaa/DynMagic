@@ -42,6 +42,16 @@ sudo systemctl enable --now dynmagic
 journalctl -u dynmagic -f   # logs: [server], [lobby], [match], [net]
 ```
 
+## Instalar ou atualizar pela release (VPS atual)
+
+`server/install.sh <tag>` baixa o pacote Linux da release do GitHub, instala em `/opt/dynmagic`, instala o template `dynmagic@.service`, cria `/etc/dynmagic/room1.env` (só na primeira vez) e reinicia a sala:
+
+```bash
+scp server/install.sh usuario@vps:/tmp/ && ssh usuario@vps "sh /tmp/install.sh v1.1.0-alpha"
+```
+
+Logs: `journalctl -u dynmagic@room1 -f` (o `stdbuf -oL` do template faz o Godot gravar linha a linha).
+
 ## Três salas na VPS (D13)
 
 A VPS de 2 GB roda **três instâncias independentes** do servidor, cada uma com seu processo, porta e diretório de dados. O template `dynmagic@.service` usa `MemoryMax=450M` e `CPUQuota=70%` por sala, de modo que três salas caibam com folga para o SO e os outros serviços.
