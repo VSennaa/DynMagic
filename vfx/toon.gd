@@ -12,6 +12,9 @@ static func material(color: Color, albedo: Texture2D = null) -> ShaderMaterial:
 	mat.set_shader_parameter(&"base_color", color)
 	if albedo != null:
 		mat.set_shader_parameter(&"albedo_texture", albedo)
+	else:
+		# Untextured geometry is arena blockout: give it painted masonry in world space.
+		mat.set_shader_parameter(&"procedural_surface", true)
 	return mat
 
 
