@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DynMagic</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="site wrap">
+  <h1>DynMagic</h1>
+  <p class="tag">Duelos de magia 1v1 em primeira pessoa. Componha feitiços, escolha seu elemento, vença a melhor de 7.</p>
+  <nav class="main">
+    <a href="index.html" aria-current="page">Início</a>
+    <a href="historia.html">Histórico</a>
+    <a href="licenca.html">Licença</a>
+    <a href="https://github.com/VSennaa/DynMagic/releases">Downloads</a>
+  </nav>
+</header>
+
+<main class="wrap">
+  <section class="panel cta">
+    <a class="button" id="download-win" href="https://github.com/VSennaa/DynMagic/releases">Baixar para Windows</a>
+    <p class="small"><span id="version">Versão mais recente no GitHub</span> · <a id="download-linux" href="https://github.com/VSennaa/DynMagic/releases">servidor Linux</a></p>
+  </section>
+
+  <section class="panel">
+    <div class="features">
+      <div><h3>Componha a magia</h3><p>Nada de lista pronta: forma + efeito sobre o elemento do round. Duas teclas, nove magias, 36 no total.</p></div>
+      <div><h3>Escolha o elemento</h3><p>Fogo queima, Gelo prende, Raio choca, Vento empurra. A cada round, um draft rápido muda o duelo.</p></div>
+      <div><h3>Arenas curtas</h3><p>Três arenas espelhadas, partidas de minutos, feitas para jogar em LAN ou num servidor com um amigo.</p></div>
+    </div>
+  </section>
+
+  <section class="panel">
+    <h2>Em que fase estamos</h2>
+    <p>O jogo está no <strong>Alfa</strong>: jogável de ponta a ponta, mas ainda mudando rápido. Veja cada fase, do rascunho ao alfa, no <a href="historia.html">histórico de versões</a>.</p>
+  </section>
+</main>
+
+<footer class="site wrap">DynMagic · feito por Vinicios · <a href="licenca.html">licença</a></footer>
+
+<script>
+// Fill the download links from the latest GitHub release; prereleases are not in /latest.
+(async () => {
+  const api = "https://api.github.com/repos/VSennaa/DynMagic/releases";
+  try {
+    let res = await fetch(api + "/latest");
+    let rel = res.ok ? await res.json() : (await (await fetch(api + "?per_page=1")).json())[0];
+    if (!rel) return;
+    const win = rel.assets.find(a => a.name.endsWith("-windows-x64.zip"));
+    const lin = rel.assets.find(a => a.name.endsWith("-linux-x64.tar.gz"));
+    if (win) document.getElementById("download-win").href = win.browser_download_url;
+    if (lin) document.getElementById("download-linux").href = lin.browser_download_url;
+    document.getElementById("version").textContent = "Versão " + rel.tag_name;
+  } catch (e) { /* keep the fallback links */ }
+})();
+</script>
+</body>
+</html>
