@@ -27,8 +27,9 @@ func _ready() -> void:
 		# 1. Spawn view: eye height, looking at the far spawn.
 		camera.look_at_from_position(from + Vector3.UP * EYE, to + Vector3.UP * EYE)
 		await _capture("%s_%s_spawn" % [tag, arena_id])
-		# 2. Mid view: from the centre-side, looking across the Core.
-		camera.look_at_from_position(Vector3(from.distance_to(to) * 0.3, EYE, 0), Vector3(0, EYE, 0))
+		# 2. Mid view: a third of the way in from the south spawn, looking diagonally across.
+		var mid: Vector3 = from.lerp(to, 0.3) + Vector3(from.distance_to(to) * 0.12, EYE, 0)
+		camera.look_at_from_position(mid, to.lerp(from, 0.3) + Vector3(-from.distance_to(to) * 0.12, EYE, 0))
 		await _capture("%s_%s_mid" % [tag, arena_id])
 		# 3. Overview: high diagonal, shows the layout.
 		camera.fov = 70.0

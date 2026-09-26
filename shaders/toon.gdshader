@@ -6,7 +6,9 @@ render_mode diffuse_toon, specular_toon;
 
 uniform vec4 base_color : source_color = vec4(0.6, 0.58, 0.55, 1.0);
 uniform sampler2D albedo_texture : source_color, hint_default_white, filter_linear_mipmap;
-uniform float shadow_floor : hint_range(0.0, 1.0) = 0.42;
+uniform float shadow_floor : hint_range(0.0, 1.0) = 0.32;
+// Shadow side leans cool so lit faces read warm against it (value + temperature contrast).
+uniform vec4 shadow_tint : source_color = vec4(0.78, 0.84, 1.0, 1.0);
 uniform float mid_band : hint_range(0.0, 1.0) = 0.72;
 uniform vec4 rim_color : source_color = vec4(1.0, 0.95, 0.85, 1.0);
 uniform float rim_strength : hint_range(0.0, 1.0) = 0.25;
@@ -97,7 +99,8 @@ void light() {
 	float ndotl = dot(NORMAL, LIGHT);
 	float lit = ndotl * ATTENUATION;
 	float band = lit > 0.55 ? 1.0 : (lit > 0.05 ? mid_band : shadow_floor);
-	DIFFUSE_LIGHT += ALBEDO * LIGHT_COLOR * band / PI * 1.6;
+	vec3 tint = mix(shadow_tint.rgb, vec3(1.0), step(0.05, lit));
+	DIFFUSE_LIGHT += ALBEDO * LIGHT_COLOR * tint * band / PI * 1.6;
 	float rim = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 4.0);
 	DIFFUSE_LIGHT += rim_color.rgb * step(0.5, rim) * rim_strength * LIGHT_COLOR / PI * max(ndotl, 0.2);
 	vec3 half_vec = normalize(LIGHT + VIEW);

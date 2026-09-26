@@ -71,10 +71,10 @@ const VARIANTS: Array[StringName] = [&"A", &"B", &"C"]
 		if is_inside_tree():
 			build()
 
-@export var floor_color: Color = Color(0.62, 0.6, 0.56)
-@export var wall_color: Color = Color(0.36, 0.33, 0.42)
-@export var cover_color: Color = Color(0.5, 0.44, 0.58)
-@export var balcony_color: Color = Color(0.55, 0.36, 0.34)
+@export var floor_color: Color = Color(0.7, 0.65, 0.57)
+@export var wall_color: Color = Color(0.6, 0.56, 0.52)
+@export var cover_color: Color = Color(0.46, 0.4, 0.62)
+@export var balcony_color: Color = Color(0.54, 0.35, 0.26)
 
 
 func _ready() -> void:
