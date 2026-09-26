@@ -195,3 +195,39 @@ func test_buffered_first_key_counts_lockout_wait() -> void:
 	composer.tick(0.2)
 	composer.press_slot(0)
 	assert_true(absf(composer.compose_seconds - 0.36) < 0.001)
+
+
+func test_precast_stores_quick_spell_instead_of_casting() -> void:
+	composer.press_slot(0)  # projectile
+	composer.press_precast()
+	composer.press_slot(0)  # direct = Bolt, stored
+	assert_eq(casts.size(), 0, "M11: G + effect stores, never casts")
+	assert_eq(composer.stored.key, &"projectile_direct")
+	assert_eq(composer.state, SpellComposer.State.IDLE)
+	composer.press_precast()
+	assert_eq(casts.size(), 1, "G again fires the stored spell")
+	assert_true(composer.stored == null)
+
+
+func test_precast_while_aiming_and_fire_reenters_aiming() -> void:
+	composer.press_slot(2)
+	composer.press_slot(1)  # Mark (confirm) -> aiming
+	composer.press_precast()
+	assert_eq(composer.stored.key, &"area_burst")
+	assert_eq(composer.state, SpellComposer.State.IDLE)
+	composer.press_precast()
+	assert_eq(composer.state, SpellComposer.State.AIMING, "confirm spells aim when fired")
+	assert_eq(casts.size(), 0)
+
+
+func test_cancel_drops_stored_spell_and_one_at_a_time() -> void:
+	composer.press_slot(0)
+	composer.press_precast()
+	composer.press_slot(0)
+	composer.press_slot(1)
+	composer.press_precast()
+	composer.press_slot(1)  # second store refused while one is held
+	assert_eq(composer.stored.key, &"projectile_direct")
+	assert_eq(rejections.back(), &"invalid")
+	composer.press_cancel()
+	assert_true(composer.stored == null, "F drops the stored spell")

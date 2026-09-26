@@ -117,6 +117,7 @@ func _ready() -> void:
 	composer.cast_requested.connect(_on_cast_requested)
 	composer.state_changed.connect(func(_s: SpellComposer.State) -> void: sprint_blocked = composer.is_composing())
 	stats.died.connect(composer.reset)
+	composer.stored_changed.connect(_on_stored_changed)
 	melee_swung.connect(func() -> void: AudioBus.play_sample_at("cloth", global_position, get_parent(), 0.0))
 	if is_local:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
@@ -450,7 +451,7 @@ func _validate_cast(spell: ResolvedSpell) -> StringName:
 	# D1: RMB only repeats confirmed spells; quick spells are cast with their keys.
 	if composer.is_recasting and spell.is_quick():
 		return &"invalid"
-	if not stats.can_afford(mana_cost_for(spell, composer.is_recasting)):
+	if not stats.can_afford(mana_cost_for(spell, composer.is_recasting), reserved_mana()):
 		return &"no_mana"
 	return &""
 
@@ -671,3 +672,18 @@ func perform_melee() -> void:
 		if forward.angle_to(to.normalized()) > MELEE_ARC * 0.5:
 			continue
 		node.call(&"receive_hit", MELEE_DAMAGE * damage_mult(), null, self)
+
+
+# --- Pre-cast (M11) ---------------------------------------------------------------
+
+## Mana held by the pre-cast spell; it shows as a striped segment on the mana bar.
+func reserved_mana() -> float:
+	return mana_cost_for(composer.stored, false) if composer.stored != null else 0.0
+
+
+func _on_stored_changed(spell: ResolvedSpell) -> void:
+	if not is_local or not Net.is_online() or Net.is_host():
+		return
+	var net_match: Node = get_tree().get_first_node_in_group(&"net_match")
+	if net_match != null:
+		net_match.call(&"request_store", spell)

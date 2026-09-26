@@ -300,7 +300,7 @@ func _validate(player: Player, spell: ResolvedSpell, origin: Vector3, cost: floa
 		return &"frozen"
 	if player.stats.is_on_cooldown(spell.key):
 		return &"cooldown"
-	if not player.stats.can_afford(cost):
+	if not player.stats.can_afford(cost, player.reserved_mana()):
 		return &"no_mana"
 	if not origin.is_finite() or origin.distance_to(player.cast_origin.global_position) > MAX_ORIGIN_ERROR:
 		return &"bad_origin"
@@ -333,6 +333,28 @@ func _cast_rejected(spell_key: StringName, reason: StringName, state: Dictionary
 	if player != null:
 		player.stats.import_state(state)
 		player.composer.cast_rejected.emit(SpellDB.resolve(player.composer.element_id, StringName(spell_key.get_slice("_", 0)), StringName(spell_key.get_slice("_", 1))), reason)
+
+
+# --- Pre-cast (M11) --------------------------------------------------------------
+
+## Client: mirror the stored spell on the host so its mana stays reserved there too.
+func request_store(spell: ResolvedSpell) -> void:
+	_request_store.rpc_id(1, spell.form if spell != null else &"", spell.effect if spell != null else &"")
+
+
+@rpc("any_peer", "call_remote", "reliable", Net.CHANNEL_RELIABLE)
+func _request_store(form: StringName, effect: StringName) -> void:
+	if not Net.is_host():
+		return
+	var player: Player = _player(multiplayer.get_remote_sender_id())
+	if player == null:
+		return
+	if form == &"":
+		player.composer.stored = null
+		return
+	var spell: ResolvedSpell = SpellDB.resolve(player.composer.element_id, form, effect)
+	if spell != null and player.stats.can_afford(player.mana_cost_for(spell, false)):
+		player.composer.stored = spell
 
 
 # --- Melee (M11) -----------------------------------------------------------------

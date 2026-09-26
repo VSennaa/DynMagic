@@ -97,3 +97,12 @@ func test_reset_clears_everything() -> void:
 	assert_eq(stats.mana, 100.0)
 	assert_false(stats.has_status(&"burn"))
 	assert_false(stats.is_on_cooldown(&"projectile_direct"))
+
+
+func test_reserved_mana_cannot_be_spent() -> void:
+	var stats: Stats = Stats.new()
+	stats.mana = 50.0
+	assert_true(stats.can_afford(30.0, 20.0), "50 - 20 reserved covers 30")
+	assert_false(stats.can_afford(31.0, 20.0), "50 - 20 reserved does not cover 31")
+	assert_true(stats.can_afford(50.0), "no reservation by default")
+	stats.free()

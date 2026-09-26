@@ -153,8 +153,9 @@ func clear_shield() -> void:
 	shield_changed.emit(shield)
 
 
-func can_afford(cost: float) -> bool:
-	return mana >= cost
+## `reserved` is mana held by a pre-cast spell (M11): it cannot be spent on anything else.
+func can_afford(cost: float, reserved: float = 0.0) -> bool:
+	return mana - reserved >= cost
 
 
 ## Spends mana and pauses regeneration. Returns false without spending when short.

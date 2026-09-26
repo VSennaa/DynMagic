@@ -123,7 +123,10 @@ func _process(delta: float) -> void:
 	_hp_label.text = "HP %d%s" % [roundi(stats.hp), "  +%d" % roundi(stats.shield) if stats.shield > 0.0 else ""]
 	_mana_bar.max_value = stats.max_mana
 	_mana_bar.value = stats.mana
-	_mana_label.text = "MN %d" % roundi(stats.mana)
+	var reserved: float = player.reserved_mana()
+	_mana_label.text = "MN %d%s" % [roundi(stats.mana), "   guardada: %s (%d) · G dispara, F descarta" % [player.composer.stored.display_name, roundi(reserved)] if player.composer.stored != null else ""]
+	_mana_bar.set_meta(&"reserved", reserved)
+	_mana_bar.queue_redraw()
 	_update_trail(player.composer)
 	_cooldowns.player = player
 	var parts: PackedStringArray = PackedStringArray()
@@ -338,6 +341,7 @@ void fragment() {
 	_mana_label = _label("MN", 18)
 	bars.add_child(_mana_label)
 	_mana_bar = _bar(Color(0.3, 0.5, 0.95))
+	_mana_bar.draw.connect(_draw_reserved_mana)
 	bars.add_child(_mana_bar)
 	_status_label = _label("", 16)
 	bars.add_child(_status_label)
@@ -432,3 +436,22 @@ func _update_captions(delta: float) -> void:
 		lines.append(entry["text"])
 	_caption_label.text = "\n".join(lines)
 	_caption_label.visible = Settings.sound_captions and not lines.is_empty()
+
+
+## M11: diagonal stripes over the part of the mana bar held by the pre-cast spell.
+func _draw_reserved_mana() -> void:
+	var reserved: float = float(_mana_bar.get_meta(&"reserved", 0.0))
+	if reserved <= 0.0 or _mana_bar.max_value <= 0.0:
+		return
+	var width: float = _mana_bar.size.x
+	var height: float = _mana_bar.size.y
+	var end_x: float = width * clampf(_mana_bar.value / _mana_bar.max_value, 0.0, 1.0)
+	var start_x: float = maxf(end_x - width * reserved / _mana_bar.max_value, 0.0)
+	_mana_bar.draw_rect(Rect2(start_x, 0.0, end_x - start_x, height), Color(0.08, 0.1, 0.2, 0.55))
+	var x: float = start_x - height
+	while x < end_x:
+		var a: Vector2 = Vector2(clampf(x, start_x, end_x), height if x >= start_x else height - (start_x - x))
+		var b: Vector2 = Vector2(clampf(x + height, start_x, end_x), 0.0 if x + height <= end_x else x + height - end_x)
+		_mana_bar.draw_line(a, b, Color(0.75, 0.85, 1.0, 0.8), 2.0)
+		x += 6.0
+	_mana_bar.draw_rect(Rect2(start_x, 0.0, end_x - start_x, height), Color(0.85, 0.9, 1.0, 0.9), false, 1.0)

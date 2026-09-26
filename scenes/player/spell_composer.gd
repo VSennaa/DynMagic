@@ -14,6 +14,8 @@ signal cast_rejected(spell: ResolvedSpell, reason: StringName)
 signal aim_started(spell: ResolvedSpell)
 signal aim_ended
 signal state_changed(state: State)
+## M11: the pre-cast slot changed (null when emptied or fired).
+signal stored_changed(spell: ResolvedSpell)
 
 const SPELL_DB: GDScript = preload("res://autoload/spell_db.gd")
 const SEQUENCE_TIMEOUT: float = 2.5
@@ -39,6 +41,10 @@ var last_spell: ResolvedSpell
 var is_recasting: bool = false
 ## Duration of the current successful request, including aiming and buffered input.
 var compose_seconds: float = -1.0
+## M11: spell held on the pre-cast key (G). Its mana is reserved until it fires or is dropped.
+var stored: ResolvedSpell
+## M11: G pressed after the form key, so the effect key stores instead of casting.
+var _store_next: bool = false
 var _compose_elapsed: float = 0.0
 
 var _timer: float = 0.0
@@ -77,6 +83,8 @@ func _poll_input() -> void:
 		press_cast()
 	if Input.is_action_just_pressed(&"recast"):
 		press_recast()
+	if InputMap.has_action(&"precast") and Input.is_action_just_pressed(&"precast"):
+		press_precast()
 
 
 func tick(delta: float) -> void:
@@ -150,6 +158,31 @@ func press_recast() -> void:
 func press_cancel() -> void:
 	if state == State.SLOT_EFFECT or state == State.AIMING:
 		clear()
+	elif state == State.IDLE and stored != null:
+		_set_stored(null)
+
+
+## M11 pre-cast (G): after the form key it arms storing, while aiming it stores the aimed
+## spell, and with nothing composed it fires the stored spell (confirm spells enter aiming).
+func press_precast() -> void:
+	match state:
+		State.SLOT_EFFECT:
+			_store_next = true
+		State.AIMING:
+			if pending != null and stored == null:
+				var spell: ResolvedSpell = pending
+				clear()
+				_set_stored(spell)
+		State.IDLE:
+			if stored != null:
+				var spell: ResolvedSpell = stored
+				_set_stored(null)  # release the reservation before validating the cast
+				_begin(spell)
+
+
+func _set_stored(spell: ResolvedSpell) -> void:
+	stored = spell
+	stored_changed.emit(spell)
 
 
 ## Drops the sequence and any aim. Called on F, timeouts, death and round end.
@@ -160,6 +193,7 @@ func clear() -> void:
 	var was_aiming: bool = state == State.AIMING
 	form = &""
 	pending = null
+	_store_next = false
 	_buffered_slot = -1
 	_timer = 0.0
 	_set_state(State.IDLE)
@@ -171,6 +205,8 @@ func clear() -> void:
 func reset() -> void:
 	clear()
 	last_spell = null
+	if stored != null:
+		_set_stored(null)
 
 
 func is_composing() -> bool:
@@ -178,6 +214,16 @@ func is_composing() -> bool:
 
 
 func _begin(spell: ResolvedSpell) -> void:
+	if _store_next:
+		_store_next = false
+		var store_reason: StringName = _validate(spell) if stored == null else &"invalid"
+		if store_reason != &"":
+			cast_rejected.emit(spell, store_reason)
+			clear()
+			return
+		clear()
+		_set_stored(spell)
+		return
 	form = spell.form
 	if spell.is_quick():
 		_fire(spell)
