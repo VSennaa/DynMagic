@@ -55,3 +55,53 @@ func test_composer_packing() -> void:
 	assert_eq(NetCodec.unpack_composer(packed), Vector3i(2, 1, -1))
 	assert_eq(NetCodec.unpack_composer(NetCodec.pack_composer(0, -1, -1)), Vector3i(0, -1, -1))
 	assert_eq(NetCodec.unpack_composer(NetCodec.pack_composer(3, 2, 2)), Vector3i(3, 2, 2))
+
+
+func _gameplay() -> Dictionary:
+	var runtime: Dictionary = {}
+	for field: Array in NetCodec.GAMEPLAY_FIELDS:
+		match int(field[1]):
+			NetCodec.Field.FLOAT: runtime[field[0]] = 1.5
+			NetCodec.Field.INT: runtime[field[0]] = 2
+			NetCodec.Field.BOOL: runtime[field[0]] = true
+			NetCodec.Field.VEC3: runtime[field[0]] = Vector3(1, -2, 3)
+	runtime[&"active_aura"] = [&"frost", &"self", &"lingering"]
+	runtime[&"active_guard"] = []
+	runtime[&"last_spell"] = [&"fire", &"projectile", &"direct"]
+	var stats: Dictionary = {"hp": 63.5, "max_hp": 100.0, "mana": 41.0, "max_mana": 130.0, "shield": 25.0,
+		"shield_time_left": 3.5, "is_dead": false, "regen_pause": 0.25,
+		"statuses": {&"burn": 2.5, &"slow": 1.0}, "cooldowns": {&"area_burst": 4.5, &"self_direct": 1.0}}
+	return {"stats": stats, "runtime": runtime}
+
+
+func _entry(id: int) -> Dictionary:
+	return {"id": id, "ack": 7, "pos": Vector3(1, 2, 3), "vel": Vector3.ZERO, "yaw": 0.5, "pitch": 0.1,
+		"hp": 63.5, "mana": 41.0, "shield": 25.0, "statuses": 3, "composer": 0, "gameplay": _gameplay()}
+
+
+func test_gameplay_fields_match_reconnect_state() -> void:
+	var codec_fields: Array[StringName] = []
+	for field: Array in NetCodec.GAMEPLAY_FIELDS:
+		codec_fields.append(field[0])
+	assert_eq(codec_fields, ReconnectState.PLAYER_FIELDS, "codec schema must list every replicated player field")
+
+
+func test_gameplay_round_trip() -> void:
+	var back: Dictionary = NetCodec.unpack_snapshot(NetCodec.pack_snapshot({"tick": 1, "players": [_entry(5)]}))
+	var gameplay: Dictionary = (back["players"][0] as Dictionary)["gameplay"]
+	var stats: Dictionary = gameplay["stats"]
+	assert_eq(stats["hp"], 63.5)
+	assert_eq(stats["max_mana"], 130.0)
+	assert_eq((stats["statuses"] as Dictionary)[&"burn"], 2.5)
+	assert_eq((stats["cooldowns"] as Dictionary)[&"area_burst"], 4.5)
+	var runtime: Dictionary = gameplay["runtime"]
+	assert_eq(runtime[&"_arrow_charges"], 2)
+	assert_eq(runtime[&"_knockback"], Vector3(1, -2, 3))
+	assert_eq(runtime[&"sudden_death"], true)
+	assert_eq(runtime[&"active_aura"], [&"frost", &"self", &"lingering"])
+	assert_eq(runtime[&"active_guard"], [])
+
+
+func test_two_player_snapshot_under_600_bytes() -> void:
+	var size: int = NetCodec.pack_snapshot({"tick": 1, "players": [_entry(1), _entry(282219641)]}).size()
+	assert_true(size < 600, "M11: 2-player snapshot is %d B (target < 600, ENet MTU 1392)" % size)
