@@ -196,3 +196,22 @@ Phase 4 — balance (user decisions D1, D2)
 - [x] D2 element multipliers Fogo 1.05 / Gelo 0.95 / Raio 1.0 / Vento 0.95
 - [x] D12 local telemetry JSON with lobby notice; remove headshot from spec (D9)
 - [x] C18 docs aligned; release v1.0.0-alpha
+
+## M11 — Antes da tag v1.0.0-alpha (1ª sessão de teste LAN, 2026-09-25)
+
+Tag `v1.0.0-alpha` segurada até fechar este bloco. Revisão do trabalho DeepSeek (commit `def9b2a`) incluída.
+
+Revisão DeepSeek (corrigir)
+- [ ] Seta sem recarga entre cargas: 3 tiros saem em ~0,45 s (só o lockout de 0,15 s). Definir intervalo mínimo entre cargas
+- [ ] HUD não mostra as cargas da Seta (grade de recarga fica sempre "pronta")
+- [ ] Snapshot ~1,8 KB > MTU 1392 (blob `gameplay` via `put_var`): compactar antes de jogar na VPS
+- [ ] Partida completa no servidor dedicado + escrita real da telemetria não verificadas (só teste unitário)
+
+Feedback da sessão LAN
+- [ ] Feedback de acerto (disparo que acerta) e de dano recebido mais forte: confirmar se o teste usou build com C2; reforçar som/flash/tremor
+- [ ] Corpo a corpo (melee) — escopo a definir com o usuário
+- [ ] "Preparar magias" — escopo a definir com o usuário
+- [ ] Magias de Área parecem efeito de duração: diferenciar leitura visual de Área × Contínuo
+- [ ] Diferenças entre magias mais claras (silhueta, cor, som por forma/efeito)
+- [ ] Animações e projéteis melhores
+- [ ] Música e efeitos sonoros melhores
