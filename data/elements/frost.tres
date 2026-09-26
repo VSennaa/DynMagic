@@ -12,13 +12,13 @@ status_id = &"slow"
 status_duration = 1.5
 status_params = {"slow": 0.3}
 variants = {
-"area_burst": {"applies_status": true, "root_duration": 0.6},
+"area_burst": {"root_duration": 0.6},
 "area_direct": {"applies_status": true, "slow_override": 0.5},
 "area_lingering": {"hp": 180.0, "opaque": true},
-"projectile_burst": {"frozen_ground_duration": 3.0},
-"projectile_direct": {"applies_status": true},
+"projectile_burst": {"applies_status": true},
+"projectile_direct": {},
 "projectile_lingering": {"zone_applies_status": true, "slow_override": 0.5},
 "self_burst": {"distance": 11.0, "slide": true},
 "self_direct": {"shield": 45.0, "no_sprint": true},
-"self_lingering": {"slow_immune": true, "shield_regen": 15.0}
+"self_lingering": {"slow_immune": true}
 }

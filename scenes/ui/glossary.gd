@@ -6,7 +6,7 @@ extends RefCounted
 const ELEMENTS: Dictionary = {&"fire": "Fogo", &"frost": "Gelo", &"storm": "Raio", &"wind": "Vento"}
 const FORMS: Dictionary = {&"projectile": "Projétil", &"self": "Pessoal", &"area": "Área"}
 const EFFECTS: Dictionary = {&"direct": "Direto", &"burst": "Explosivo", &"lingering": "Contínuo"}
-const STATUSES: Dictionary = {&"burn": "Queimando", &"slow": "Lento", &"shock": "Choque", &"knockback": "Empurrão", &"aura": "Aura"}
+const STATUSES: Dictionary = {&"burn": "Queimando", &"slow": "Lento", &"shock": "Choque", &"knockback": "Empurrão", &"aura": "Aura", &"root": "Preso", &"control_recovery": "Recupera??o", &"seed_ready": "Semente preparada"}
 ## Rune id -> short name shown on the draft button.
 const RUNES: Dictionary = {
 	&"breath": "Fôlego",

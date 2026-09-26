@@ -82,12 +82,15 @@ func _detonate() -> void:
 	var root_time: float = float(spell.param(&"root_duration", 0.0))
 	var launch: float = float(spell.param(&"launch_up", 0.0))
 	for target: Node in overlap_damageables(global_position + Vector3.UP * 0.9, _radius):
-		hit(target)
+		var exposed: float = SpatialContract.exposure(get_world_3d(), global_position, target as Node3D, caster)
+		if exposed <= 0.0:
+			continue
+		hit(target, exposed)
 		if target == caster or not has_authority():
 			continue
 		# Frost Mark roots (a full slow); wind Mark launches upward.
 		if root_time > 0.0 and target.has_method(&"receive_status"):
-			target.call(&"receive_status", spell.with_params({"slow_override": 1.0}).with_status(&"slow", root_time), caster)
+			target.call(&"receive_status", spell.with_status(&"root", root_time), caster)
 		if launch > 0.0 and target.has_method(&"apply_knockback"):
 			target.call(&"apply_knockback", Vector3.UP * launch)
 	var fx: ExplosionFx = EXPLOSION_SCENE.instantiate() as ExplosionFx
@@ -118,12 +121,7 @@ func _rewound_position(target: Node3D) -> Vector3:
 
 
 func _has_line_of_sight(origin: Vector3, target: Node3D, target_pos: Vector3) -> bool:
-	var query: PhysicsRayQueryParameters3D = PhysicsRayQueryParameters3D.create(origin, target_pos + Vector3.UP * 0.9)
-	var body: CollisionObject3D = caster as CollisionObject3D
-	if body != null:
-		query.exclude = [body.get_rid()]
-	var result: Dictionary = get_world_3d().direct_space_state.intersect_ray(query)
-	return result.is_empty() or find_damageable(result["collider"]) == target
+	return SpatialContract.clear_path(get_world_3d(), origin, target_pos + Vector3.UP * 0.9, target, caster)
 
 
 ## Flat triangle fan in the XZ plane, opening toward -Z (the node looks along the aim).

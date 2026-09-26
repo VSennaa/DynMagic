@@ -142,9 +142,9 @@ const GAMEPLAY_FIELDS: Array = [
 	[&"_dash_velocity", Field.VEC3], [&"_dash_time", Field.FLOAT], [&"_knockback", Field.VEC3],
 	[&"_burn_dps", Field.FLOAT], [&"_burn_tick", Field.FLOAT], [&"_slow_strength", Field.FLOAT],
 	[&"_air_jumps_used", Field.INT], [&"_arrow_charges", Field.INT], [&"_arrow_recharge", Field.FLOAT],
-	[&"_arrow_interval", Field.FLOAT], [&"_melee_cooldown", Field.FLOAT],
+	[&"_arrow_interval", Field.FLOAT], [&"_melee_cooldown", Field.FLOAT], [&"_melee_windup", Field.FLOAT], [&"cast_lockout", Field.FLOAT],
 ]
-const STATUS_IDS: Array[StringName] = [&"burn", &"slow", &"shock", &"knockback", &"aura"]
+const STATUS_IDS: Array[StringName] = [&"burn", &"slow", &"shock", &"knockback", &"aura", &"root", &"control_recovery", &"seed_ready"]
 const SPELL_ELEMENTS: Array[StringName] = [&"fire", &"frost", &"storm", &"wind"]
 const SPELL_FORMS: Array[StringName] = [&"projectile", &"self", &"area"]
 const SPELL_EFFECTS: Array[StringName] = [&"direct", &"burst", &"lingering"]
@@ -190,8 +190,8 @@ static func _put_gameplay(buf: StreamPeerBuffer, gameplay: Dictionary) -> void:
 			Field.BOOL:
 				bits |= (1 << i) if bool(value) else 0
 	buf.put_u32(bits)
-	for key: String in ["active_aura", "active_guard", "last_spell"]:
-		_put_spell(buf, runtime[key])
+	for key: String in ["active_aura", "active_guard", "last_spell", "stored_spell"]:
+		_put_spell(buf, runtime.get(key, []))
 
 
 static func _get_gameplay(buf: StreamPeerBuffer) -> Dictionary:
@@ -228,7 +228,7 @@ static func _get_gameplay(buf: StreamPeerBuffer) -> Dictionary:
 	var bits: int = buf.get_u32()
 	for i: int in bool_fields:
 		runtime[GAMEPLAY_FIELDS[i][0]] = bits & (1 << i) != 0
-	for key: String in ["active_aura", "active_guard", "last_spell"]:
+	for key: String in ["active_aura", "active_guard", "last_spell", "stored_spell"]:
 		runtime[StringName(key)] = _get_spell(buf)
 	return {"stats": stats, "runtime": runtime}
 

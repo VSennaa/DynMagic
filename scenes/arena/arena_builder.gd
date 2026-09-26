@@ -63,6 +63,8 @@ const LAYOUTS: Dictionary = {
 
 const VARIANTS: Array[StringName] = [&"A", &"B", &"C"]
 
+@export var spaces: ArenaSpaces
+
 @export var variant: StringName = &"A":
 	set(value):
 		variant = value
@@ -85,9 +87,44 @@ func build() -> void:
 			remove_child(child)
 			child.free()
 	_build_shell()
-	_build_balconies()
-	_build_cover()
+	if spaces == null:
+		_build_balconies()
+		_build_cover()
+	else:
+		_build_spaces()
 	_build_spawns()
+	var anchor: Marker3D = Marker3D.new()
+	anchor.name = "CoreAnchor"
+	anchor.position = spaces.core_anchor if spaces != null else Vector3(4.0, 0.0, 0.0)
+	_adopt(anchor)
+	if spaces != null:
+		for i: int in spaces.spawn_regions.size():
+			var region: Marker3D = Marker3D.new()
+			region.name = "SpawnRegion%d" % i
+			region.position = spaces.spawn_regions[i].get_center()
+			region.set_meta(&"bounds", spaces.spawn_regions[i])
+			_adopt(region)
+		for i: int in spaces.exits.size():
+			var exit_marker: Marker3D = Marker3D.new()
+			exit_marker.name = "Exit%d" % i
+			exit_marker.position = spaces.exits[i]
+			_adopt(exit_marker)
+
+
+func _build_spaces() -> void:
+	var index: int = 0
+	for piece: Dictionary in spaces.solids + spaces.platforms:
+		var size: Vector3 = piece["size"]
+		var box: CSGBox3D = _box("Space%02d" % index, (piece["position"] as Vector3) + Vector3.UP * size.y * 0.5, size, cover_color)
+		box.rotation.y = float(piece.get("yaw", 0.0))
+		box.add_to_group(&"cover")
+		index += 1
+	for entry: Dictionary in spaces.ramps:
+		var height: float = entry["height"]
+		var length: float = entry["length"]
+		var ramp: CSGBox3D = _box("SpaceRamp%02d" % index, (entry["position"] as Vector3) + Vector3.UP * (height * 0.5 - 0.15), Vector3(float(entry["width"]), 0.3, sqrt(length * length + height * height)), balcony_color)
+		ramp.rotation = Vector3(atan2(height, length), float(entry.get("yaw", 0.0)), 0)
+		index += 1
 
 
 ## Cover table expanded with its 180° mirror. Entries on the centre point are not duplicated.

@@ -126,3 +126,19 @@ Cooldown é por **combinação forma+efeito**. Todos os cooldowns zeram no iníc
 - [ ] Recast respeita mana, cooldown e modo de conjuração.
 - [ ] Mana e cooldown só mudam no host. O cliente mostra previsão e corrige com o snapshot.
 - [ ] O oponente vê o círculo rúnico com cor e glifo corretos antes do disparo.
+
+## Rodada 9 ? contrato espacial R1
+
+Seta e melee respeitam o percurso f?sico. Melee mede alcance em 3D. Orbe e Marca usam tr?s amostras verticais do corpo a partir do centro do efeito: dano proporcional ? exposi??o; cobertura total impede dano e efeitos. Impacto de Orbe desloca a origem 4 cm pela normal para n?o nascer dentro da pedra. Leque compartilha a consulta de LOS. Semente continua parab?lica e pode colocar uma zona atr?s da cobertura; zona exige piso a at? 0,5 m, raio e exposi??o. Muralha de Gelo bloqueia corpo/tiro/explos?o; Vento bloqueia tiro/explos?o; Fogo e Raio s?o atravess?veis. N?cleo exige dist?ncia horizontal ?2 m e vertical ?0,5 m do CoreAnchor do mapa.
+
+## Rodada 9 ? planos elementais R2 (substitui tabela hist?rica da se??o 3)
+
+Multiplicadores permanecem 1,05/0,95/1/0,95 e Seta mant?m tr?s cargas/0,3 s/1,2 s. Fogo renova queimadura at? 3 s; Leque consome a queimadura antecipando 50% do dano restante, abrindo m?o do restante. Orbe n?o cria ch?o; Guarda n?o reflete. Aura permite uma Semente em faixa de 6?2 m por 4 s, mesmo DPS, orientada pela mira. Impulso s? planta rastro nas posi??es percorridas.
+
+Gelo: Seta sem slow; Orbe aplica slow no impacto, sem zona. Marca prende por 0,6 s; depois h? 1 s sem root/slow forte. Aura s? conserva imunidade a slow. Raio: Choque s? ? consumido em impactos de Seta/Leque/Orbe/Marca; ticks e melee n?o o gastam. Orbe sem chain, Marca 0,9 s, Muralha aplica Choque na travessia. Aura s? aumenta velocidade de proj?til. Teleporte mostra destino por 0,12 s antes do deslocamento, validando colis?o novamente.
+
+Vento: Semente empurra corpos pela dire??o da mira, sem desviar tiros. Guarda desvia um proj?til na janela inicial de 0,25 s; depois conserva o escudo comum. Zonas sobrepostas da mesma magia/dono n?o acumulam intensidade. Status novos usam o codec compacto; protocolo 4 exige clientes da mesma vers?o.
+
+## Rodada 9 ? prepara??o e compromisso R4
+
+G em IDLE vazio arma a pr?xima composi??o para armazenamento; F desarma. G em mira guarda, G com slot cheio recupera (confirmadas exigem LMB). Um slot, com valida??o/ACK por revis?o no host, reserva e recargas normais. Inscri??o persistente mostra apenas a forma. V mant?m 12 dano/1,8 m/70?/0,8 s, com antecipa??o 0,12 s e recupera??o 0,25 s sem conjura??o; dano no contato respeita cobertura e altura. Windup/lockout e slot guardado entram na reconex?o.

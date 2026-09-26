@@ -36,6 +36,7 @@ const MELEE_COOLDOWN: float = 0.8
 var net_driven: bool = false
 ## M11: seconds until the next staff swing (replicated with the player runtime).
 var _melee_cooldown: float = 0.0
+var _melee_windup: float = 0.0
 ## Draft, countdown and round end: no walking or casting (spawn barriers, spec 02 §2).
 var frozen: bool = false:
 	set(value):
@@ -114,6 +115,7 @@ func _ready() -> void:
 	add_to_group(&"damageable")
 	composer.read_input = is_local
 	composer.validator = _validate_cast
+	composer.action_locked = func() -> bool: return _melee_cooldown > MELEE_COOLDOWN - 0.37
 	composer.cast_requested.connect(_on_cast_requested)
 	composer.state_changed.connect(func(_s: SpellComposer.State) -> void: sprint_blocked = composer.is_composing())
 	stats.died.connect(composer.reset)
@@ -189,6 +191,10 @@ static func _buttons(jump: bool, crouch: bool, sprint: bool) -> int:
 ## One movement tick. Kept free of Input reads so the host can replay client inputs (M3).
 func simulate(delta: float, input_dir: Vector2, want_jump: bool, want_crouch: bool, want_sprint: bool) -> void:
 	cast_lockout = maxf(0.0, cast_lockout - delta)
+	if _melee_windup > 0.0:
+		_melee_windup = maxf(0.0, _melee_windup - delta)
+		if _melee_windup <= 0.0 and not frozen and not stats.is_dead:
+			_resolve_melee()
 	_melee_cooldown = maxf(0.0, _melee_cooldown - delta)
 	if frozen or stats.is_dead:
 		# Spawn barriers and the death freeze: the body keeps its place, statuses stop mattering.
@@ -323,16 +329,18 @@ func receive_hit(amount: float, spell: ResolvedSpell, source: Node) -> void:
 	if invulnerable_time > 0.0 or stats.is_dead or (MatchState.active and MatchState.is_frozen()) or (Net.is_online() and not Net.is_host()):
 		return
 	# Shock: the next damage taken is increased, then the shock is consumed.
-	if stats.has_status(&"shock") and amount > 0.0:
+	if stats.has_status(&"shock") and amount > 0.0 and spell != null and spell.effect in [&"direct", &"burst"] and spell.form in [&"projectile", &"area"]:
 		amount *= 1.0 + _shock_bonus
 		stats.clear_status(&"shock")
 	if active_guard != null and stats.shield <= 0.0:
 		active_guard = null
-	if active_guard != null and spell != null and spell.form == &"projectile" and bool(active_guard.param(&"deflect_next", false)):
+	if active_guard != null and spell != null and spell.form == &"projectile" and bool(active_guard.param(&"deflect_next", false)) and stats.shield_time_left >= float(active_guard.param(&"duration", 3.0)) - float(active_guard.param(&"deflect_window", 0.25)):
 		# Wind Guard: the next projectile is deflected entirely, once.
-		active_guard = null
-		stats.clear_shield()
+		active_guard = active_guard.with_params({"deflect_next": false})
 		return
+	if spell != null and bool(spell.param(&"consume_burn", false)) and stats.has_status(&"burn"):
+		amount += _burn_dps * stats.status_time_left(&"burn") * 0.5
+		stats.clear_status(&"burn")
 	var had_shield: bool = stats.shield > 0.0
 	stats.take_damage(amount)
 	if MatchState.active and Net.is_host():
@@ -351,10 +359,19 @@ func receive_status(spell: ResolvedSpell, source: Node = null) -> void:
 		&"burn":
 			_burn_dps = float(spell.status_params.get("dps", 4.0))
 			stats.apply_status(&"burn", spell.status_duration)
+		&"root":
+			if stats.has_status(&"control_recovery") or stats.has_status(&"root"):
+				return
+			stats.clear_status(&"slow")
+			_slow_strength = 0.0
+			stats.apply_status(&"root", spell.status_duration)
+			stats.apply_status(&"control_recovery", spell.status_duration + 1.0)
 		&"slow":
 			if active_aura != null and bool(active_aura.param(&"slow_immune", false)):
 				return
 			var strength: float = float(spell.param(&"slow_override", spell.status_params.get("slow", 0.3)))
+			if strength >= 0.5 and stats.has_status(&"control_recovery"):
+				return
 			_slow_strength = strength if not stats.has_status(&"slow") else maxf(_slow_strength, strength)
 			stats.apply_status(&"slow", spell.status_duration)
 		&"shock":
@@ -386,6 +403,10 @@ func _guard_blocks_sprint() -> bool:
 
 ## Storm Impulse: instant blink up to distance along the movement input, stopping at walls.
 func teleport(distance: float) -> void:
+	global_position = teleport_destination(distance)
+
+
+func teleport_destination(distance: float) -> Vector3:
 	var input: Vector2 = move_input if move_input.length() > 0.1 else Vector2(0.0, -1.0)
 	var dir: Vector3 = transform.basis * Vector3(input.x, 0.0, input.y)
 	dir.y = 0.0
@@ -393,7 +414,7 @@ func teleport(distance: float) -> void:
 	var collision: KinematicCollision3D = KinematicCollision3D.new()
 	if test_move(global_transform, motion, collision):
 		motion = collision.get_travel()
-	global_position += motion
+	return global_position + motion
 
 
 func apply_knockback(impulse: Vector3) -> void:
@@ -523,7 +544,7 @@ func damage_mult() -> float:
 func speed_mult() -> float:
 	var bonus: float = float(active_aura.param(&"move_speed_bonus", 0.0)) if active_aura != null else 0.0
 	var rune_bonus: float = 0.12 if rune == &"light_step" else 0.0
-	return (1.0 + bonus + rune_bonus) * (1.0 - _slow_strength)
+	return 0.0 if stats.has_status(&"root") else (1.0 + bonus + rune_bonus) * (1.0 - _slow_strength)
 
 
 ## Debug nameplate over non-local players: HP, shield and statuses. Replaced by the final HUD in M6.
@@ -614,6 +635,7 @@ func reset_round() -> void:
 	_arrow_recharge = 0.0
 	_arrow_interval = 0.0
 	_melee_cooldown = 0.0
+	_melee_windup = 0.0
 	_shake_time = 0.0
 	_shake_strength = 0.0
 	_camera.position = Vector3.ZERO
@@ -634,7 +656,7 @@ func reset_round() -> void:
 # --- Melee (M11) ------------------------------------------------------------------
 
 func can_melee() -> bool:
-	return _melee_cooldown <= 0.0 and not frozen and not stats.is_dead
+	return _melee_cooldown <= 0.0 and cast_lockout <= 0.0 and not frozen and not stats.is_dead
 
 
 ## Local input: swing now (offline) or ask the host (online). The client starts the
@@ -646,6 +668,7 @@ func try_melee() -> void:
 	if Net.is_online() and net_match != null:
 		if not Net.is_host():
 			_melee_cooldown = MELEE_COOLDOWN
+			cast_lockout = 0.37
 			melee_swung.emit()
 		net_match.call(&"request_melee", self)
 	else:
@@ -655,7 +678,13 @@ func try_melee() -> void:
 ## Authority side: start the cooldown and hit every damageable in the 70° cone within reach.
 func perform_melee() -> void:
 	_melee_cooldown = MELEE_COOLDOWN
+	_melee_windup = 0.12
+	cast_lockout = 0.37
+	composer.clear()
 	melee_swung.emit()
+
+
+func _resolve_melee() -> void:
 	if not SpellNode.has_authority():
 		return
 	var forward: Vector3 = -global_basis.z
@@ -665,11 +694,12 @@ func perform_melee() -> void:
 		if node == self or not node is Node3D:
 			continue
 		var to: Vector3 = (node as Node3D).global_position - global_position
-		to.y = 0.0
 		# Reach is measured to the target's centre, so add a capsule radius of slack.
 		if to.length() < 0.01 or to.length() > MELEE_RANGE + tuning.capsule_radius:
 			continue
 		if forward.angle_to(to.normalized()) > MELEE_ARC * 0.5:
+			continue
+		if not SpatialContract.clear_path(get_world_3d(), global_position + Vector3.UP * 0.9, (node as Node3D).global_position + Vector3.UP * 0.9, node, self):
 			continue
 		node.call(&"receive_hit", MELEE_DAMAGE * damage_mult(), null, self)
 
@@ -686,4 +716,4 @@ func _on_stored_changed(spell: ResolvedSpell) -> void:
 		return
 	var net_match: Node = get_tree().get_first_node_in_group(&"net_match")
 	if net_match != null:
-		net_match.call(&"request_store", spell)
+		net_match.call(&"request_store", spell, composer.store_revision)

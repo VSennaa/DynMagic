@@ -4,7 +4,7 @@ Last update: 2026-09-25. Written so any AI agent (Claude, Codex, Gemini, etc.) c
 
 ## 0. Active agent
 
-Active agent: Codex (round 9 — ROADMAP M12, started 2026-09-26). Claude runs the M13 visual gauntlet in parallel on shaders/, vfx/, assets/ and the viewmodel only.
+Active agent: none (Codex round 9 PARTIAL — usage limit, resets 2026-09-27 00:46. Done: R1, R3, arena A greybox, R2, R4; 92 tests 0 failures; committed by Claude. Remaining M12: team framework, 2v2, 3v3, 5v5, R8/R9. Claude runs the M13 visual gauntlet on shaders/, vfx/, assets/, viewmodel.)
 
 ### Handoff brief for Codex (round 9 — design refactor and team modes, ROADMAP M12; 2026-09-26)
 Read `docs/reviews/r2-decisions.md` (binding decisions), your own proposals in `docs/reviews/r2-codex-design.md`, then do the **Codex** items of ROADMAP M12 in order, ticking `[x]` and adding one line per item below this brief.
@@ -13,6 +13,14 @@ Read `docs/reviews/r2-decisions.md` (binding decisions), your own proposals in `
 - For small open design questions, ask the Jev classifier instead of stopping: `python tools/ai/openrouter.py -m typesafe/jev-router -s "Pick one option, one line" "<question with lettered options>"` and record the answer here.
 - After each item: `--import`, `res://build/check_suites.tscn` (0 failures), and for gameplay the headless LAN pair `-- --host --bot --match-speed 10` + `-- --join 127.0.0.1 --bot --match-speed 10`. For team modes add a CLI way to fill slots with bots and test 2v2/3v3/5v5 headless.
 - No commits, downloads or installs. Leave changes uncommitted and set `Active agent: none (round 9 ...)` with what remains when you stop.
+
+### Round 9 progress (Codex, 2026-09-26)
+- R4: G arms before composition, persistent form-only stored rune, host-validated storage with revision ACK, reconnect stored slot, melee 0.12 s windup + 0.25 s cast recovery in replicated state. Import + 92 suite tests/0 failures + melee timing/range checks/0 failures + LAN speed 10 passed. Viewmodel file preserved for parallel agent; its visual contact timing still needs alignment by its owner.
+- R2: four element plans implemented (burn conversion/refresh, root recovery, direct-only Shock conversion, directional wind territory, one fire Aura strip, actual dash trail, telegraph blink, guard window, redundant orb zones/chain/passive buffs removed). Import + 89 suite tests/0 failures + `check_element_plans.tscn`/0 failures + LAN pair passed. Protocol 4 for extended statuses. Six-pair human counterplay/clip review remains unmeasured; no balance claims.
+- Arena A/R5: `CloisterSpaces` broken ring, central floor Core, H0/H1/l1/H2, two 1.5 m terraces/four ramps, named mirrored approaches; `arena_a_control.tscn` preserves original. Import + 89 tests + physical routes/spawn/capture/barrier gate passed; LAN speed 10 passed. Sightline report has 38.18 m maximum/17,499 over-target samples (includes elevated empty-space samples): tuning belongs to M13, not claimed visually accepted. H0 widened 6?7 m from measured spawn leaks.
+- R3: authored `ArenaSpaces` + builder branch, rotated bounds/capture-disc/route-width gates, physical capsule routes/spawn-border LOS and temporary-barrier checks (`tests/check_arena_spaces.tscn`). Legacy layouts stay loadable. Import + 89 tests/0 failures + LAN speed 10 passed. Physical gate caught exposed spawn borders beside the proposed 6 m baffle; 7 m closes them. Sightline sampler reports 0.5 m grid/standing-crouch-balcony exceptions, not an assumed pass.
+- R1: shared `SpatialContract` (3 blast exposure samples, cover rays, floor height tolerance 0.5 m), melee 3D/LOS, explicit wall blocking, per-arena CoreAnchor. Import passed; 85 tests/0 failures; physical cover/partial exposure/seed behind cover/wind barrier checks 0 failures; headless LAN pair at speed 10 connected and simulated without script/RPC errors (`build/r9-r1-*`).
+- Jev unavailable: prescribed command failed because OPENROUTER_API_KEY is absent (WinError 2). Asked user about conservative fallback. Legacy control anchor provisionally at (4,0,0), clear ground beside centre solids; new arenas use central ground anchor.
 
 ### Handoff brief for DeepSeek (round 8 — alpha 1.1, ROADMAP M11; 2026-09-25)
 Active agent while running: DeepSeek (openclaude). Claude reviews, commits, tags `v1.1.0-alpha` and then sets up the web route on the VPS.

@@ -32,6 +32,10 @@ Pilares:
 | Arte | Shader-first; M7 com Blender 5.2.1 LTS headless e Python procedural, sem Tripo/Meshy, serviços pagos ou mcp-blender nesta rodada | Usuário, 2026-09-25 |
 | Arenas | 3 variantes (A, B, C) do layout da imagem de referência | Usuário |
 
+### Rodada 9 ? decis?es aprovadas (2026-09-26)
+
+As decis?es de `reviews/r2-decisions.md` prevalecem sobre as regras hist?ricas acima: R2 (quatro planos elementais), R4 (prepara??o G e compromisso V), R8 (atos do round e N?cleo), R9 (revanche espacial e runas) e modos 2v2/3v3 de elimina??o MD7, 5v5 Controle MD3 com ondas de 10 s. Sem fogo amigo; draft sem repeti??o no time em 2v2/3v3, m?ximo dois por elemento em 5v5. Refer?ncia B do gauntlet aprovada. Implementa??o e valida??o por etapa no HANDOFF/ROADMAP.
+
 ## 3. Premissas
 
 As premissas P1–P5 foram validadas em 2026-09-24 e passaram para a tabela da seção 2.

@@ -124,7 +124,7 @@ func _process(delta: float) -> void:
 	_mana_bar.max_value = stats.max_mana
 	_mana_bar.value = stats.mana
 	var reserved: float = player.reserved_mana()
-	_mana_label.text = "MN %d%s" % [roundi(stats.mana), "   guardada: %s (%d) · G dispara, F descarta" % [player.composer.stored.display_name, roundi(reserved)] if player.composer.stored != null else ""]
+	_mana_label.text = "MN %d%s" % [roundi(stats.mana), "   guardada: %s (%d) · G dispara, F descarta" % [player.composer.stored.display_name, roundi(reserved)] if player.composer.stored != null else ("   Preparar: escolha forma e efeito" if player.composer._store_next else "")]
 	_mana_bar.set_meta(&"reserved", reserved)
 	_mana_bar.queue_redraw()
 	_update_trail(player.composer)

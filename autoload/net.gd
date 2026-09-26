@@ -9,7 +9,7 @@ signal peer_left(peer_id: int)
 signal disconnected
 signal lobbies_changed
 
-const PROTOCOL_VERSION: int = 3
+const PROTOCOL_VERSION: int = 4
 const GAME_TAG: String = "dynmagic"
 const DEFAULT_PORT: int = 7777
 const DISCOVERY_PORT: int = 7778

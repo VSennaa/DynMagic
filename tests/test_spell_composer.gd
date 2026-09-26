@@ -45,6 +45,26 @@ func test_quick_spell_fires_on_effect_key() -> void:
 	assert_eq(composer.state, SpellComposer.State.CASTING)
 
 
+func test_g_before_composition_stores_and_cancel_disarms() -> void:
+	composer.press_precast()
+	composer.press_slot(0)
+	composer.press_slot(0)
+	assert_eq(casts.size(), 0)
+	assert_true(composer.stored != null)
+	composer.press_cancel()
+	composer.press_precast()
+	composer.press_cancel()
+	composer.press_slot(0)
+	composer.press_slot(0)
+	assert_eq(casts.size(), 1)
+
+
+func test_melee_commitment_prevents_starting_composition() -> void:
+	composer.action_locked = func() -> bool: return true
+	composer.press_slot(0)
+	assert_eq(composer.state, SpellComposer.State.IDLE)
+
+
 func test_cast_click_with_incomplete_sequence_does_nothing() -> void:
 	composer.press_cast()
 	composer.press_slot(2)

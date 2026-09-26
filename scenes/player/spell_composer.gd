@@ -32,6 +32,8 @@ const INPUT_BUFFER: float = 0.15
 var resolver: Callable
 ## (spell) -> StringName: empty when the spell may be cast, else a rejection reason.
 var validator: Callable
+var action_locked: Callable
+var store_revision: int = 0
 
 var state: State = State.IDLE
 var form: StringName = &""
@@ -114,6 +116,8 @@ func tick(delta: float) -> void:
 
 ## Q/E/R = slot 0/1/2. First press picks the form, second picks the effect.
 func press_slot(index: int) -> void:
+	if action_locked.is_valid() and action_locked.call():
+		return
 	match state:
 		State.IDLE:
 			form = SPELL_DB.form_at(index)
@@ -158,8 +162,10 @@ func press_recast() -> void:
 func press_cancel() -> void:
 	if state == State.SLOT_EFFECT or state == State.AIMING:
 		clear()
-	elif state == State.IDLE and stored != null:
-		_set_stored(null)
+	elif state == State.IDLE:
+		_store_next = false
+		if stored != null:
+			_set_stored(null)
 
 
 ## M11 pre-cast (G): after the form key it arms storing, while aiming it stores the aimed
@@ -178,9 +184,12 @@ func press_precast() -> void:
 				var spell: ResolvedSpell = stored
 				_set_stored(null)  # release the reservation before validating the cast
 				_begin(spell)
+			else:
+				_store_next = not _store_next
 
 
 func _set_stored(spell: ResolvedSpell) -> void:
+	store_revision += 1
 	stored = spell
 	stored_changed.emit(spell)
 

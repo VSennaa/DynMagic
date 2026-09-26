@@ -171,8 +171,8 @@ func spend_mana(cost: float) -> bool:
 ## Adds duration to a status. Durations stack up to STATUS_STACK_CAP × duration; intensity never stacks.
 func apply_status(status_id: StringName, duration: float) -> void:
 	var current: float = _statuses.get(status_id, 0.0)
-	var total: float = minf(current + duration, duration * STATUS_STACK_CAP)
-	_statuses[status_id] = maxf(total, current)
+	var total: float = minf(duration, 3.0) if status_id == &"burn" else minf(current + duration, duration * STATUS_STACK_CAP)
+	_statuses[status_id] = total if status_id == &"burn" else maxf(total, current)
 	status_applied.emit(status_id, _statuses[status_id])
 
 

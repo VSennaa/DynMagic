@@ -223,11 +223,11 @@ Feedback da sessão LAN
 ## M12 — Rodada 2: design e modos em time (decisions: docs/reviews/r2-decisions.md)
 
 Codex (critical), in order:
-- [ ] R1 one cover contract for projectiles, area effects and the Core (line of sight from effect centre)
-- [ ] R3 ArenaBuilder driven by spaces and metrics (corridor widths, cover heights, max sightline, jump heights); keep current arenas as a test control
-- [ ] Arena A rebuilt as greybox from R5 on top of R3
-- [ ] R2 four elemental combat plans and nine purposeful functions
-- [ ] R4 G as readable preparation, V as short-range commitment
+- [x] R1 one cover contract for projectiles, area effects and the Core (line of sight from effect centre)
+- [x] R3 ArenaBuilder driven by spaces and metrics (corridor widths, cover heights, max sightline, jump heights); keep current arenas as a test control
+- [x] Arena A rebuilt as greybox from R5 on top of R3
+- [x] R2 four elemental combat plans and nine purposeful functions
+- [x] R4 G as readable preparation, V as short-range commitment
 - [ ] Team framework: N players per side, team draft (no duplicate per team; 5v5 max 2 per element), friendly fire off, spawns per team, HUD/scoreboard for teams
 - [ ] 2v2 on small arenas (elimination rounds, best-of-7, rune + Core kept)
 - [ ] 3v3 on expanded arenas (x1.5 with extra flank routes)

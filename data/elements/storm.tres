@@ -12,13 +12,13 @@ status_id = &"shock"
 status_duration = 3.0
 status_params = {"bonus": 0.2}
 variants = {
-"area_burst": {"delay": 0.6},
+"area_burst": {},
 "area_direct": {"angle_deg": 30.0, "range": 9.0},
-"area_lingering": {"contact_dps": 10.0, "transparent": true},
-"projectile_burst": {"chain_damage": 8.0},
+"area_lingering": {"contact_status": true, "transparent": true},
+"projectile_burst": {},
 "projectile_direct": {"speed": 70.0},
 "projectile_lingering": {"zone_applies_status": true},
 "self_burst": {"teleport": true},
 "self_direct": {"shock_on_break": true},
-"self_lingering": {"projectile_speed_bonus": 0.25, "cooldown_reduction": 0.15}
+"self_lingering": {"projectile_speed_bonus": 0.25}
 }

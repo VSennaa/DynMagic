@@ -26,7 +26,7 @@ func _ready() -> void:
 func _on_state_changed(state: SpellComposer.State) -> void:
 	match state:
 		SpellComposer.State.IDLE:
-			visible = false
+			visible = _composer.stored != null
 		SpellComposer.State.SLOT_EFFECT:
 			_show(_composer.form, &"")
 		SpellComposer.State.AIMING:
@@ -36,6 +36,14 @@ func _on_state_changed(state: SpellComposer.State) -> void:
 			# Flash the full circle briefly on release.
 			if _composer.last_spell != null:
 				_show(_composer.last_spell.form, _composer.last_spell.effect)
+
+
+func _process(_delta: float) -> void:
+	if _composer.stored != null and _composer.state == SpellComposer.State.IDLE:
+		_show(_composer.stored.form, &"")
+		scale = Vector3.ONE * 0.45
+	elif _composer.state == SpellComposer.State.IDLE and player.is_local:
+		visible = false
 
 
 func _show(form: StringName, effect: StringName) -> void:

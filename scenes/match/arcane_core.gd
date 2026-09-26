@@ -61,9 +61,7 @@ func host_tick(delta: float, players: Dictionary) -> void:
 		if _hp_seen.has(id) and hp < _hp_seen[id]:
 			progress[id] = 0.0  # damage resets this player's progress
 		_hp_seen[id] = hp
-		var flat: Vector3 = player.global_position - global_position
-		flat.y = 0.0
-		if flat.length() <= RADIUS:
+		if SpatialContract.on_floor(player.global_position, global_position, RADIUS):
 			progress[id] = progress.get(id, 0.0) + delta
 			if progress[id] >= CAPTURE_TIME:
 				_done = true

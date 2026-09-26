@@ -193,7 +193,7 @@ func _restore_client(state: Array[Dictionary], round_number: int, arena_id: Stri
 		player.velocity = entry["velocity"]
 		player.set_look(player.rotation.y, float(entry["pitch"]))
 		player.stats.import_state(entry["stats"])
-		ReconnectState.restore_player(player, entry["runtime"])
+		ReconnectState.restore_player(player, entry["runtime"], true)
 	ReconnectState.restore_world(self, spells)
 	if collapse_elapsed >= 0.0:
 		_collapse = CollapseZone.new()
@@ -338,23 +338,35 @@ func _cast_rejected(spell_key: StringName, reason: StringName, state: Dictionary
 # --- Pre-cast (M11) --------------------------------------------------------------
 
 ## Client: mirror the stored spell on the host so its mana stays reserved there too.
-func request_store(spell: ResolvedSpell) -> void:
-	_request_store.rpc_id(1, spell.form if spell != null else &"", spell.effect if spell != null else &"")
+func request_store(spell: ResolvedSpell, revision: int) -> void:
+	_request_store.rpc_id(1, spell.form if spell != null else &"", spell.effect if spell != null else &"", revision)
 
 
 @rpc("any_peer", "call_remote", "reliable", Net.CHANNEL_RELIABLE)
-func _request_store(form: StringName, effect: StringName) -> void:
+func _request_store(form: StringName, effect: StringName, revision: int) -> void:
 	if not Net.is_host():
 		return
 	var player: Player = _player(multiplayer.get_remote_sender_id())
 	if player == null:
 		return
+	if revision <= player.composer.store_revision:
+		return
+	player.composer.store_revision = revision
 	if form == &"":
 		player.composer.stored = null
-		return
-	var spell: ResolvedSpell = SpellDB.resolve(player.composer.element_id, form, effect)
-	if spell != null and player.stats.can_afford(player.mana_cost_for(spell, false)):
-		player.composer.stored = spell
+	else:
+		var spell: ResolvedSpell = SpellDB.resolve(player.composer.element_id, form, effect)
+		if spell != null and player.composer.stored == null and not player.frozen and not player.stats.is_dead and player.cast_lockout <= 0.0 and player.stats.can_afford(spell.mana_cost):
+			player.composer.stored = spell
+	var stored: ResolvedSpell = player.composer.stored
+	_store_result.rpc_id(multiplayer.get_remote_sender_id(), stored.form if stored != null else &"", stored.effect if stored != null else &"", revision)
+
+
+@rpc("authority", "call_remote", "reliable", Net.CHANNEL_RELIABLE)
+func _store_result(form: StringName, effect: StringName, revision: int) -> void:
+	var player: Player = _player(multiplayer.get_unique_id())
+	if player != null and revision == player.composer.store_revision:
+		player.composer.stored = SpellDB.resolve(player.composer.element_id, form, effect) if form != &"" else null
 
 
 # --- Melee (M11) -----------------------------------------------------------------
@@ -601,7 +613,8 @@ func _update_core(view: Dictionary, round_number: int) -> void:
 	if should_exist and _core == null:
 		_core = ArcaneCore.create()
 		add_child(_core)
-		_core.global_position = Vector3(0, 3.0, 0)  # on top of Arena A's central pillar
+		var anchor: Node3D = _arena.find_child("CoreAnchor", true, false) as Node3D
+		_core.global_position = anchor.global_position if anchor != null else Vector3.ZERO
 		_core.captured.connect(MatchState.report_core)
 	elif not should_exist and _core != null:
 		_core.queue_free()

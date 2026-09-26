@@ -87,6 +87,14 @@ func test_cooldowns() -> void:
 	assert_false(stats.is_on_cooldown(&"area_burst"))
 
 
+func test_burn_refresh_does_not_stack_duration() -> void:
+	stats.apply_status(&"burn", 3.0)
+	stats.tick(1.0)
+	stats.apply_status(&"burn", 3.0)
+	stats.apply_status(&"burn", 3.0)
+	assert_eq(stats.status_time_left(&"burn"), 3.0)
+
+
 func test_reset_clears_everything() -> void:
 	stats.take_damage(50.0)
 	stats.spend_mana(50.0)

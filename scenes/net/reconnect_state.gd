@@ -2,7 +2,7 @@ class_name ReconnectState
 extends RefCounted
 ## Host-only capture and authority-RPC restore of surviving world objects.
 
-const PLAYER_FIELDS: Array[StringName] = [&"overcharge_time", &"overcharge_casts", &"invulnerable_time", &"glide_time", &"sudden_death", &"mana_surge", &"_dash_velocity", &"_dash_time", &"_knockback", &"_burn_dps", &"_burn_tick", &"_slow_strength", &"_air_jumps_used", &"_arrow_charges", &"_arrow_recharge", &"_arrow_interval", &"_melee_cooldown"]
+const PLAYER_FIELDS: Array[StringName] = [&"overcharge_time", &"overcharge_casts", &"invulnerable_time", &"glide_time", &"sudden_death", &"mana_surge", &"_dash_velocity", &"_dash_time", &"_knockback", &"_burn_dps", &"_burn_tick", &"_slow_strength", &"_air_jumps_used", &"_arrow_charges", &"_arrow_recharge", &"_arrow_interval", &"_melee_cooldown", &"_melee_windup", &"cast_lockout"]
 
 static func player_state(player: Player) -> Dictionary:
 	var state: Dictionary = fields(player, PLAYER_FIELDS)
@@ -11,15 +11,20 @@ static func player_state(player: Player) -> Dictionary:
 		state[key] = [spell.element, spell.form, spell.effect] if spell != null else []
 	var last: ResolvedSpell = player.composer.last_spell
 	state["last_spell"] = [last.element, last.form, last.effect] if last != null else []
+	var stored: ResolvedSpell = player.composer.stored
+	state["stored_spell"] = [stored.element, stored.form, stored.effect] if stored != null else []
 	return state
 
 
-static func restore_player(player: Player, state: Dictionary) -> void:
+static func restore_player(player: Player, state: Dictionary, restoring: bool = false) -> void:
 	for key: StringName in PLAYER_FIELDS:
 		player.set(key, state[key])
 	for key: StringName in [&"active_aura", &"active_guard"]:
 		var ids: Array = state[key]
 		player.set(key, SpellDB.resolve(ids[0], ids[1], ids[2]) if ids.size() == 3 else null)
+	if not player.is_local or restoring:
+		var stored: Array = state.get("stored_spell", [])
+		player.composer.stored = SpellDB.resolve(stored[0], stored[1], stored[2]) if stored.size() == 3 else null
 	var last: Array = state["last_spell"]
 	player.composer.last_spell = SpellDB.resolve(last[0], last[1], last[2]) if last.size() == 3 else null
 

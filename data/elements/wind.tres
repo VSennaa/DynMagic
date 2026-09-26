@@ -17,8 +17,8 @@ variants = {
 "area_lingering": {"blocks_players": false},
 "projectile_burst": {"pull_force": 6.0},
 "projectile_direct": {"homing_deg": 15.0},
-"projectile_lingering": {"deflect": true},
+"projectile_lingering": {"current_force": 5.0},
 "self_burst": {"lift": 8.0, "glide_time": 1.0},
-"self_direct": {"deflect_next": true},
+"self_direct": {"deflect_next": true, "deflect_window": 0.25},
 "self_lingering": {"move_speed_bonus": 0.25, "double_jump": true}
 }

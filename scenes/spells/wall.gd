@@ -15,6 +15,9 @@ const CONTACT_MARGIN: float = 0.6
 var spell: ResolvedSpell
 var caster: Node3D
 var hp: float = 120.0
+var blocks_movement: bool = true
+var blocks_projectiles: bool = true
+var blocks_blast: bool = true
 
 var _life: float = 5.0
 var _size: Vector3 = Vector3(6.0, 3.0, 0.5)
@@ -39,11 +42,12 @@ func _ready() -> void:
 	box.size = _size
 	_shape.shape = box
 	_shape.position.y = _size.y * 0.5
-	if float(spell.param(&"contact_dps", 0.0)) > 0.0:
-		collision_layer = 0
+	blocks_movement = spell.element == &"frost"
+	blocks_projectiles = spell.element in [&"frost", &"wind"]
+	blocks_blast = blocks_projectiles
+	collision_layer = 1 if blocks_movement else (2 if blocks_projectiles else 0)
+	if not blocks_projectiles:
 		remove_from_group(&"damageable")
-	elif not bool(spell.param(&"blocks_players", true)):
-		collision_layer = 1 << (PROJECTILE_ONLY_LAYER - 1)
 	var mesh: BoxMesh = BoxMesh.new()
 	mesh.size = _size
 	_mesh.mesh = mesh
@@ -80,7 +84,7 @@ func receive_hit(amount: float, _spell: ResolvedSpell, _source: Node) -> void:
 ## Fire burns and storm shocks-and-damages anyone touching or standing inside the wall.
 func _contact_tick() -> void:
 	var dps: float = float(spell.param(&"contact_dps", 0.0))
-	var burns: bool = bool(spell.param(&"contact_burn", false))
+	var burns: bool = bool(spell.param(&"contact_burn", false)) or bool(spell.param(&"contact_status", false))
 	if (dps <= 0.0 and not burns) or not SpellNode.has_authority():
 		return
 	var shape: BoxShape3D = BoxShape3D.new()

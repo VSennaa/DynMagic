@@ -1,6 +1,8 @@
-[gd_scene load_steps=5 format=3]
+[gd_scene load_steps=6 format=3]
 
 [ext_resource type="Script" path="res://scenes/arena/arena_builder.gd" id="1_builder"]
+
+[ext_resource type="Resource" path="res://scenes/arena/cloister_spaces.tres" id="2_spaces"]
 
 [sub_resource type="ProceduralSkyMaterial" id="Sky_mat"]
 sky_top_color = Color(0.22, 0.4, 0.82, 1)
@@ -27,3 +29,4 @@ shadow_enabled = true
 
 [node name="Layout" type="Node3D" parent="."]
 script = ExtResource("1_builder")
+spaces = ExtResource("2_spaces")

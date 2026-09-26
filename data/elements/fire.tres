@@ -13,12 +13,12 @@ status_duration = 3.0
 status_params = {"dps": 4.0}
 variants = {
 "area_burst": {"applies_status": true},
-"area_direct": {"range": 7.0},
+"area_direct": {"range": 7.0, "consume_burn": true},
 "area_lingering": {"contact_burn": true},
-"projectile_burst": {"burning_ground_duration": 2.0},
+"projectile_burst": {},
 "projectile_direct": {"applies_status": true},
 "projectile_lingering": {"zone_dps": 8.0},
 "self_burst": {"trail_duration": 2.0},
-"self_direct": {"reflect_ratio": 0.2},
-"self_lingering": {"damage_bonus": 0.2}
+"self_direct": {},
+"self_lingering": {"seed_strip": true}
 }

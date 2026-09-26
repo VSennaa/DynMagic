@@ -84,3 +84,13 @@ A variante é escolhida no lobby: Fixa A, B, C, Rotação (padrão: A, B, C e re
 - [ ] Todas as coberturas são alcançáveis ou contornáveis sem ficar preso (teste com o Impulso).
 - [ ] O script de espelhamento gera posições com diferença de no máximo 1 mm.
 - [ ] 144 FPS numa GPU média (GTX 1660) em 1080p.
+
+## Rodada 9 ? espa?os e m?tricas R3
+
+`ArenaSpaces` descreve s?lidos/plataformas (posi??o no piso, tamanho XYZ, yaw), rampas (posi??o no piso, largura/comprimento/altura/yaw), regi?es de spawn, sa?das, rotas nomeadas e CoreAnchor. `ArenaBuilder.spaces == null` mant?m as tr?s geometrias originais como controle. O contrato R1 usa CoreAnchor no piso, inclusive nos controles (4,0,0).
+
+`validate()` verifica extremos girados, disco livre R=2, largura de rota ?2,5 m, rampas ?3 m e inclina??o ?0,5. `ArenaMetrics` mede c?psula real ao longo de percursos, LOS entre bordas/centros dos spawns em crouch/em p?/pulo, e grade de 0,5 m em oito dire??es nas alturas 1,068/1,602/3,102. Linhas acima de 18/22/14 m s?o relatadas como exce??es de projeto; n?o presumidas aprovadas. Saltos opcionais ?1 m e degraus ?0,3 m; caminhos essenciais usam solo/rampa. Teste f?sico inclui bloqueio de uma rota por Muralha de 6 m e preserva??o da outra.
+
+### Claustro R5
+
+Arena A usa `cloister_spaces.tres`: geometria da proposta R5, com H0 de 7 m para fechar LOS das bordas do spawn; H1 4?2?2,2, l1 4?1,5?1,4, H2 2?4?3,5; dois terra?os 4?6 a +1,5 e quatro rampas 3?4. N?cleo central livre. Controle em `arena_a_control.tscn`. Percursos com c?psula, simetria, captura e prote??o inicial passaram; m?ximo amostrado de vis?o 38,18 m requer avalia??o/tuning no gauntlet M13.

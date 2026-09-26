@@ -10,6 +10,11 @@ const TRAIL_POINTS: int = 3
 
 var _life: float = 0.4
 var restoring: bool = false
+var _trail_last: Vector3
+var _trail_active: bool = false
+var _teleport_delay: float = 0.0
+var _teleport_destination: Vector3
+var _destination_marker: MeshInstance3D
 
 @onready var _shell: MeshInstance3D = $Shell
 
@@ -34,6 +39,8 @@ func _ready() -> void:
 			if player != null:
 				player.stats.apply_status(&"aura", _life)
 				player.active_aura = spell
+				if bool(spell.param(&"seed_strip", false)):
+					player.stats.apply_status(&"seed_ready", _life)
 				var shield_bonus: float = float(spell.param(&"shield_regen", 0.0))
 				if shield_bonus > 0.0:
 					player.stats.add_shield(shield_bonus, _life)
@@ -45,27 +52,61 @@ func _impulse(player: Player) -> void:
 	var start: Vector3 = player.global_position
 	var distance: float = float(spell.param(&"distance", 9.0))
 	if bool(spell.param(&"teleport", false)):
-		player.teleport(distance)
-		player.invulnerable_time = maxf(player.invulnerable_time, float(spell.param(&"iframes", 0.1)))
+		_teleport_destination = player.teleport_destination(distance)
+		_teleport_delay = 0.12
+		_destination_marker = MeshInstance3D.new()
+		var mesh: CylinderMesh = CylinderMesh.new()
+		mesh.top_radius = 0.45
+		mesh.bottom_radius = 0.45
+		mesh.height = 0.06
+		_destination_marker.mesh = mesh
+		var material: StandardMaterial3D = StandardMaterial3D.new()
+		material.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		material.albedo_color = spell.color
+		_destination_marker.material_override = material
+		get_parent().add_child(_destination_marker)
+		_destination_marker.global_position = _teleport_destination + Vector3.UP * 0.04
 	else:
 		player.start_dash(distance, float(spell.param(&"dash_time", 0.18)), float(spell.param(&"iframes", 0.1)), float(spell.param(&"lift", 0.0)))
 		player.glide_time = float(spell.param(&"glide_time", 0.0))
 	var trail: float = float(spell.param(&"trail_duration", 0.0))
 	if trail > 0.0:
-		_leave_trail(start, player, distance, trail)
+		_trail_last = start
+		_trail_active = true
 
 
 ## Fire Impulse: small burning zones along the dash path.
-func _leave_trail(start: Vector3, player: Player, distance: float, duration: float) -> void:
-	var input: Vector2 = player.move_input if player.move_input.length() > 0.1 else Vector2(0.0, -1.0)
-	var dir: Vector3 = player.transform.basis * Vector3(input.x, 0.0, input.y)
-	dir.y = 0.0
-	dir = dir.normalized()
+func _leave_trail(point: Vector3, duration: float) -> void:
 	var trail_spell: ResolvedSpell = spell.with_params({"zone_radius": 1.2, "zone_duration": duration, "zone_dps": 8.0})
-	for i: int in TRAIL_POINTS:
-		var zone: Zone = ZONE_SCENE.instantiate() as Zone
-		zone.setup(trail_spell, caster, start + dir * distance * (float(i) + 0.5) / TRAIL_POINTS, dir, start)
-		get_parent().add_child(zone)
+	var zone: Zone = ZONE_SCENE.instantiate() as Zone
+	zone.setup(trail_spell, caster, floor_below(point), direction, point)
+	get_parent().add_child(zone)
+
+
+func _physics_process(delta: float) -> void:
+	var player: Player = caster as Player
+	if player == null or restoring or player.stats.is_dead:
+		return
+	if _teleport_delay > 0.0:
+		_teleport_delay -= delta
+		if _teleport_delay <= 0.0:
+			var collision: KinematicCollision3D = KinematicCollision3D.new()
+			var motion: Vector3 = _teleport_destination - player.global_position
+			if player.test_move(player.global_transform, motion, collision):
+				motion = collision.get_travel()
+			player.global_position += motion
+			player.invulnerable_time = maxf(player.invulnerable_time, float(spell.param(&"iframes", 0.1)))
+			_destination_marker.queue_free()
+	if _trail_active:
+		if player.global_position.distance_to(_trail_last) >= 1.0:
+			_leave_trail(player.global_position, float(spell.param(&"trail_duration", 2.0)))
+			_trail_last = player.global_position
+		_trail_active = player._dash_time > 0.0
+
+
+func _exit_tree() -> void:
+	if is_instance_valid(_destination_marker):
+		_destination_marker.queue_free()
 
 
 func _process(delta: float) -> void:
