@@ -7,6 +7,8 @@ extends CharacterBody3D
 signal spell_cast(spell: ResolvedSpell)
 ## Emitted by the local player after each movement tick (NetSync records it for prediction).
 signal input_sampled(frame: Dictionary)
+## M11: a staff swing started (arms animation and sound listen here).
+signal melee_swung
 
 const PITCH_LIMIT: float = deg_to_rad(89.0)
 const KNOCKBACK_DECAY: float = 18.0
@@ -21,12 +23,19 @@ const ARROW_CHARGES: int = 3
 const ARROW_RECHARGE: float = 1.2
 ## Round 8: minimum spacing between Arrow shots, so the 3 charges cannot be emptied in one burst.
 const ARROW_MIN_INTERVAL: float = 0.3
+## M11: staff swing on V. Host-authoritative in multiplayer, no mana.
+const MELEE_RANGE: float = 1.8
+const MELEE_ARC: float = deg_to_rad(70.0)
+const MELEE_DAMAGE: float = 12.0
+const MELEE_COOLDOWN: float = 0.8
 
 @export var tuning: PlayerTuning = preload("res://data/player_tuning.tres")
 ## Only the local player reads input. Remote players are driven by NetSync (M3).
 @export var is_local: bool = true
 ## When true, NetSync moves this body (host replaying client inputs, or client interpolating).
 var net_driven: bool = false
+## M11: seconds until the next staff swing (replicated with the player runtime).
+var _melee_cooldown: float = 0.0
 ## Draft, countdown and round end: no walking or casting (spawn barriers, spec 02 §2).
 var frozen: bool = false:
 	set(value):
@@ -108,6 +117,7 @@ func _ready() -> void:
 	composer.cast_requested.connect(_on_cast_requested)
 	composer.state_changed.connect(func(_s: SpellComposer.State) -> void: sprint_blocked = composer.is_composing())
 	stats.died.connect(composer.reset)
+	melee_swung.connect(func() -> void: AudioBus.play_sample_at("cloth", global_position, get_parent(), 0.0))
 	if is_local:
 		Input.mouse_mode = Input.MOUSE_MODE_CAPTURED
 		Toon.add_outline(_camera)
@@ -142,6 +152,8 @@ func _physics_process(delta: float) -> void:
 		# Offline stand-in: idle but still ticks statuses and knockback.
 		simulate(delta, Vector2.ZERO, false, false, false)
 		return
+	if Input.is_action_just_pressed(&"melee") and Input.mouse_mode == Input.MOUSE_MODE_CAPTURED:
+		try_melee()
 	var frame: Dictionary = {
 		"move": Input.get_vector(&"move_left", &"move_right", &"move_forward", &"move_back"),
 		"yaw": rotation.y,
@@ -176,6 +188,7 @@ static func _buttons(jump: bool, crouch: bool, sprint: bool) -> int:
 ## One movement tick. Kept free of Input reads so the host can replay client inputs (M3).
 func simulate(delta: float, input_dir: Vector2, want_jump: bool, want_crouch: bool, want_sprint: bool) -> void:
 	cast_lockout = maxf(0.0, cast_lockout - delta)
+	_melee_cooldown = maxf(0.0, _melee_cooldown - delta)
 	if frozen or stats.is_dead:
 		# Spawn barriers and the death freeze: the body keeps its place, statuses stop mattering.
 		velocity = Vector3.ZERO
@@ -599,6 +612,7 @@ func reset_round() -> void:
 	_arrow_charges = ARROW_CHARGES
 	_arrow_recharge = 0.0
 	_arrow_interval = 0.0
+	_melee_cooldown = 0.0
 	_shake_time = 0.0
 	_shake_strength = 0.0
 	_camera.position = Vector3.ZERO
@@ -614,3 +628,46 @@ func reset_round() -> void:
 	is_crouching = false
 	_current_height = tuning.stand_height
 	_apply_height(_current_height)
+
+
+# --- Melee (M11) ------------------------------------------------------------------
+
+func can_melee() -> bool:
+	return _melee_cooldown <= 0.0 and not frozen and not stats.is_dead
+
+
+## Local input: swing now (offline) or ask the host (online). The client starts the
+## cooldown and the animation right away; the host decides the hit.
+func try_melee() -> void:
+	if not can_melee():
+		return
+	var net_match: Node = get_tree().get_first_node_in_group(&"net_match")
+	if Net.is_online() and net_match != null:
+		if not Net.is_host():
+			_melee_cooldown = MELEE_COOLDOWN
+			melee_swung.emit()
+		net_match.call(&"request_melee", self)
+	else:
+		perform_melee()
+
+
+## Authority side: start the cooldown and hit every damageable in the 70° cone within reach.
+func perform_melee() -> void:
+	_melee_cooldown = MELEE_COOLDOWN
+	melee_swung.emit()
+	if not SpellNode.has_authority():
+		return
+	var forward: Vector3 = -global_basis.z
+	forward.y = 0.0
+	forward = forward.normalized()
+	for node: Node in get_tree().get_nodes_in_group(&"damageable"):
+		if node == self or not node is Node3D:
+			continue
+		var to: Vector3 = (node as Node3D).global_position - global_position
+		to.y = 0.0
+		# Reach is measured to the target's centre, so add a capsule radius of slack.
+		if to.length() < 0.01 or to.length() > MELEE_RANGE + tuning.capsule_radius:
+			continue
+		if forward.angle_to(to.normalized()) > MELEE_ARC * 0.5:
+			continue
+		node.call(&"receive_hit", MELEE_DAMAGE * damage_mult(), null, self)

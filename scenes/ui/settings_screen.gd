@@ -5,7 +5,7 @@ const ACTION_LABELS: Dictionary = {
 	&"move_forward": "Frente", &"move_back": "Trás", &"move_left": "Esquerda", &"move_right": "Direita",
 	&"jump": "Pular", &"crouch": "Agachar", &"sprint": "Correr",
 	&"slot_1": "Slot 1 (Q)", &"slot_2": "Slot 2 (E)", &"slot_3": "Slot 3 (R)", &"compose_cancel": "Cancelar",
-	&"cast": "Conjurar", &"recast": "Repetir / cancelar mira", &"scoreboard": "Placar", &"net_overlay": "Overlay de rede",
+	&"cast": "Conjurar", &"recast": "Repetir / cancelar mira", &"melee": "Golpe de cajado", &"precast": "Pré-conjurar", &"scoreboard": "Placar", &"net_overlay": "Overlay de rede",
 }
 const FPS_OPTIONS: Array[int] = [60, 120, 144, 240, 0]
 

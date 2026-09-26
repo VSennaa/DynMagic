@@ -169,7 +169,7 @@ func save_settings(path: String = PATH) -> Error:
 ## Actions the player may rebind (spec 06 §3).
 const REMAPPABLE: Array[StringName] = [
 	&"move_forward", &"move_back", &"move_left", &"move_right", &"jump", &"crouch", &"sprint",
-	&"slot_1", &"slot_2", &"slot_3", &"compose_cancel", &"cast", &"recast", &"scoreboard", &"net_overlay",
+	&"slot_1", &"slot_2", &"slot_3", &"compose_cancel", &"cast", &"recast", &"melee", &"precast", &"scoreboard", &"net_overlay",
 ]
 
 

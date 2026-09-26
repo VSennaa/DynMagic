@@ -3,6 +3,8 @@ extends Node
 ## An isolated World3D has no arena depth, so walls cannot clip the arms.
 const ARMS_LAYER: int = 1 << 19
 const CAST_FLASH: float = 0.12
+## M11: staff swing duration (sideways sweep).
+const MELEE_SWING: float = 0.28
 ## Single grip anchored at the lower right; its own FOV keeps gameplay aim stable.
 const REST_OFFSET: Vector3 = Vector3(0.29, -0.23, -0.64)
 const ARMS_SCALE: float = 0.56
@@ -18,6 +20,7 @@ var flash_light: OmniLight3D
 var mirrored_shader: Shader
 var overlay: CanvasLayer
 var _flash: float = 0.0
+var _swing: float = 0.0
 var _time: float = 0.0
 
 
@@ -74,6 +77,7 @@ func setup(owner_player: Player, owner_camera: Camera3D) -> void:
 	environment.environment.ambient_light_energy = .4
 	view.add_child(environment)
 	player.spell_cast.connect(_on_cast)
+	player.melee_swung.connect(func() -> void: _swing = MELEE_SWING)
 	player.stats.died.connect(_on_died)
 	_process(0.0)
 
@@ -91,6 +95,7 @@ func _process(delta: float) -> void:
 		return
 	_time += delta
 	_flash = maxf(0.0, _flash - delta)
+	_swing = maxf(0.0, _swing - delta)
 	camera.fov = Settings.viewmodel_fov
 	camera.keep_aspect = source_camera.keep_aspect
 	view.msaa_3d = player.get_viewport().msaa_3d
@@ -110,6 +115,12 @@ func _process(delta: float) -> void:
 	var side: float = -1.0 if Settings.left_handed else 1.0
 	arms.position = REST_OFFSET * Vector3(side, 1, 1) + Vector3(0, raised * .045 + sin(_time * 2.0) * .004, -aim * .035 - thrust * .12)
 	arms.rotation = Vector3(-.22 - aim * .70 + raised * .12, 0, -.12 * side)
+	if _swing > 0.0:
+		# Sweep from the grip side across the screen and back.
+		var t: float = 1.0 - _swing / MELEE_SWING
+		var arc: float = sin(t * PI)
+		arms.position += Vector3(-0.22 * side * arc, 0.05 * arc, -0.12 * arc)
+		arms.rotation += Vector3(-0.3 * arc, 0.9 * side * arc, 0.6 * side * arc)
 	flash_light.light_energy = 2.0 * _flash / CAST_FLASH
 
 

@@ -335,6 +335,38 @@ func _cast_rejected(spell_key: StringName, reason: StringName, state: Dictionary
 		player.composer.cast_rejected.emit(SpellDB.resolve(player.composer.element_id, StringName(spell_key.get_slice("_", 0)), StringName(spell_key.get_slice("_", 1))), reason)
 
 
+# --- Melee (M11) -----------------------------------------------------------------
+
+## Called by Player.try_melee: the host swings at once; a client asks the host.
+func request_melee(player: Player) -> void:
+	if Net.is_host():
+		_host_melee(int(String(player.name)))
+	else:
+		_request_melee.rpc_id(1)
+
+
+@rpc("any_peer", "call_remote", "reliable", Net.CHANNEL_RELIABLE)
+func _request_melee() -> void:
+	if Net.is_host():
+		_host_melee(multiplayer.get_remote_sender_id())
+
+
+func _host_melee(caster_id: int) -> void:
+	var player: Player = _player(caster_id)
+	if player == null or not player.can_melee() or (MatchState.active and MatchState.is_frozen()):
+		return
+	player.perform_melee()
+	_melee_fx.rpc(caster_id)
+
+
+## Everyone but the swinger (who already animated) plays the swing.
+@rpc("authority", "call_remote", "reliable", Net.CHANNEL_RELIABLE)
+func _melee_fx(caster_id: int) -> void:
+	var player: Player = _player(caster_id)
+	if player != null and not player.is_local:
+		player.melee_swung.emit()
+
+
 # --- Debug ---------------------------------------------------------------------
 
 func _bot_step(delta: float) -> void:
@@ -358,6 +390,12 @@ func _bot_step(delta: float) -> void:
 	if me != null and not me.frozen and fmod(_bot_clock, 2.0) < delta:
 		me.composer.press_slot(0)
 		me.composer.press_slot(0)
+	# M11: swing the staff when the opponent is within reach (exercises the melee RPC path).
+	if me != null and not me.frozen and me.can_melee():
+		for child: Node in _players_root.get_children():
+			if child is Player and child != me and me.global_position.distance_to((child as Player).global_position) < Player.MELEE_RANGE:
+				me.try_melee()
+				break
 
 
 func _log_state() -> void:
