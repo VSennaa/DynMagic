@@ -214,7 +214,7 @@ Feedback da sessão LAN
 - [x] Feedback de acerto e de dano recebido mais forte (teste usou build com C2, ainda fraco): som, flash de borda, tremor leve, número maior, marca de abate
 - [x] Corpo a corpo (user 2026-09-25): golpe com o cajado na tecla **V** (ação própria, remapeável). 1,8 m, 70°, 12 de dano, 0,8 s; host-autoritativo; `build/check_melee.tscn` 0 falhas
 - [x] Pré-conjuração (user 2026-09-25): guardar uma magia montada numa tecla para disparar depois; o custo fica **reservado** (congelado) na barra de mana, marcado visualmente, até disparar ou cancelar
-- [ ] Magias de Área parecem efeito de duração: diferenciar leitura visual de Área × Contínuo
+- [x] Magias de Área parecem efeito de duração: Área = anel sólido que varre uma vez; Contínuo = borda pontilhada pulsando + arco de tempo restante (`shaders/ground_ring.gdshader`)
 - [ ] Diferenças entre magias mais claras (silhueta, cor, som por forma/efeito)
 - [ ] Animações e projéteis melhores
 - [ ] Música e efeitos sonoros melhores

@@ -4,6 +4,7 @@ extends SpellNode
 ## Params: zone_radius, zone_duration, zone_dps, zone_applies_status.
 
 const TICK: float = 0.5
+const RING_SHADER: Shader = preload("res://shaders/ground_ring.gdshader")
 
 var radius: float = 3.5
 var duration: float = 4.0
@@ -11,6 +12,7 @@ var dps: float = 0.0
 
 var _age: float = 0.0
 var _tick_timer: float = 0.0
+var _ring: ShaderMaterial
 
 @onready var _disc: MeshInstance3D = $Disc
 
@@ -21,17 +23,24 @@ func _ready() -> void:
 	dps = float(spell.param(&"zone_dps", 0.0))
 	if bool(spell.param(&"deflect", false)):
 		add_to_group(&"deflect_zone")
+	# M11: lingering effects read as a pulsing dotted ring with a time-left arc,
+	# unlike the one-shot solid ring of area spells (ExplosionFx).
+	var plane: PlaneMesh = PlaneMesh.new()
+	plane.size = Vector2(2.0, 2.0)
+	_disc.mesh = plane
 	_disc.scale = Vector3(radius, 1.0, radius)
-	var mat: StandardMaterial3D = StandardMaterial3D.new()
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mat.albedo_color = Color(spell.color, 0.35)
-	_disc.material_override = mat
+	_ring = ShaderMaterial.new()
+	_ring.shader = RING_SHADER
+	_ring.set_shader_parameter(&"color", Color(spell.color, 0.9))
+	_ring.set_shader_parameter(&"mode", 1)
+	_disc.material_override = _ring
 
 
 func _physics_process(delta: float) -> void:
 	_age += delta
 	_tick_timer += delta
+	_ring.set_shader_parameter(&"pulse_time", _age)
+	_ring.set_shader_parameter(&"remaining", clampf(1.0 - _age / maxf(duration, 0.01), 0.0, 1.0))
 	if _tick_timer >= TICK:
 		_tick_timer -= TICK
 		_apply_tick()

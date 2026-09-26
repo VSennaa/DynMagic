@@ -191,7 +191,10 @@ func restore_default_bindings() -> void:
 
 func _load_bindings(cfg: ConfigFile) -> void:
 	for action: StringName in REMAPPABLE:
-		var event: Variant = cfg.get_value("bindings", String(action), null)
+		# Actions added after the file was saved (melee, precast) keep their project default.
+		if not cfg.has_section_key("bindings", String(action)):
+			continue
+		var event: Variant = cfg.get_value("bindings", String(action))
 		if event is InputEvent:
 			InputMap.action_erase_events(action)
 			InputMap.action_add_event(action, event)
