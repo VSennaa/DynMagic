@@ -4,7 +4,15 @@ Last update: 2026-09-25. Written so any AI agent (Claude, Codex, Gemini, etc.) c
 
 ## 0. Active agent
 
-Active agent: none (round 8 DeepSeek PARTIAL — only task 1 of 7 done, changes uncommitted). Task 1 (hit/damage feedback) implemented and tested (`--import` clean, 77 tests 0 failures, headless LAN pair ran clean). Tasks 2–7 NOT started: Arrow 0.3 s pacing + charge pips, melee on V, pre-cast on G, area/lingering readability, compact snapshot, version 1.1.0 + release notes. ARROW PACING BUG STILL PRESENT. Pending from earlier rounds: VPS 1 h load test, `status.json` queue and `web/` site (no VPS/network access); true third-person death cam.
+Active agent: Codex (round 9 — ROADMAP M12, started 2026-09-26). Claude runs the M13 visual gauntlet in parallel on shaders/, vfx/, assets/ and the viewmodel only.
+
+### Handoff brief for Codex (round 9 — design refactor and team modes, ROADMAP M12; 2026-09-26)
+Read `docs/reviews/r2-decisions.md` (binding decisions), your own proposals in `docs/reviews/r2-codex-design.md`, then do the **Codex** items of ROADMAP M12 in order, ticking `[x]` and adding one line per item below this brief.
+- You may edit gameplay, network, match, arena, UI and tests. **Do not edit** `shaders/`, `vfx/`, `assets/`, `scenes/player/first_person_arms.gd`, `web/`, `.git`, `addons/`, `.github/` (another agent works there now).
+- Keep static typing, surrounding style, UI text in Portuguese. Keep the current arenas loadable as a control until the new ones pass tests.
+- For small open design questions, ask the Jev classifier instead of stopping: `python tools/ai/openrouter.py -m typesafe/jev-router -s "Pick one option, one line" "<question with lettered options>"` and record the answer here.
+- After each item: `--import`, `res://build/check_suites.tscn` (0 failures), and for gameplay the headless LAN pair `-- --host --bot --match-speed 10` + `-- --join 127.0.0.1 --bot --match-speed 10`. For team modes add a CLI way to fill slots with bots and test 2v2/3v3/5v5 headless.
+- No commits, downloads or installs. Leave changes uncommitted and set `Active agent: none (round 9 ...)` with what remains when you stop.
 
 ### Handoff brief for DeepSeek (round 8 — alpha 1.1, ROADMAP M11; 2026-09-25)
 Active agent while running: DeepSeek (openclaude). Claude reviews, commits, tags `v1.1.0-alpha` and then sets up the web route on the VPS.
@@ -24,6 +32,11 @@ Set `Active agent: none (round 8 DeepSeek ...)` when you stop, listing what is u
 Active agent: none. Claude finished round 8 after DeepSeek did task 1 (and task 2 in part): task 2 verified; task 3 melee on V (`Player.try_melee/perform_melee`, `NetMatch.request_melee` host-authoritative, arm swing, `build/check_melee.tscn` 0 failures); task 4 pre-cast on G (`SpellComposer.stored/press_precast`, `Stats.can_afford(cost, reserved)`, host mirror `request_store`, striped mana segment); task 5 ground rings (`shaders/ground_ring.gdshader`: area = one-shot solid ring, lingering = dotted pulsing edge + time-left arc; render check `build/check_rings.tscn`); task 6 compact snapshot codec (`NetCodec.GAMEPLAY_FIELDS` must match `ReconnectState.PLAYER_FIELDS`, 2 players < 600 B, no MTU warning); task 7 version 1.1.0 + release notes. Also fixed: saved settings without the new actions no longer error on load; `export_presets.cfg` preset renamed by the editor back to "Windows Desktop" (the release workflow depends on that name). 84 tests, 0 failures; LAN headless and exported exe smoke-tested. Seen once: a 2.02 m reconciliation spike mid-combat that did not reproduce in two more runs — watch it.
 Lesson: stopping a background PowerShell task does not kill `openclaude`/`opencode` children; kill the node process too (see memory).
 Next (M11 leftovers, Claude): sound/music quality, animation and projectile art, spell identity pass; then post-alpha site/DNS and the dedicated-server full-match telemetry check.
+
+### Round 8 verification — DeepSeek/opencode (2026-09-26)
+
+The server restarted mid-execution; on return the working tree was clean at `20e7ef8` and Claude's commits `fdcf879` (melee on V), `da42a6a` (pre-cast on G), `821d4e4` (area/lingering rings), `c241028` (compact snapshot), `6dc415f` (v1.1.0-alpha) were already in place, so tasks 2–7 were not repeated. Verified the committed state: `--import` clean, `res://build/check_suites.tscn` → **84 tests, 0 failures** (includes the extended `tests/test_net_serialization.gd`), `res://build/check_melee.tscn` → **0 failures**. `build/check_rings.tscn` was not re-run (headless run exceeded the command timeout; it is a render check). ROADMAP M11 items for tasks 2–7 are ticked. No commit/push and no `web/` changes by this agent.
+
 
 ### Round 8 result — DeepSeek (2026-09-25, STOPPED EARLY, 1/7 tasks)
 
