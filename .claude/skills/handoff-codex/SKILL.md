@@ -1,16 +1,16 @@
 ---
 name: handoff-codex
-description: Delegate work when the Claude plan quota reaches 90%. Executor order is Codex (primary) then opencode/DeepSeek (fallback). Claude supervises and reports back when the executor finishes or runs out of quota. Use for /handoff-codex, "passa pro codex", or when the 5-hour limit is at or above 90%.
+description: Delegate work when the Claude plan quota reaches 75%. Executor order is Codex (primary) then opencode/DeepSeek (fallback). Claude supervises and reports back when the executor finishes or runs out of quota. Use for /handoff-codex, "passa pro codex", or when the 5-hour limit is at or above 75%.
 ---
 
 # Handoff (Claude supervises)
 
-**Executor order: 1) Codex CLI (primary assistant) → 2) opencode + DeepSeek (fallback) → 3) Claude resumes after its quota resets.**
+**Rotation (user 2026-09-25): Claude works until 75% of its quota (5-hour OR weekly window, whichever is higher) → Codex CLI until its quota ends → opencode + DeepSeek (`opencode run -m deepseek/deepseek-flash`; openclaude reports cost wrongly, avoid it) → back to Claude after its reset.**
 Claude stays as supervisor. Supervising is cheap: launch, wait, report.
 
 ## 1. Check quota
-Call `mcp__ccd_session_mgmt__get_usage`. Read the "5-hour limit" window: `percentUsed` and `resetsAt`.
-- Below 90% and not invoked by the user explicitly: stop and report the number.
+Call `mcp__ccd_session_mgmt__get_usage`. Read both the "5-hour limit" and the weekly window; use the higher `percentUsed` and its `resetsAt`.
+- Below 75% and not invoked by the user explicitly: stop and report the number.
 - At or above 90%, or explicit user request: continue.
 
 ## 2. Write the handoff
@@ -46,4 +46,4 @@ Read its output, `git status` and `git diff`. Classify the exit: **finished**, *
 Say which executor ran, how it ended (finished, quota out, failure), files changed, test result, what remains, and when Claude resumes if waiting for a reset.
 
 ## Trigger at 90%
-This skill does not run by itself. For automatic triggering, schedule a recurring task (about every 10 minutes): "run /handoff-codex; if the 5-hour limit is below 90%, do nothing and say nothing". Each check costs a little quota.
+This skill does not run by itself. For automatic triggering, schedule a recurring task (about every 10 minutes): "run /handoff-codex; if the 5-hour limit is below 75%, do nothing and say nothing". Each check costs a little quota.

@@ -20,6 +20,9 @@ Tasks, in order (user decisions are binding):
 Leave for Claude: sound/music quality, animation and projectile art, spell identity pass, release tag, VPS web route.
 Set `Active agent: none (round 8 DeepSeek ...)` when you stop, listing what is undone.
 
+### Round 8 status (2026-09-26 ~01:00, Claude)
+Active agent: Codex next (Claude weekly quota at 72%, rotation threshold 75%). Task 1 done and committed (`4f947ad`); task 2 partially done by DeepSeek (Arrow 0.3 s spacing `ARROW_MIN_INTERVAL`, `arrow_ready()`, charge pips in `scenes/ui/cooldown_grid.gd`) — verify it is complete (local + host `net_match.gd` check, pips visible), then tasks 3–7. 77 tests pass at `4f947ad`. openclaude's `--max-budget-usd` counter over-reports; use opencode for DeepSeek.
+
 ### Round 8 result — DeepSeek (2026-09-25, STOPPED EARLY, 1/7 tasks)
 
 Stopped on budget before task 2. Only **task 1 (hit/damage feedback)** is implemented; tasks 2–7 are untouched. No commit, no `.git`/`addons/`/`.github/` changes, no downloads.
