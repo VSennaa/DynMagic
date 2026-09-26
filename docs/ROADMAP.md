@@ -205,8 +205,8 @@ Phase 4 — balance (user decisions D1, D2)
 Tag `v1.1.0-alpha` sai quando este bloco fechar. Revisão do trabalho DeepSeek (commit `def9b2a`) incluída.
 
 Revisão DeepSeek (corrigir)
-- [ ] Seta sem recarga entre cargas: 3 tiros saem em ~0,45 s (só o lockout de 0,15 s). Definir intervalo mínimo entre cargas
-- [ ] HUD não mostra as cargas da Seta (grade de recarga fica sempre "pronta")
+- [x] Seta sem recarga entre cargas: 3 tiros saem em ~0,45 s (só o lockout de 0,15 s). Definir intervalo mínimo entre cargas
+- [x] HUD não mostra as cargas da Seta (grade de recarga fica sempre "pronta")
 - [x] Snapshot compactado: esquema binário fixo em `NetCodec` (meias-floats, bits, índices) no lugar do `put_var`; 2 jogadores < 600 B, sem aviso de MTU
 - [ ] Partida completa no servidor dedicado + escrita real da telemetria não verificadas (só teste unitário)
 

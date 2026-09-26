@@ -1,6 +1,20 @@
-# DynMagic v1.0.0-alpha — alfa 1.0
+# DynMagic v1.1.0-alpha — alfa 1.1
 
-A primeira alfa pública do DynMagic: o jogo se explica sozinho, o placar é confiável e o servidor aguenta três salas.
+Primeira alfa pública. Junta tudo da alfa 1.0 (interna) com os ajustes pedidos na primeira sessão de teste em LAN.
+
+## Novidades na 1.1
+
+- **Golpe de cajado** na tecla **V**: 12 de dano a curta distância, sem custo de mana, 0,8 s de recarga.
+- **Pré-conjuração** na tecla **G**: monte a magia, aperte G antes do efeito (ou durante a mira) e ela fica guardada. G de novo dispara; F descarta. A mana dela fica **reservada**, marcada em listras na barra.
+- **Acertos com mais peso**: som forte, número maior, marca de abate; ao levar dano, flash vermelho na borda e um tremor leve (desligável em Configurações).
+- **Seta** com 0,3 s entre um tiro e outro, e as **3 cargas** visíveis na grade de recarga.
+- **Área × Contínuo** fáceis de distinguir: magias de Área deixam um anel sólido que se abre uma vez; efeitos Contínuos têm borda pontilhada pulsando e um arco que mostra o tempo restante.
+- **Grimório** virou tabela de referência: atalho, magia, efeito e tipo de conjuração das 9 magias de cada elemento.
+- Rede mais leve: o estado de combate vai compactado em cada atualização.
+
+## Da alfa 1.0 (interna)
+
+O jogo passa a se explicar sozinho, o placar fica confiável e o servidor aguenta três salas.
 
 ## Regras mais justas
 
