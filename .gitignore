@@ -10,3 +10,5 @@ Thumbs.db
 
 .blender_tmp/
 __pycache__/
+
+.claude/settings.local.json

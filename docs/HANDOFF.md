@@ -4,7 +4,7 @@ Last update: 2026-09-25. Written so any AI agent (Claude, Codex, Gemini, etc.) c
 
 ## 0. Active agent
 
-Active agent: none (round 7 DeepSeek fallback DONE — alpha 1.0 / M10 phases 1–4 implemented and tested; changes uncommitted, ready for Claude review/commit). Pending: VPS 1 h load test, `status.json` queue and `web/` site (no VPS/network access); true third-person death cam; snapshot payload over ENet MTU when gameplay state is included (LAN accepted, worth compacting).
+Active agent: none (round 8 DeepSeek PARTIAL — only task 1 of 7 done, changes uncommitted). Task 1 (hit/damage feedback) implemented and tested (`--import` clean, 77 tests 0 failures, headless LAN pair ran clean). Tasks 2–7 NOT started: Arrow 0.3 s pacing + charge pips, melee on V, pre-cast on G, area/lingering readability, compact snapshot, version 1.1.0 + release notes. ARROW PACING BUG STILL PRESENT. Pending from earlier rounds: VPS 1 h load test, `status.json` queue and `web/` site (no VPS/network access); true third-person death cam.
 
 ### Handoff brief for DeepSeek (round 8 — alpha 1.1, ROADMAP M11; 2026-09-25)
 Active agent while running: DeepSeek (openclaude). Claude reviews, commits, tags `v1.1.0-alpha` and then sets up the web route on the VPS.
@@ -19,6 +19,14 @@ Tasks, in order (user decisions are binding):
 7. Version `1.1.0` (project.godot, export_presets `1.1.0.0`) and a `v1.1.0-alpha` section at the top of `docs/release-notes.md` (Portuguese, player-facing).
 Leave for Claude: sound/music quality, animation and projectile art, spell identity pass, release tag, VPS web route.
 Set `Active agent: none (round 8 DeepSeek ...)` when you stop, listing what is undone.
+
+### Round 8 result — DeepSeek (2026-09-25, STOPPED EARLY, 1/7 tasks)
+
+Stopped on budget before task 2. Only **task 1 (hit/damage feedback)** is implemented; tasks 2–7 are untouched. No commit, no `.git`/`addons/`/`.github/` changes, no downloads.
+
+- **Task 1 DONE — Hit / damage feedback.** `autoload/audio_bus.gd`: new sample groups `hit_strong`, `kill`, `hurt` (CC0 impacts). `autoload/settings.gd`: new `screen_shake` bool (default on) persisted under `[game]`. `scenes/ui/settings_screen.gd`: "Tremor de câmera ao levar dano" checkbox. `scenes/player/player.gd`: `SHAKE_TIME`/`SHAKE_AMPLITUDE`, `add_camera_shake(strength)`, `_update_shake(delta)` offsetting `_camera.position` (local player only, gated by the setting, reset each round). `scenes/ui/hud.gd`: full-screen red edge-flash `ColorRect` + inline `canvas_item` shader driven by a `strength` uniform, larger/red damage number on a killing hit, distinct `ABATE` kill marker, `hit_strong`/`kill` sounds on our hits, and on taking damage a flash + `add_camera_shake` + `hurt` sound in `_update_damage_arrow`.
+- **Verification (task 1):** `--import` clean; `res://build/check_suites.tscn` → **77 tests, 0 failures**; headless LAN pair `-- --host --bot --match-speed 10` + `-- --join 127.0.0.1 --bot --match-speed 10` ran rounds with players synced and no script errors. Known headless warnings unchanged: snapshot MTU (1876 B > 1392; this is task 6) and the first-person arms material under the headless renderer (pre-existing).
+- **NOT DONE (tasks 2–7):** 2 Arrow 0.3 s minimum between shots + 3 charge pips in the HUD grid cell; 3 melee on V (action `melee`, host-authoritative, 1.8 m / 70° / 12 dmg / 0.8 s CD, arm thrust + sound); 4 pre-cast on G (action `precast`, reserve mana with a striped bar segment, fire/cancel, host validation, tests); 5 area vs lingering readability (one-shot ground ring vs pulsing dotted + remaining-time ring, unshaded); 6 compact snapshot (replace `put_var` gameplay blob, < 600 B, extend `tests/test_net_serialization.gd`); 7 version `1.1.0` + `v1.1.0-alpha` release notes. ROADMAP M11 line for task 1 ticked; lines for tasks 2–7 left unticked.
 
 ### Round 7 result — DeepSeek fallback (2026-09-25)
 
@@ -222,6 +230,9 @@ $g = "$env:USERPROFILE\Downloads\Godot_v4.7.2-stable_win64.exe\Godot_v4.7.2-stab
 ```
 
 ## 9. Rules for the next agent
+
+- Website (2026-09-25): `web/` is published at **http://vsennaa.duckdns.org/dynmagic/** (VPS `vinicios@45.39.210.28`, key `~/.ssh/id_ed25519`, nginx route `location /dynmagic/` with `alias /var/www/dynmagic/` inside the first server block of `/etc/nginx/sites-enabled/default`; backups in `/root/default.bak.*`). Redeploy: scp `web/` to `/tmp/dynmagic-web` and copy into `/var/www/dynmagic/`. A dedicated DNS name comes later.
+- License (user 2026-09-25): PolyForm Noncommercial 1.0.0 (`LICENSE.md`) + `NOTICE.md` (required notice, extra permission for monetized videos/streams, third-party components).
 
 - Update this file at the end of every work session: status table, next steps, any new decision.
 - Record every new user decision in SDD §2 and in the relevant spec.
