@@ -1,4 +1,4 @@
-@font-face { font-family: "Cinzel"; src: url("fonts/Cinzel.ttf") format("truetype"); font-display: swap; }
+﻿@font-face { font-family: "Cinzel"; src: url("fonts/Cinzel.ttf") format("truetype"); font-display: swap; }
 @font-face { font-family: "Alegreya Sans"; src: url("fonts/AlegreyaSans-Regular.ttf") format("truetype"); font-display: swap; }
 @font-face { font-family: "Alegreya Sans"; font-weight: 700; src: url("fonts/AlegreyaSans-Bold.ttf") format("truetype"); font-display: swap; }
 
@@ -69,7 +69,7 @@ nav.main a:hover, nav.main a[aria-current] { color: var(--gold); border-color: v
 .features > div:nth-child(2) { border-color: var(--frost); }
 .features > div:nth-child(3) { border-color: var(--wind); }
 
-/* Release timeline, in the spirit of the old Minecraft version history. */
+/* Release timeline. */
 .eras { list-style: none; padding: 0; margin: 0; }
 .era { display: grid; grid-template-columns: 150px 1fr; gap: 16px; padding: 18px 0; border-top: 1px dashed rgba(242, 232, 213, .2); }
 .era:first-child { border-top: 0; }
