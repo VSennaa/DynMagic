@@ -50,13 +50,14 @@ float sd_flame(vec2 p) {
 }
 
 void fragment() {
-	vec2 p = vec2(UV.x * 2.0 - 1.0, UV.y * 2.0 - 1.0);
+	// QuadMesh UV.y grows downward, so flip it: +y is up (toward the flame tip).
+	vec2 p = vec2(UV.x * 2.0 - 1.0, 1.0 - UV.y * 2.0);
 	// Slight sway of the tip so the flame does not look like a static card.
-	p.x += sin(TIME * 2.4 + UV.y * 7.0) * 0.08 * UV.y;
+	p.x += sin(TIME * 2.4 + p.y * 4.0) * 0.06 * (0.5 + 0.5 * p.y);
 
-	// Noise rolling upward erodes the edge; two octaves, the finer one moving faster.
-	float roll = fbm(vec2(UV.x * 3.4, UV.y * 4.2 - TIME * rise_speed)) * 0.5
-	           + vnoise(vec2(UV.x * 6.0, UV.y * 8.0 - TIME * rise_speed * 1.7)) * 0.5;
+	// Noise rolling upward (toward +y) erodes the edge; two octaves, the finer moving faster.
+	float roll = fbm(vec2(p.x * 1.7, p.y * 2.1 - TIME * rise_speed)) * 0.5
+	           + vnoise(vec2(p.x * 3.0, p.y * 4.0 - TIME * rise_speed * 1.7)) * 0.5;
 	float d = sd_flame(p) + (roll - 0.5) * edge_erosion * 1.2;
 
 	float edge = 1.0 - smoothstep(-0.04, 0.04, d);
