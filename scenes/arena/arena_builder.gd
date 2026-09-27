@@ -109,6 +109,7 @@ func build() -> void:
 			exit_marker.name = "Exit%d" % i
 			exit_marker.position = spaces.exits[i]
 			_adopt(exit_marker)
+	ArenaDressing.apply(self, wall_color, cover_color)
 
 
 func _build_spaces() -> void:
