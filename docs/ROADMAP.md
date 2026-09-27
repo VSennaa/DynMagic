@@ -232,6 +232,8 @@ Codex (critical), in order:
 - [x] 2v2 elimination rounds best-of-7 with rune + Core kept: generic team framework, plays on the small (unscaled, `team_scale=1.0`) arena as decided (Skirmish-style small arenas for 1v1/2v2)
 - [x] 3v3 elimination rounds on the x1.5 expanded arena with extra flank routes (`ArenaBuilder.team_scale`, `_effective_spaces()`/`_add_flank_routes()` in scenes/arena/arena_builder.gd; physically verified with `tests/check_cloister.gd`)
 - [x] 5v5 Control: one point to 100% (contested pauses), best-of-3, 10 s wave respawn, no rune, Core reused as the point (`ControlMatchFsm`, `ControlCore`), x1.5 expanded arena; LAN/listen server only — logic verified with `tests/test_control_match_fsm.gd`; not exercised in a live 10-process headless match this round (time-boxed), so treat the net_match/HUD wiring as implemented-but-unexercised until that run happens
+- [x] Control overtime tiebreak now uses capture % instead of HP totals (`ControlMatchFsm.overtime_timeout`, fed by `net_match.gd` each host tick via `update_capture_progress`); `ControlCore.CAPTURE_FULL_TIME` tuned 60s -> 45s so a realistically contested round lands ~2-3 min; 2 new tests in `tests/test_control_match_fsm.gd` (114 total, 0 failures). Still not exercised in a live 3v3/5v5 headless bot match this round (quota time-boxed) — that run remains the next step before trusting the net_match/HUD wiring
+- [ ] Live 3v3 (6-process) and 5v5 Control (10-process) headless bot matches — needed to confirm no script errors/hangs and that capture/wave-respawn/round-end behave under real play
 - [ ] R8 round in three acts; R9 match memory (spatial rematch, adaptation runes)
 DeepSeek (simple):
 - [ ] R6/R7 arenas B and C greybox on R3 metrics

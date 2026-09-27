@@ -6,7 +6,9 @@ extends ArcaneCore
 ## (decision 4). Visuals/rotation/bob come from the base ArcaneCore.
 
 ## Host: seconds of uncontested single-team occupation needed to go from 0% to 100%.
-const CAPTURE_FULL_TIME: float = 60.0
+## Tuned (M12 round 9) so a realistically contested round lands around 2-3 minutes total:
+## contests pause the fill, so the effective time is well above this raw value.
+const CAPTURE_FULL_TIME: float = 45.0
 
 ## Host: a team (0 or 1) reached 100% capture.
 signal team_captured(team: int)

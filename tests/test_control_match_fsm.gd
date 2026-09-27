@@ -86,6 +86,24 @@ func test_capture_completed_is_ignored_outside_combat_or_overtime() -> void:
 	assert_eq(round_winners.size(), 0)
 
 
+func test_overtime_timeout_breaks_tie_on_higher_capture_percent() -> void:
+	fsm.phase = ControlMatchFsm.Phase.OVERTIME
+	var north_team: int = fsm.teams[fsm.north_id]
+	fsm.update_capture_progress(0.7 if north_team == 0 else 0.2, 0.7 if north_team == 1 else 0.2)
+	fsm.overtime_timeout({})
+	assert_eq(round_winners.size(), 1)
+	assert_eq(fsm.teams[round_winners[0]], north_team)
+
+
+func test_overtime_timeout_ignores_hp_and_draws_on_equal_capture_percent() -> void:
+	fsm.phase = ControlMatchFsm.Phase.OVERTIME
+	fsm.update_capture_progress(0.5, 0.5)
+	# Wildly unequal HP must not matter: Control breaks ties on capture %, not HP.
+	fsm.overtime_timeout({fsm.north_id: 100.0, fsm.south_id(): 1.0})
+	assert_eq(round_winners.size(), 1)
+	assert_eq(round_winners[0], 0)
+
+
 func test_best_of_three_match_ends_at_two_round_wins() -> void:
 	var north_team: int = fsm.teams[fsm.north_id]
 	fsm.match_ended.connect(func(w: int, _r: StringName) -> void: _match_winner = w)

@@ -105,6 +105,10 @@ func _physics_process(delta: float) -> void:
 		for id: int in Net.players:
 			by_id_control[id] = _player(id)
 		_control.host_tick_teams(delta, by_id_control, MatchState.view.get("teams", {}))
+		if MatchState.fsm is ControlMatchFsm:
+			(MatchState.fsm as ControlMatchFsm).update_capture_progress(
+				_control.progress_ratio_team(0), _control.progress_ratio_team(1)
+			)
 	if Net.is_host() and _collapse != null:
 		var alive: Array[Player] = []
 		for child: Node in _players_root.get_children():

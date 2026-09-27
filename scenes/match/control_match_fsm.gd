@@ -18,6 +18,17 @@ const WAVE_RESPAWN_TIME: float = 10.0
 ## for the HUD countdown).
 var respawn_at: Dictionary[int, float] = {}
 
+## team -> 0..1 capture ratio, refreshed each tick from `ControlCore` (net_match calls
+## `update_capture_progress`). Used by `overtime_timeout` so overtime ties break on who
+## controls more of the point instead of HP totals, which Control mostly ignores.
+var capture_progress: Dictionary[int, float] = {0: 0.0, 1: 0.0}
+
+
+## Host: net_match forwards `ControlCore.progress_ratio_team()` here every physics tick.
+func update_capture_progress(team0: float, team1: float) -> void:
+	capture_progress[0] = team0
+	capture_progress[1] = team1
+
 
 func _begin_round() -> void:
 	super._begin_round()
@@ -61,6 +72,17 @@ func tick(delta: float, hp: Dictionary = {}) -> void:
 func capture_completed(team: int) -> void:
 	if phase == Phase.COMBAT or phase == Phase.OVERTIME:
 		_end_round(leader(team), &"capture")
+
+
+## Overtime timeout in Control breaks ties on capture % (decision 4 follow-up), not HP:
+## the point is the whole objective, so whoever controls more of it should win a draw.
+func overtime_timeout(_hp: Dictionary) -> void:
+	var p0: float = float(capture_progress.get(0, 0.0))
+	var p1: float = float(capture_progress.get(1, 0.0))
+	if not is_equal_approx(p0, p1):
+		_end_round(leader(0 if p0 > p1 else 1), &"capture_pct")
+	else:
+		_end_round(0, &"draw")
 
 
 func _after_round() -> void:
