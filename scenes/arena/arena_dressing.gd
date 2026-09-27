@@ -36,6 +36,11 @@ const BRAZIER_SCENE: PackedScene = preload("res://scenes/assets/brazier.tscn")
 const BANNER_SCENE: PackedScene = preload("res://scenes/assets/banner.tscn")
 const PILLAR_SCENE: PackedScene = preload("res://scenes/assets/pillar.tscn")
 
+const FLAME_HEIGHT: float = 0.6
+const FLAME_WIDTH: float = 0.5
+const FLAME_QUADS: int = 3
+const FLAME_SHADER: Shader = preload("res://shaders/flame_mesh.gdshader")
+
 
 static func apply(layout: Node3D, wall_color: Color, cover_color: Color) -> void:
 	var dressing: Node3D = Node3D.new()
@@ -205,16 +210,21 @@ static func _mesh(parent: Node3D, mesh_name: String, size: Vector3, pos: Vector3
 
 
 ## Adds a rising fire trail and a warm flickering light to one brazier, and hides the
-## model's static triangular flame mesh (docs/briefs/gauntlet-look2.md task 3).
+## model's static triangular flame mesh (docs/briefs/gauntlet-look2.md task 3). The look3
+## pass replaces the flat glyph trail with a crossed-quad flame mesh (volume) and keeps a
+## thinner layer of smaller sparks rising above it; the flickering light stays.
 static func _add_brazier_fire(brazier: Node3D) -> void:
 	_hide_flame_meshes(brazier)
+	_add_flame_mesh(brazier)
 
-	var fire: GPUParticles3D = ElementFx.trail(&"fire", Color("ff5a1f"), 36)
-	fire.name = "Fire"
-	fire.position = Vector3(0.0, 1.1, 0.0)
-	var process: ParticleProcessMaterial = fire.process_material as ParticleProcessMaterial
+	var sparks: GPUParticles3D = ElementFx.trail(&"fire", Color("ff5a1f"), 14)
+	sparks.name = "Sparks"
+	sparks.position = Vector3(0.0, 1.55, 0.0)
+	var process: ParticleProcessMaterial = sparks.process_material as ParticleProcessMaterial
 	process.direction = Vector3.UP
-	brazier.add_child(fire)
+	process.scale_min = 0.3
+	process.scale_max = 0.6
+	brazier.add_child(sparks)
 
 	var light: OmniLight3D = OmniLight3D.new()
 	light.name = "FireLight"
@@ -226,6 +236,28 @@ static func _add_brazier_fire(brazier: Node3D) -> void:
 	brazier.add_child(light)
 	if not Engine.is_editor_hint():
 		_flicker_step(light, 1.2)
+
+
+## Volumetric flame: 3 crossed vertical quads (a ~0.6 m volume) sharing one additive,
+## double-sided toon flame shader. The quads are culled off and shadowless so they read
+## as light, not geometry.
+static func _add_flame_mesh(brazier: Node3D) -> void:
+	var flame: Node3D = Node3D.new()
+	flame.name = "Flame"
+	flame.position = Vector3(0.0, 1.3, 0.0)
+	var material: ShaderMaterial = ShaderMaterial.new()
+	material.shader = FLAME_SHADER
+	for i: int in FLAME_QUADS:
+		var quad: MeshInstance3D = MeshInstance3D.new()
+		quad.name = "FlameQuad%d" % i
+		var mesh: QuadMesh = QuadMesh.new()
+		mesh.size = Vector2(FLAME_WIDTH, FLAME_HEIGHT)
+		quad.mesh = mesh
+		quad.material_override = material
+		quad.rotation.y = PI * float(i) / float(FLAME_QUADS)
+		quad.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		flame.add_child(quad)
+	brazier.add_child(flame)
 
 
 static func _hide_flame_meshes(node: Node) -> void:

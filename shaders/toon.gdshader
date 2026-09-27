@@ -22,6 +22,14 @@ uniform float brick_size = 0.9;
 uniform float bevel_strength : hint_range(0.0, 0.5) = 0.15;
 uniform float wear_strength : hint_range(0.0, 0.3) = 0.08;
 uniform float grime_strength : hint_range(0.0, 1.0) = 1.0;
+// M13 "look3" decals (brief gauntlet-look3.md): moss/ivy, cracks, floor dust and
+// floor-region tone variation, all inside procedural_surface in world coordinates.
+uniform vec3 sun_dir = vec3(-0.5, -0.433013, 0.75); // toward the sun (arena directional light)
+uniform vec2 arena_half = vec2(14.0, 19.0);         // playable floor half extents (x, z)
+uniform float moss_strength : hint_range(0.0, 1.0) = 0.4;
+uniform float crack_strength : hint_range(0.0, 1.0) = 0.0;
+uniform float dust_strength : hint_range(0.0, 1.0) = 0.85;
+uniform float region_strength : hint_range(0.0, 0.5) = 0.5;
 
 float hash(vec2 p) {
 	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -48,6 +56,15 @@ float joint(vec2 cell_uv, vec2 width) {
 	vec2 edge = min(cell_uv, 1.0 - cell_uv);
 	vec2 j = 1.0 - smoothstep(width, width + aa, edge);
 	return max(j.x, j.y);
+}
+
+// Distance-based thin stroke: 1 on a line segment from a to b, fading to 0 past `width`.
+float stroke(vec2 p, vec2 a, vec2 b, float width) {
+	vec2 pa = p - a;
+	vec2 ba = b - a;
+	float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);
+	float d = length(pa - ba * h);
+	return 1.0 - smoothstep(width * 0.35, width, d);
 }
 
 // Returns a colour multiplier for the stone/tile pattern on this fragment.
@@ -96,7 +113,53 @@ vec3 masonry(vec3 p, vec3 nrm) {
 	// Low-frequency wear blotches (0.3-0.6 m) that brighten/darken slightly.
 	float wear = noise(p.xz * 2.0 + p.y * 0.4) * 2.0 - 1.0;
 	col *= 1.0 + wear * wear_strength;
+	// Thin dark cracks in ~10% of blocks: 1-2 short strokes seeded per cell, drawn inside
+	// the block's own UV space so they never straddle a mortar joint.
+	if (hash(cell + vec2(4.2, 1.7)) < 0.10) {
+		float seed = hash(cell * 2.0 + vec2(9.3, 0.7));
+		vec2 a = vec2(0.15 + seed * 0.5, 0.2 + fract(seed * 7.0) * 0.4);
+		vec2 b = vec2(0.55 + fract(seed * 13.0) * 0.3, 0.65 + seed * 0.25);
+		float crack = stroke(uv, a, b, 0.012 + seed * 0.02);
+		if (seed > 0.5) {
+			vec2 c = vec2(fract(seed * 5.0) * 0.7, 0.15 + seed * 0.2);
+			vec2 d = vec2(0.3 + fract(seed * 11.0) * 0.5, 0.5 + fract(seed * 3.0) * 0.4);
+			crack = max(crack, stroke(uv, c, d, 0.010 + seed * 0.02));
+		}
+		col *= 1.0 - crack * 0.55 * crack_strength;
+	}
 	return col;
+}
+
+// Absolute-colour decals layered over the masonry (M13 look3): moss/ivy on the foot of
+// vertical faces, sand/dust on the floor next to the walls, and large tone patches that
+// break up the floor tiling. Moss blends toward a fixed green so it reads as growth over
+// any base colour, and only ever touches wall faces (never the floor).
+vec3 decals(vec3 p, vec3 nrm, vec3 albedo) {
+	float up = abs(nrm.y);
+	// Moss/ivy: low-frequency patches (3-6 m cells) climbing from the wall foot, strongest
+	// on faces turned away from the sun (dot(nrm, sun_dir) < 0).
+	if (up <= 0.6) {
+		float patch = noise(p.xz * 0.25 + 3.7) * 0.65 + noise(p.xz * 0.4 - 9.1) * 0.35;
+		float patch_mask = smoothstep(0.48, 0.72, patch);
+		float climb = 1.0 - smoothstep(0.0, 1.1, p.y);
+		float away = clamp(-dot(nrm, sun_dir), 0.0, 1.0);
+		float moss = patch_mask * climb * (0.35 + 0.65 * away) * moss_strength;
+		vec3 moss_col = mix(vec3(0.431, 0.545, 0.306), vec3(0.616, 0.702, 0.416), smoothstep(0.0, 1.0, p.y / 1.1));
+		albedo = mix(albedo, moss_col, moss);
+	}
+	if (up > 0.6) {
+		// Sand/dust: lightens and yellows a ~0.5 m band around the wall bases.
+		float dist = min(arena_half.x - abs(p.x), arena_half.y - abs(p.z));
+		float dust = (1.0 - smoothstep(0.0, 0.5, dist)) * step(0.0, dist);
+		dust *= (0.6 + noise(p.xz * 1.3 + 17.0) * 0.4) * dust_strength;
+		albedo = mix(albedo, albedo * vec3(1.16, 1.14, 0.9), dust);
+		// Large floor-region patches (4-8 m): +-10% value and a slight warm/cool hue drift.
+		float region = noise(p.xz * 0.18 + 21.0) * 0.6 + noise(p.xz * 0.35 - 5.7) * 0.4;
+		float val = (region - 0.5) * 0.2 * region_strength;
+		float hue = (region - 0.5) * 0.05 * region_strength;
+		albedo *= vec3(1.0 + val + hue, 1.0 + val, 1.0 + val - hue);
+	}
+	return albedo;
 }
 
 void fragment() {
@@ -104,6 +167,7 @@ void fragment() {
 	ALBEDO = base_color.rgb * texture(albedo_texture, UV).rgb * (1.0 - paint_noise + n * paint_noise * 2.0);
 	if (procedural_surface) {
 		ALBEDO *= masonry(world_pos, world_normal);
+		ALBEDO = decals(world_pos, world_normal, ALBEDO);
 	}
 	ROUGHNESS = 0.85;
 	SPECULAR = 0.2;
