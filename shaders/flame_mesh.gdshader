@@ -55,10 +55,17 @@ void fragment() {
 	// Slight sway of the tip so the flame does not look like a static card.
 	p.x += sin(TIME * 2.4 + p.y * 4.0) * 0.06 * (0.5 + 0.5 * p.y);
 
+	// Quantize time to ~12 steps/second so the noise updates in discrete frames instead of
+	// drifting smoothly, giving the flame a hand-drawn flipbook cadence.
+	float flip_time = floor(TIME * 12.0) / 12.0;
+
 	// Noise rolling upward (toward +y) erodes the edge; two octaves, the finer moving faster.
-	float roll = fbm(vec2(p.x * 1.7, p.y * 2.1 - TIME * rise_speed)) * 0.5
-	           + vnoise(vec2(p.x * 3.0, p.y * 4.0 - TIME * rise_speed * 1.7)) * 0.5;
-	float d = sd_flame(p) + (roll - 0.5) * edge_erosion * 1.2;
+	float roll = fbm(vec2(p.x * 1.7, p.y * 2.1 - flip_time * rise_speed)) * 0.5
+	           + vnoise(vec2(p.x * 3.0, p.y * 4.0 - flip_time * rise_speed * 1.7)) * 0.5;
+	// Fast upward-scrolling flame-lick layer: a second, quicker noise pass that reads as
+	// individual tongues of fire racing up through the silhouette, also frame-quantized.
+	float lick = vnoise(vec2(p.x * 5.0 + 3.1, p.y * 6.5 - flip_time * rise_speed * 3.4));
+	float d = sd_flame(p) + (roll - 0.5) * edge_erosion * 1.2 + (lick - 0.5) * edge_erosion * 0.35;
 
 	float edge = 1.0 - smoothstep(-0.04, 0.04, d);
 	float mid = 1.0 - smoothstep(-0.16, -0.06, d);

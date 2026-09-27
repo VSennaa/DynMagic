@@ -68,7 +68,9 @@ float stroke(vec2 p, vec2 a, vec2 b, float width) {
 }
 
 // Returns a colour multiplier for the stone/tile pattern on this fragment.
-vec3 masonry(vec3 p, vec3 nrm) {
+// sat_boost (0 = neutral grey, ~0.5-0.8 = saturated cover colour) scales macro
+// variation and wear so covers do not read as an obviously tiling texture.
+vec3 masonry(vec3 p, vec3 nrm, float sat_boost) {
 	float up = abs(nrm.y);
 	vec2 uv;
 	vec2 cell;
@@ -101,8 +103,11 @@ vec3 masonry(vec3 p, vec3 nrm) {
 	face *= 0.94 + noise(p.xz * 3.1 + p.y * 2.3) * 0.12;
 	vec3 col = vec3(face);
 	// Macro variation: large soft patches break the tiling read at distance (warm/cool drift).
+	// Saturated surfaces (cover blocks) get extra macro contrast so the repeat is less blatant.
 	float macro = noise(p.xz * 0.11 + p.y * 0.07) * 0.6 + noise(p.xz * 0.37 - p.y * 0.21) * 0.4;
-	col *= mix(vec3(0.86, 0.88, 0.94), vec3(1.08, 1.03, 0.95), macro);
+	float macro2 = noise(p.xz * 0.83 - p.y * 0.53 + 5.1) * 0.5 + noise(p.zx * 1.7 + p.y * 0.31 - 2.3) * 0.5;
+	col *= mix(vec3(1.0), mix(vec3(0.86, 0.88, 0.94), vec3(1.08, 1.03, 0.95), macro), 1.0 + sat_boost * 1.2);
+	col *= 1.0 + (macro2 - 0.5) * 0.5 * sat_boost;
 	col = mix(col, vec3(0.74), line * 0.7);
 	// Grime rising from the floor: blotchy, darkest at the base, fading over ~0.4 m.
 	if (up <= 0.6) {
@@ -110,9 +115,15 @@ vec3 masonry(vec3 p, vec3 nrm) {
 		float foot = 1.0 - smoothstep(0.0, 0.4 * blotch, p.y);
 		col *= mix(vec3(1.0), vec3(0.74, 0.72, 0.67), clamp(foot, 0.0, 1.0) * grime_strength);
 	}
-	// Low-frequency wear blotches (0.3-0.6 m) that brighten/darken slightly.
+	// Low-frequency wear blotches (0.3-0.6 m) that brighten/darken slightly; edge wear on
+	// saturated cover blocks is boosted so the flat colour reads as a worn surface, not a tile.
 	float wear = noise(p.xz * 2.0 + p.y * 0.4) * 2.0 - 1.0;
-	col *= 1.0 + wear * wear_strength;
+	col *= 1.0 + wear * wear_strength * (1.0 + sat_boost * 2.5);
+	if (up <= 0.6) {
+		// Edge chipping: darken a thin band right at the block's mortar edge, stronger when saturated.
+		float edge_wear = 1.0 - smoothstep(0.0, 0.05, min(min(uv.x, 1.0 - uv.x), min(uv.y, 1.0 - uv.y)));
+		col *= 1.0 - edge_wear * 0.25 * sat_boost * (0.5 + jitter);
+	}
 	// Thin dark cracks in ~10% of blocks: 1-2 short strokes seeded per cell, drawn inside
 	// the block's own UV space so they never straddle a mortar joint.
 	if (hash(cell + vec2(4.2, 1.7)) < 0.10) {
@@ -166,8 +177,17 @@ void fragment() {
 	float n = noise(world_pos.xz * 1.7 + world_pos.y * 0.9);
 	ALBEDO = base_color.rgb * texture(albedo_texture, UV).rgb * (1.0 - paint_noise + n * paint_noise * 2.0);
 	if (procedural_surface) {
-		ALBEDO *= masonry(world_pos, world_normal);
+		// Saturation of the instance colour flags cover blocks (purple) vs. neutral stone/floor.
+		float sat = max(base_color.r, max(base_color.g, base_color.b)) - min(base_color.r, min(base_color.g, base_color.b));
+		ALBEDO *= masonry(world_pos, world_normal, sat);
 		ALBEDO = decals(world_pos, world_normal, ALBEDO);
+		// Fake rounded edge from screen-space derivatives: real geometry stays a sharp box, but a
+		// ~6 cm band where the normal changes fast (a box edge) gets a highlight on top-facing
+		// edges and a darker line on vertical corners, so 90-degree edges read as chamfered.
+		float normal_edge = length(fwidth(world_normal));
+		float edge_mask = smoothstep(0.015, 0.12, normal_edge) * (1.0 + sat * 1.5);
+		float top_bias = clamp(world_normal.y * 0.5 + 0.5, 0.0, 1.0);
+		ALBEDO *= 1.0 + edge_mask * mix(-0.10, 0.16, top_bias);
 	}
 	ROUGHNESS = 0.85;
 	SPECULAR = 0.2;
