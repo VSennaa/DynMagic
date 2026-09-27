@@ -30,6 +30,8 @@ var _last_round: int = 0
 var _runes_applied_round: int = 0
 var _core: ArcaneCore
 var _core_granted_round: int = 0
+## M12 5v5 Control: the Core reused as the capture point.
+var _control: ControlCore
 var _collapse: CollapseZone
 ## Which overtime effects were applied this round: "rule", "collapse".
 var _overtime_applied: Dictionary = {}
@@ -54,6 +56,8 @@ func _ready() -> void:
 	else:
 		_build_presentation()
 	MatchState.changed.connect(_on_match_changed)
+	# M12 decision 10: 3v3 and 5v5 (Control) play on the x1.5 expanded arena with extra flank routes.
+	(_arena.get_node(^"Layout") as ArenaBuilder).team_scale = 1.5 if Lobby.mode in [&"3v3", &"5v5"] else 1.0
 	_sync_players()
 
 
@@ -96,6 +100,11 @@ func _physics_process(delta: float) -> void:
 		for id: int in Net.players:
 			by_id[id] = _player(id)
 		_core.host_tick(delta, by_id)
+	if Net.is_host() and _control != null:
+		var by_id_control: Dictionary = {}
+		for id: int in Net.players:
+			by_id_control[id] = _player(id)
+		_control.host_tick_teams(delta, by_id_control, MatchState.view.get("teams", {}))
 	if Net.is_host() and _collapse != null:
 		var alive: Array[Player] = []
 		for child: Node in _players_root.get_children():
@@ -541,8 +550,14 @@ func _on_match_changed() -> void:
 			if p != null:
 				p.apply_rune(runes.get(int(String(p.name)), &""))
 	_update_core(view, round_number)
+	_update_control(view)
 	if _hud != null:
 		_hud.set_core_progress(float((view.get("core_progress", {}) as Dictionary).get(multiplayer.get_unique_id(), 0.0)))
+		if Lobby.mode == &"5v5":
+			var control_progress: Dictionary = view.get("control_progress", {})
+			var my_team: int = int((view.get("teams", {}) as Dictionary).get(multiplayer.get_unique_id(), 0))
+			var respawn_left: float = float((view.get("respawn_at", {}) as Dictionary).get(multiplayer.get_unique_id(), 0.0))
+			_hud.set_control_progress(float(control_progress.get(0, 0.0)), float(control_progress.get(1, 0.0)), my_team, respawn_left)
 	_update_overtime(view, round_number)
 	_update_draft_panel(view)
 	var frozen: bool = MatchState.is_frozen()
@@ -692,6 +707,41 @@ func _update_core(view: Dictionary, round_number: int) -> void:
 		var player: Player = _player(holder)
 		if player != null:
 			player.grant_overcharge()
+
+## M12 5v5 Control: spawns the point at the arena centre for the whole combat/overtime
+## phase (no 30 s delay like the elimination Overcharge core) and frees it between rounds.
+func _update_control(view: Dictionary) -> void:
+	if Lobby.mode != &"5v5":
+		return
+	var should_exist: bool = MatchState.phase() == MatchFsm.Phase.COMBAT or MatchState.phase() == MatchFsm.Phase.OVERTIME
+	if should_exist and _control == null:
+		_control = ControlCore.create()
+		add_child(_control)
+		var anchor: Node3D = _arena.find_child("CoreAnchor", true, false) as Node3D
+		_control.global_position = anchor.global_position if anchor != null else Vector3.ZERO
+		_control.team_captured.connect(MatchState.report_capture)
+	elif not should_exist and _control != null:
+		_control.queue_free()
+		_control = null
+
+
+## Host: a Control-mode wave-respawned player (M12) is teleported back to their team spawn
+## with full HP/mana, exactly like the per-round respawn in `_start_round`.
+func wave_respawn(id: int) -> void:
+	var player: Player = _player(id)
+	if player == null:
+		return
+	player.global_transform = _team_spawn(id, _team_for(id))
+	player.reset_round()
+	(player.get_node(^"NetSync") as NetSync).reset_transport(id)
+
+
+## Host: capture percentage per team for the view (clients get it once per second).
+func control_progress() -> Dictionary:
+	if _control == null:
+		return {}
+	return {0: _control.progress_ratio_team(0), 1: _control.progress_ratio_team(1)}
+
 
 ## Overtime rules (spec 02 §5). Sudden Death and Mana Surge fall back to Collapse after 30 s / 20 s.
 func _update_overtime(view: Dictionary, round_number: int) -> void:

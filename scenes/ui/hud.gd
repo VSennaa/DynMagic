@@ -41,6 +41,12 @@ var _fps_label: Label
 var _caption_label: Label
 var _captions: Array[Dictionary] = []
 var _core_bar: ProgressBar
+## M12 5v5 Control.
+var _control_box: VBoxContainer
+var _control_label: Label
+var _control_bar_ally: ProgressBar
+var _control_bar_enemy: ProgressBar
+var _respawn_label: Label
 var _last_hp: float = -1.0
 var _prev_hp: float = -1.0
 var _last_damage: float = 0.0
@@ -256,6 +262,31 @@ void fragment() {
 	_core_bar.visible = false
 	root.add_child(_core_bar)
 
+	# M12 5v5 Control: capture % per team plus a wave-respawn countdown.
+	_control_box = VBoxContainer.new()
+	_control_box.set_anchors_preset(Control.PRESET_CENTER_TOP)
+	_control_box.position = Vector2(-160, 130)
+	_control_box.custom_minimum_size = Vector2(320, 0)
+	_control_box.visible = false
+	root.add_child(_control_box)
+	_control_label = _label("Ponto: 0% x 0%", 16)
+	_control_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_control_box.add_child(_control_label)
+	_control_bar_ally = _bar(Color(0.4, 0.75, 1.0))
+	_control_bar_ally.max_value = 1.0
+	_control_bar_ally.custom_minimum_size = Vector2(320, 14)
+	_control_box.add_child(_control_bar_ally)
+	_control_bar_enemy = _bar(Color(1.0, 0.4, 0.4))
+	_control_bar_enemy.max_value = 1.0
+	_control_bar_enemy.custom_minimum_size = Vector2(320, 14)
+	_control_box.add_child(_control_bar_enemy)
+	_respawn_label = _label("", 22)
+	_respawn_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_respawn_label.set_anchors_preset(Control.PRESET_CENTER)
+	_respawn_label.position = Vector2(-100, -40)
+	_respawn_label.visible = false
+	root.add_child(_respawn_label)
+
 	var bars: VBoxContainer = VBoxContainer.new()
 	_player_widgets.append(bars)
 	bars.set_anchors_preset(Control.PRESET_TOP_LEFT)
@@ -406,6 +437,20 @@ func _update_damage_arrow(delta: float, total_hp: float) -> void:
 func set_core_progress(ratio: float) -> void:
 	_core_bar.visible = ratio > 0.0
 	_core_bar.value = ratio
+
+
+## M12 5v5 Control: capture % for both teams (0..1) plus the local player's wave-respawn
+## countdown in seconds (<= 0 hides it).
+func set_control_progress(team0_ratio: float, team1_ratio: float, my_team: int, respawn_left: float) -> void:
+	_control_box.visible = true
+	var ally_ratio: float = team0_ratio if my_team == 0 else team1_ratio
+	var enemy_ratio: float = team1_ratio if my_team == 0 else team0_ratio
+	_control_bar_ally.value = ally_ratio
+	_control_bar_enemy.value = enemy_ratio
+	_control_label.text = "Ponto — Aliados %d%%  Inimigos %d%%" % [roundi(ally_ratio * 100.0), roundi(enemy_ratio * 100.0)]
+	_respawn_label.visible = respawn_left > 0.0
+	if _respawn_label.visible:
+		_respawn_label.text = "Reforço em %ds" % ceili(respawn_left)
 
 
 func _on_spell_sound(spell: ResolvedSpell, source: Vector3) -> void:

@@ -35,7 +35,12 @@ func start_match(overtime_setting: StringName = &"collapse", arena_setting: Stri
 	if not Net.is_host():
 		return
 	var team_size: int = TeamRules.size_for(mode)
-	if team_size > 1:
+	if mode == &"5v5":
+		var control_fsm: ControlMatchFsm = ControlMatchFsm.new()
+		control_fsm.team_size = team_size
+		control_fsm.player_respawn_ready.connect(_on_wave_respawn)
+		fsm = control_fsm
+	elif team_size > 1:
 		var team_fsm: TeamMatchFsm = TeamMatchFsm.new()
 		team_fsm.team_size = team_size
 		fsm = team_fsm
@@ -184,6 +189,19 @@ func report_death(id: int) -> void:
 			_pending_deaths.append(id)
 
 
+## Host: a Control point (M12) team reached 100% capture.
+func report_capture(team: int) -> void:
+	if fsm is ControlMatchFsm and Net.is_host():
+		(fsm as ControlMatchFsm).capture_completed(team)
+
+
+## Host: a wave-respawned player (M12 5v5 Control) should be teleported back in.
+func _on_wave_respawn(id: int) -> void:
+	var net_match: Node = get_tree().get_first_node_in_group(&"net_match")
+	if net_match != null:
+		net_match.call(&"wave_respawn", id)
+
+
 func report_core(id: int) -> void:
 	if fsm != null and Net.is_host():
 		fsm.core_captured(id)
@@ -260,6 +278,8 @@ func _broadcast() -> void:
 		"core_progress": _core_progress(),
 		"teams": (fsm as TeamMatchFsm).teams if fsm is TeamMatchFsm else {},
 		"mode": Lobby.mode,
+		"control_progress": _control_progress(),
+		"respawn_at": (fsm as ControlMatchFsm).respawn_at.duplicate() if fsm is ControlMatchFsm else {},
 	}
 	_sync.rpc(state)
 
@@ -336,6 +356,11 @@ func _hp_by_player() -> Dictionary:
 func _core_progress() -> Dictionary:
 	var net_match: Node = get_tree().get_first_node_in_group(&"net_match")
 	return net_match.call(&"core_progress") if net_match != null else {}
+
+
+func _control_progress() -> Dictionary:
+	var net_match: Node = get_tree().get_first_node_in_group(&"net_match")
+	return net_match.call(&"control_progress") if net_match != null else {}
 
 ## Back to the lobby after a match: drop the FSM and the mirrored view.
 func reset_for_lobby() -> void:

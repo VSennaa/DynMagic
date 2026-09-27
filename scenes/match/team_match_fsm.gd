@@ -59,7 +59,7 @@ func _finish_draft() -> void:
 func _begin_round() -> void:
 	alive = players.duplicate()
 	super._begin_round()
-	if last_round_loser != 0 and not decisive:
+	if last_round_loser != 0 and not decisive and rune_offers.has(last_round_loser):
 		for id: int in players:
 			if teams[id] == teams[last_round_loser]:
 				rune_offers[id] = (rune_offers[last_round_loser] as Array).duplicate()

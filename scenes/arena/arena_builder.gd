@@ -71,6 +71,15 @@ const VARIANTS: Array[StringName] = [&"A", &"B", &"C"]
 		if is_inside_tree():
 			build()
 
+## M12: footprint scale for expanded team arenas (3v3 = 1.5, decision 10). Scales the
+## shell and every authored space in X/Z only (heights unchanged so traversal metrics
+## stay valid) and opens two extra ground-level flank corridors. 1.0 keeps 1v1/2v2 exact.
+@export var team_scale: float = 1.0:
+	set(value):
+		team_scale = value
+		if is_inside_tree():
+			build()
+
 @export var floor_color: Color = Color(0.7, 0.65, 0.57)
 @export var wall_color: Color = Color(0.6, 0.56, 0.52)
 @export var cover_color: Color = Color(0.46, 0.4, 0.62)
@@ -86,46 +95,128 @@ func build() -> void:
 		if child.has_meta(&"generated"):
 			remove_child(child)
 			child.free()
+	var effective: ArenaSpaces = _effective_spaces()
 	_build_shell()
-	if spaces == null:
+	if effective == null:
 		_build_balconies()
 		_build_cover()
 	else:
-		_build_spaces()
+		_build_spaces(effective)
 	_build_spawns()
 	var anchor: Marker3D = Marker3D.new()
 	anchor.name = "CoreAnchor"
-	anchor.position = spaces.core_anchor if spaces != null else Vector3(4.0, 0.0, 0.0)
+	anchor.position = effective.core_anchor if effective != null else Vector3(4.0, 0.0, 0.0)
 	_adopt(anchor)
-	if spaces != null:
-		for i: int in spaces.spawn_regions.size():
+	if effective != null:
+		for i: int in effective.spawn_regions.size():
 			var region: Marker3D = Marker3D.new()
 			region.name = "SpawnRegion%d" % i
-			region.position = spaces.spawn_regions[i].get_center()
-			region.set_meta(&"bounds", spaces.spawn_regions[i])
+			region.position = effective.spawn_regions[i].get_center()
+			region.set_meta(&"bounds", effective.spawn_regions[i])
 			_adopt(region)
-		for i: int in spaces.exits.size():
+		for i: int in effective.exits.size():
 			var exit_marker: Marker3D = Marker3D.new()
 			exit_marker.name = "Exit%d" % i
-			exit_marker.position = spaces.exits[i]
+			exit_marker.position = effective.exits[i]
 			_adopt(exit_marker)
 	ArenaDressing.apply(self, wall_color, cover_color)
 
 
-func _build_spaces() -> void:
+func _build_spaces(effective: ArenaSpaces) -> void:
 	var index: int = 0
-	for piece: Dictionary in spaces.solids + spaces.platforms:
+	for piece: Dictionary in effective.solids + effective.platforms:
 		var size: Vector3 = piece["size"]
 		var box: CSGBox3D = _box("Space%02d" % index, (piece["position"] as Vector3) + Vector3.UP * size.y * 0.5, size, cover_color)
 		box.rotation.y = float(piece.get("yaw", 0.0))
 		box.add_to_group(&"cover")
 		index += 1
-	for entry: Dictionary in spaces.ramps:
+	for entry: Dictionary in effective.ramps:
 		var height: float = entry["height"]
 		var length: float = entry["length"]
 		var ramp: CSGBox3D = _box("SpaceRamp%02d" % index, (entry["position"] as Vector3) + Vector3.UP * (height * 0.5 - 0.15), Vector3(float(entry["width"]), 0.3, sqrt(length * length + height * height)), balcony_color)
 		ramp.rotation = Vector3(atan2(height, length), float(entry.get("yaw", 0.0)), 0)
 		index += 1
+
+
+## Returns `spaces` unchanged for team_scale 1.0 (1v1/2v2 exact), or a scaled-and-augmented
+## copy for expanded team arenas. X/Z only; heights and thicknesses are untouched.
+## Public so tests can validate the expanded routes/regions physically (tests/check_cloister.gd).
+func effective_spaces() -> ArenaSpaces:
+	return _effective_spaces()
+
+
+func _effective_spaces() -> ArenaSpaces:
+	if spaces == null:
+		return null
+	if is_equal_approx(team_scale, 1.0):
+		return spaces
+	var scaled: ArenaSpaces = ArenaSpaces.new()
+	for piece: Dictionary in spaces.solids:
+		scaled.solids.append(_scale_piece(piece))
+	for piece: Dictionary in spaces.platforms:
+		scaled.platforms.append(_scale_piece(piece))
+	for ramp: Dictionary in spaces.ramps:
+		scaled.ramps.append(_scale_ramp(ramp))
+	scaled.core_anchor = _scale_xz(spaces.core_anchor)
+	var regions: Array[AABB] = []
+	for aabb: AABB in spaces.spawn_regions:
+		regions.append(_scale_aabb(aabb))
+	scaled.spawn_regions = regions
+	var exits: Array[Vector3] = []
+	for exit_point: Vector3 in spaces.exits:
+		exits.append(_scale_xz(exit_point))
+	scaled.exits = exits
+	scaled.sightline_limit = spaces.sightline_limit * team_scale
+	var routes: Dictionary = {}
+	for key: String in spaces.routes:
+		routes[key] = _scale_route(spaces.routes[key])
+	_add_flank_routes(routes)
+	scaled.routes = routes
+	return scaled
+
+
+func _scale_xz(v: Vector3) -> Vector3:
+	return Vector3(v.x * team_scale, v.y, v.z * team_scale)
+
+
+func _scale_piece(piece: Dictionary) -> Dictionary:
+	return {"position": _scale_xz(piece["position"]), "size": _scale_xz(piece["size"]), "yaw": float(piece.get("yaw", 0.0))}
+
+
+func _scale_ramp(ramp: Dictionary) -> Dictionary:
+	return {"position": _scale_xz(ramp["position"]), "width": float(ramp["width"]) * team_scale,
+		"length": float(ramp["length"]) * team_scale, "height": float(ramp["height"]), "yaw": float(ramp.get("yaw", 0.0))}
+
+
+func _scale_aabb(aabb: AABB) -> AABB:
+	var pos: Vector3 = aabb.position
+	var size: Vector3 = aabb.size
+	return AABB(Vector3(pos.x * team_scale, pos.y, pos.z * team_scale), Vector3(size.x * team_scale, size.y, size.z * team_scale))
+
+
+func _scale_route(points: PackedVector3Array) -> PackedVector3Array:
+	var out: PackedVector3Array = PackedVector3Array()
+	for point: Vector3 in points:
+		out.append(_scale_xz(point))
+	return out
+
+
+## New ground-level flank corridors (decision 10), hugging the expanded shell wall on both
+## sides. CloisterSpaces only puts a wall-adjacent terrace on a short middle stretch of each
+## wall (the broken-ring platform/ramps), so the lane is carved in the two clear stretches
+## north and south of it rather than the platform's own z band.
+func _add_flank_routes(routes: Dictionary) -> void:
+	var hx: float = ARENA_X * team_scale * 0.5
+	var hz: float = ARENA_Z * team_scale * 0.5
+	var flank_x: float = hx - 1.0
+	var near: float = hz - 2.0
+	# Clears the broken-ring platform/ramps on both walls (CloisterSpaces' furthest ramp
+	# reaches roughly 7 m out plus half its slope length; scale the margin with the arena).
+	var clear_of_terrace: float = 15.0 * team_scale
+	for sign_x: float in [-1.0, 1.0]:
+		var tag: String = "west" if sign_x < 0.0 else "east"
+		routes["flank_%s_north" % tag] = PackedVector3Array([Vector3(sign_x * flank_x, 0, -near), Vector3(sign_x * flank_x, 0, -clear_of_terrace)])
+		routes["flank_%s_south" % tag] = PackedVector3Array([Vector3(sign_x * flank_x, 0, clear_of_terrace), Vector3(sign_x * flank_x, 0, near)])
 
 
 ## Cover table expanded with its 180° mirror. Entries on the centre point are not duplicated.
@@ -141,31 +232,34 @@ static func mirrored_layout(layout_variant: StringName) -> Array:
 
 
 func _build_shell() -> void:
-	var hx: float = ARENA_X * 0.5
-	var hz: float = ARENA_Z * 0.5
-	var spawn_depth: float = SPAWN_SIZE
-	_box("Floor", Vector3(0, -0.5, 0), Vector3(ARENA_X, 1.0, ARENA_Z + spawn_depth * 2.0), floor_color)
+	var ax: float = ARENA_X * team_scale
+	var az: float = ARENA_Z * team_scale
+	var spawn_size: float = SPAWN_SIZE * team_scale
+	var hx: float = ax * 0.5
+	var hz: float = az * 0.5
+	var spawn_depth: float = spawn_size
+	_box("Floor", Vector3(0, -0.5, 0), Vector3(ax, 1.0, az + spawn_depth * 2.0), floor_color)
 	# Side walls.
-	_box("WallWest", Vector3(-hx - WALL_THICKNESS * 0.5, WALL_HEIGHT * 0.5, 0), Vector3(WALL_THICKNESS, WALL_HEIGHT, ARENA_Z), wall_color)
-	_box("WallEast", Vector3(hx + WALL_THICKNESS * 0.5, WALL_HEIGHT * 0.5, 0), Vector3(WALL_THICKNESS, WALL_HEIGHT, ARENA_Z), wall_color)
+	_box("WallWest", Vector3(-hx - WALL_THICKNESS * 0.5, WALL_HEIGHT * 0.5, 0), Vector3(WALL_THICKNESS, WALL_HEIGHT, az), wall_color)
+	_box("WallEast", Vector3(hx + WALL_THICKNESS * 0.5, WALL_HEIGHT * 0.5, 0), Vector3(WALL_THICKNESS, WALL_HEIGHT, az), wall_color)
 	# End walls with a spawn opening in the middle, plus the spawn corridors.
-	var side_len: float = (ARENA_X - SPAWN_SIZE) * 0.5
+	var side_len: float = (ax - spawn_size) * 0.5
 	for sign_z: float in [-1.0, 1.0]:
 		var tag: String = "North" if sign_z < 0.0 else "South"
 		var z_wall: float = sign_z * (hz + WALL_THICKNESS * 0.5)
 		for sign_x: float in [-1.0, 1.0]:
-			var x_center: float = sign_x * (SPAWN_SIZE * 0.5 + side_len * 0.5)
+			var x_center: float = sign_x * (spawn_size * 0.5 + side_len * 0.5)
 			_box("Wall%s%s" % [tag, "W" if sign_x < 0.0 else "E"], Vector3(x_center, WALL_HEIGHT * 0.5, z_wall), Vector3(side_len, WALL_HEIGHT, WALL_THICKNESS), wall_color)
 		var z_corridor: float = sign_z * (hz + spawn_depth * 0.5)
 		for sign_x: float in [-1.0, 1.0]:
-			_box("Spawn%sSide%s" % [tag, "W" if sign_x < 0.0 else "E"], Vector3(sign_x * (SPAWN_SIZE * 0.5 + WALL_THICKNESS * 0.5), WALL_HEIGHT * 0.5, z_corridor), Vector3(WALL_THICKNESS, WALL_HEIGHT, spawn_depth), wall_color)
-		_box("Spawn%sBack" % tag, Vector3(0, WALL_HEIGHT * 0.5, sign_z * (hz + spawn_depth + WALL_THICKNESS * 0.5)), Vector3(SPAWN_SIZE + WALL_THICKNESS * 2.0, WALL_HEIGHT, WALL_THICKNESS), wall_color)
+			_box("Spawn%sSide%s" % [tag, "W" if sign_x < 0.0 else "E"], Vector3(sign_x * (spawn_size * 0.5 + WALL_THICKNESS * 0.5), WALL_HEIGHT * 0.5, z_corridor), Vector3(WALL_THICKNESS, WALL_HEIGHT, spawn_depth), wall_color)
+		_box("Spawn%sBack" % tag, Vector3(0, WALL_HEIGHT * 0.5, sign_z * (hz + spawn_depth + WALL_THICKNESS * 0.5)), Vector3(spawn_size + WALL_THICKNESS * 2.0, WALL_HEIGHT, WALL_THICKNESS), wall_color)
 	# Invisible ceiling.
 	var ceiling: StaticBody3D = StaticBody3D.new()
 	ceiling.name = "Ceiling"
 	var shape: CollisionShape3D = CollisionShape3D.new()
 	var box: BoxShape3D = BoxShape3D.new()
-	box.size = Vector3(ARENA_X, 1.0, ARENA_Z + spawn_depth * 2.0)
+	box.size = Vector3(ax, 1.0, az + spawn_depth * 2.0)
 	shape.shape = box
 	ceiling.add_child(shape)
 	ceiling.position = Vector3(0, WALL_HEIGHT + 0.5, 0)
@@ -225,7 +319,7 @@ func _add_cover_visual(box: CSGBox3D, size: Vector3) -> void:
 
 
 func _build_spawns() -> void:
-	var hz: float = ARENA_Z * 0.5 + SPAWN_SIZE * 0.5
+	var hz: float = (ARENA_Z * 0.5 + SPAWN_SIZE * 0.5) * team_scale
 	for sign_z: float in [-1.0, 1.0]:
 		var marker: Marker3D = Marker3D.new()
 		marker.name = "SpawnNorth" if sign_z < 0.0 else "SpawnSouth"

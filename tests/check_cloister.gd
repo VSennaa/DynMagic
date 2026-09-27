@@ -33,5 +33,15 @@ func _ready() -> void:
 	check(not ArenaMetrics.route_clear(get_world_3d(), spaces.routes["north_west"]), "barrier blocks west")
 	check(ArenaMetrics.route_clear(get_world_3d(), spaces.routes["north_east"]), "barrier leaves east open")
 	print(ArenaMetrics.sightlines(get_world_3d(), spaces.sightline_limit))
+	# M12 decision 10: 3v3/5v5 expanded arena (x1.5) with extra ground-level flank routes.
+	wall.queue_free()
+	layout.team_scale = 1.5
+	await get_tree().physics_frame
+	await get_tree().physics_frame
+	var expanded: ArenaSpaces = layout.effective_spaces()
+	check(expanded.spawn_regions[0].size.x > spaces.spawn_regions[0].size.x, "expanded spawn regions are larger")
+	for key: String in expanded.routes:
+		check(ArenaMetrics.route_clear(get_world_3d(), expanded.routes[key]), "expanded capsule route " + key)
+	check(expanded.routes.has("flank_west_north") and expanded.routes.has("flank_east_south"), "extra flank routes present")
 	print("CLOISTER: %d failures" % failures)
 	get_tree().quit(1 if failures else 0)

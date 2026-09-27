@@ -290,21 +290,27 @@ func _begin_round() -> void:
 	core_holder = 0
 	core_spawned = false
 	overtime_rule = &""
-	var rune_takers: Array[int] = []
-	if decisive:
-		rune_takers.assign(players)
-	elif last_round_loser != 0:
-		rune_takers.append(last_round_loser)
-	for id: int in rune_takers:
-		var pool: Array[StringName] = RUNES.duplicate()
-		var offer: Array[StringName] = []
-		for i: int in 3:
-			offer.append(pool.pop_at(rng.randi_range(0, pool.size() - 1)))
-		rune_offers[id] = offer
+	if _grants_rune():
+		var rune_takers: Array[int] = []
+		if decisive:
+			rune_takers.assign(players)
+		elif last_round_loser != 0:
+			rune_takers.append(last_round_loser)
+		for id: int in rune_takers:
+			var pool: Array[StringName] = RUNES.duplicate()
+			var offer: Array[StringName] = []
+			for i: int in 3:
+				offer.append(pool.pop_at(rng.randi_range(0, pool.size() - 1)))
+			rune_offers[id] = offer
 	confirmed.clear()
 	_draft_elapsed = 0.0
 	draft_step = DraftStep.SIDE_A
 	_set_phase(Phase.DRAFT, 30.0 if round_number == 1 else 20.0)
+
+
+## M12 decision 6: 5v5 Control has no loser rune. Overridden by `ControlMatchFsm`.
+func _grants_rune() -> bool:
+	return true
 
 
 func _end_round(winner_id: int, reason: StringName) -> void:

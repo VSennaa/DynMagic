@@ -229,9 +229,9 @@ Codex (critical), in order:
 - [x] R2 four elemental combat plans and nine purposeful functions
 - [x] R4 G as readable preparation, V as short-range commitment
 - [x] Team framework: N players per side, team draft (no duplicate per team; 5v5 max 2 per element), friendly fire off, spawns per team, scoreboard grouped by team (`TeamRules`, `TeamMatchFsm`; verified headless 2v2/3v3/5v5, see round 9 Sonnet note)
-- [~] 2v2 elimination rounds best-of-7 with rune + Core kept: works via the generic team framework (verified headless), but still runs on the current arenas, not a dedicated small arena
-- [~] 3v3 elimination rounds: works via the generic team framework (verified headless); expanded (x1.5) arena with extra flank routes not built
-- [ ] 5v5 Control: one point to 100%, best-of-3 rounds, 10 s wave respawn, no rune (Core becomes the point); LAN/listen server only — currently 5v5 just runs the same elimination framework (verified headless), no control-point mode yet
+- [x] 2v2 elimination rounds best-of-7 with rune + Core kept: generic team framework, plays on the small (unscaled, `team_scale=1.0`) arena as decided (Skirmish-style small arenas for 1v1/2v2)
+- [x] 3v3 elimination rounds on the x1.5 expanded arena with extra flank routes (`ArenaBuilder.team_scale`, `_effective_spaces()`/`_add_flank_routes()` in scenes/arena/arena_builder.gd; physically verified with `tests/check_cloister.gd`)
+- [x] 5v5 Control: one point to 100% (contested pauses), best-of-3, 10 s wave respawn, no rune, Core reused as the point (`ControlMatchFsm`, `ControlCore`), x1.5 expanded arena; LAN/listen server only — logic verified with `tests/test_control_match_fsm.gd`; not exercised in a live 10-process headless match this round (time-boxed), so treat the net_match/HUD wiring as implemented-but-unexercised until that run happens
 - [ ] R8 round in three acts; R9 match memory (spatial rematch, adaptation runes)
 DeepSeek (simple):
 - [ ] R6/R7 arenas B and C greybox on R3 metrics

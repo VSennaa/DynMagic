@@ -20,6 +20,12 @@ var _done: bool = false
 
 static func create() -> ArcaneCore:
 	var core: ArcaneCore = ArcaneCore.new()
+	build_visuals(core)
+	return core
+
+
+## Shared with `ControlCore` (M12 decision 4: the point reuses the Core's visuals).
+static func build_visuals(core: ArcaneCore) -> void:
 	core.name = "ArcaneCore"
 	var mesh: Node3D = preload("res://scenes/assets/arcane_core.tscn").instantiate() as Node3D
 	mesh.name = "Model"
@@ -41,7 +47,6 @@ static func create() -> ArcaneCore:
 	light.omni_range = 5.0
 	light.position.y = 1.4
 	core.add_child(light)
-	return core
 
 
 func _process(delta: float) -> void:
