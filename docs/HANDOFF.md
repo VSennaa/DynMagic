@@ -4,7 +4,7 @@ Last update: 2026-09-25. Written so any AI agent (Claude, Codex, Gemini, etc.) c
 
 ## 0. Active agent
 
-Active agent: none (round 9 Sonnet-6: sightline gate implemented and hard invariants verified / gate still failing on Espinha, and partially on Cloister and Pátio — see note below)
+Active agent: none (2026-09-27 08:10: Codex round 10 never started — `codex exec` launched in background blocked on stdin; relaunch with `< /dev/null`. R8/R9 + prop remodel still pending. Everything else committed.)
 
 ### Round 9 progress — Sonnet-6 (2026-09-27, arena sightline tuning A/B/C) — no commit
 Brief: break the ~37-38 m shell-corner-diagonal/outer-corridor sightlines the three arenas shared, then gate the measurement in each check script (fail above target + 2 m tolerance). Edited only `scenes/arena/{cloister,patio,spine}_spaces.gd` and `tests/check_{cloister,patio,spine}.gd`, as scoped (never touched `arena_dressing.gd`/`arena_environment.tres`).
