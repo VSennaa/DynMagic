@@ -1,6 +1,9 @@
 class_name ExplosionFx
 extends Node3D
-## Placeholder burst: an unshaded sphere that grows to the radius and fades out.
+## Burst flash for Orb impacts and Mark detonations. Used to be a bare growing sphere (the
+## user's "still spherical with light" report matches this almost exactly, on top of the
+## per-element ground ring below); squashed flat and dimmed so the ring + element particle
+## burst (both already per-element) read as the shape, with this as a quick flash accent.
 
 const DURATION: float = 0.35
 ## M11: the ground ring of area spells, sharper and faster than the lingering ring.
@@ -25,12 +28,16 @@ func _ready() -> void:
 	var mat: ShaderMaterial = ShaderMaterial.new()
 	mat.shader = SHELL_SHADER
 	mat.set_shader_parameter(&"color", _color)
-	mat.set_shader_parameter(&"base_alpha", 0.5)
+	mat.set_shader_parameter(&"base_alpha", 0.32)
 	_mesh.material_override = mat
-	_mesh.scale = Vector3.ONE * 0.1
+	# Squash the sphere into a low dome/shockwave instead of growing a full ball: a complete
+	# sphere floating over the impact point is exactly the "still spherical" read. The ring
+	# and particle burst below already carry the per-element shape.
+	const FLATTEN: Vector3 = Vector3(1.0, 0.4, 1.0)
+	_mesh.scale = Vector3.ONE * 0.1 * FLATTEN
 	var tween: Tween = create_tween().set_parallel(true)
-	tween.tween_property(_mesh, ^"scale", Vector3.ONE * _radius, DURATION).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
-	tween.tween_method(func(t: float) -> void: mat.set_shader_parameter(&"base_alpha", lerpf(0.5, 0.0, t)), 0.0, 1.0, DURATION)
+	tween.tween_property(_mesh, ^"scale", Vector3.ONE * _radius * FLATTEN, DURATION).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
+	tween.tween_method(func(t: float) -> void: mat.set_shader_parameter(&"base_alpha", lerpf(0.32, 0.0, t)), 0.0, 1.0, DURATION)
 	var ring: MeshInstance3D = MeshInstance3D.new()
 	var plane: PlaneMesh = PlaneMesh.new()
 	plane.size = Vector2(2.0, 2.0)

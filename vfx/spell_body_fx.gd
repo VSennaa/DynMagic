@@ -14,8 +14,6 @@ const CRYSTAL_SHADER: Shader = preload("res://shaders/spell_crystal.gdshader")
 const PLASMA_SHADER: Shader = preload("res://shaders/spell_plasma.gdshader")
 const VORTEX_SHADER: Shader = preload("res://shaders/spell_vortex.gdshader")
 
-static var _additive_glyph_cache: Shader = null
-
 
 ## Element index shared by the ground/wall shaders: 0 fire, 1 frost, 2 storm, 3 wind.
 static func element_index(element: StringName) -> int:
@@ -48,7 +46,11 @@ static func _fire_body(color: Color, body_scale: float) -> Node3D:
 	var quad: QuadMesh = QuadMesh.new()
 	quad.size = Vector2(0.5, 0.75) * body_scale
 	var mat: ShaderMaterial = ShaderMaterial.new()
-	mat.shader = _additive_glyph_shader()
+	# Plain alpha blend, not the additive variant: additive glyphs barely tint a bright
+	# background (arena sky/sunlit stone, glow bloom) and the flame nearly disappears --
+	# this is one of the "sometimes even invisible" reports. The particle trail
+	# (ElementFx.trail, added separately in projectile.gd) stays additive for its glow accent.
+	mat.shader = GLYPH_SHADER
 	mat.set_shader_parameter(&"shape", 0)
 	mat.set_shader_parameter(&"core_color", color.lightened(0.55))
 	mat.set_shader_parameter(&"edge_color", color)
@@ -82,10 +84,14 @@ static func _storm_body(color: Color, body_scale: float) -> Node3D:
 	var root: Node3D = Node3D.new()
 	root.name = "StormBody"
 	var sphere: SphereMesh = SphereMesh.new()
-	sphere.radius = 0.17 * body_scale
-	sphere.height = 0.34 * body_scale
-	sphere.radial_segments = 10
-	sphere.rings = 6
+	# Bigger and lower-poly than before: at the old 0.17 m radius (0.093 m on a Bolt) the
+	# crackling plasma texture never resolved at gameplay distance/speed, so the whole body
+	# read as nothing but "a light" -- the actual user complaint. The low segment count also
+	# breaks up the perfectly round silhouette a little instead of a smooth ball.
+	sphere.radius = 0.26 * body_scale
+	sphere.height = 0.52 * body_scale
+	sphere.radial_segments = 7
+	sphere.rings = 4
 	var mat: ShaderMaterial = ShaderMaterial.new()
 	mat.shader = PLASMA_SHADER
 	mat.set_shader_parameter(&"core_color", color.lightened(0.6))
@@ -96,13 +102,15 @@ static func _storm_body(color: Color, body_scale: float) -> Node3D:
 	root.add_child(core)
 	for i: int in 3:
 		var jitter: SpellJitter = SpellJitter.new()
-		jitter.radius = 0.24 * body_scale
+		jitter.radius = 0.3 * body_scale
 		jitter.seed_offset = float(i) * 2.17
 		var arc: MeshInstance3D = MeshInstance3D.new()
 		var quad: QuadMesh = QuadMesh.new()
-		quad.size = Vector2(0.3, 0.3) * body_scale
+		quad.size = Vector2(0.34, 0.34) * body_scale
 		var amat: ShaderMaterial = ShaderMaterial.new()
-		amat.shader = _additive_glyph_shader()
+		# Plain alpha blend (see _fire_body): the additive arcs washed out to nothing against
+		# a bright background instead of reading as crackling lightning.
+		amat.shader = GLYPH_SHADER
 		amat.set_shader_parameter(&"shape", 2)
 		amat.set_shader_parameter(&"core_color", Color.WHITE)
 		amat.set_shader_parameter(&"edge_color", color.lightened(0.3))
@@ -132,12 +140,3 @@ static func _wind_body(color: Color, body_scale: float) -> Node3D:
 		mesh_instance.rotation.y = deg_to_rad(45.0 * i)
 		root.add_child(mesh_instance)
 	return root
-
-
-## Additive variant of particle_glyph.gdshader (same trick as ElementFx._additive_shader):
-## ShaderMaterial has no runtime blend mode, so rebuild the source with blend_add.
-static func _additive_glyph_shader() -> Shader:
-	if _additive_glyph_cache == null:
-		_additive_glyph_cache = Shader.new()
-		_additive_glyph_cache.code = GLYPH_SHADER.code.replace("blend_mix", "blend_add")
-	return _additive_glyph_cache

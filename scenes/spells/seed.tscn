@@ -7,5 +7,5 @@ script = ExtResource("1_seed")
 body_scale = 0.75
 
 [node name="Light" type="OmniLight3D" parent="."]
-light_energy = 1.5
-omni_range = 3.0
+light_energy = 0.6
+omni_range = 1.6
