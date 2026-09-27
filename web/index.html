@@ -7,47 +7,129 @@
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header class="site wrap">
-  <h1>DynMagic</h1>
-  <p class="tag">Duelos de magia 1v1 em primeira pessoa. Componha feitiços, escolha seu elemento, vença a melhor de 7.</p>
-  <nav class="main">
-    <a href="index.html" aria-current="page">Início</a>
-    <a href="historia.html">Histórico</a>
-    <a href="licenca.html">Licença</a>
-    <a href="https://github.com/VSennaa/DynMagic/releases">Downloads</a>
-  </nav>
+<header class="topbar">
+  <div class="wrap">
+    <a class="logo" href="index.html">Dyn<span>Magic</span></a>
+    <nav>
+      <a href="index.html" aria-current="page">Notícias</a>
+      <a href="#baixar">Baixar</a>
+      <a href="licenca.html">Licença</a>
+    </nav>
+  </div>
 </header>
 
-<main class="wrap">
-  <section class="panel cta">
-    <a class="button" id="download-win" href="https://github.com/VSennaa/DynMagic/releases">Baixar para Windows</a>
-    <p class="small"><span id="version">Versão mais recente no GitHub</span> · <a id="download-linux" href="https://github.com/VSennaa/DynMagic/releases">servidor Linux</a></p>
-  </section>
+<div class="wrap layout">
+  <main>
+    <p class="section-title">Diário de atualizações</p>
 
-  <section class="panel">
-    <div class="features">
-      <div><h3>Componha a magia</h3><p>Nada de lista pronta: forma + efeito sobre o elemento do round. Duas teclas, nove magias, 36 no total.</p></div>
-      <div><h3>Escolha o elemento</h3><p>Fogo queima, Gelo prende, Raio choca, Vento empurra. A cada round, um draft rápido muda o duelo.</p></div>
-      <div><h3>Arenas curtas</h3><p>Três arenas espelhadas, partidas de minutos, feitas para jogar em LAN ou num servidor com um amigo.</p></div>
+    <article class="post">
+      <img src="img/news/times.jpg" alt="Spawn da arena Pátio Partido com braseiros acesos e estandartes">
+      <div class="body">
+        <h2>Alfa 1.2: agora dá para jogar em time</h2>
+        <p class="meta">27 de setembro de 2026 · por Vinicios</p>
+        <p>O DynMagic deixou de ser só duelo. Chame os amigos: agora tem <strong>2 contra 2</strong>, <strong>3 contra 3</strong> em arenas maiores e o novo <strong>5 contra 5 Controle</strong>, em que os dois times disputam um ponto no centro do mapa e os caídos voltam em ondas a cada 10 segundos.</p>
+        <p>No draft em time ninguém repete elemento dentro do próprio time, então cada equipe precisa combinar Fogo, Gelo, Raio e Vento do seu jeito.</p>
+      </div>
+    </article>
+
+    <article class="post">
+      <img src="img/news/rounds.jpg" alt="Vista de cima da arena Espinha com colunatas e coberturas">
+      <div class="body">
+        <h2>Cada round conta uma história</h2>
+        <p class="meta">27 de setembro de 2026 · por Vinicios</p>
+        <p>Os rounds agora têm começo, meio e fim. Nos primeiros segundos você explora; aos 20 s o Núcleo Arcano é anunciado e aos 30 s ele pode ser capturado; no fim, o Colapso fecha a arena aos poucos e obriga todo mundo a se encontrar.</p>
+        <p>A melhor de 7 também ganhou memória: as arenas vêm em pares, para você ter a revanche no mesmo lugar, e o draft mostra o que o rival usou no round anterior.</p>
+      </div>
+    </article>
+
+    <article class="post">
+      <img src="img/news/arenas.jpg" alt="Arena Claustro vista de cima ao entardecer">
+      <div class="body">
+        <h2>Arenas de cara nova</h2>
+        <p class="meta">26 de setembro de 2026 · por Vinicios</p>
+        <p>Claustro, Pátio Partido e Espinha foram redesenhadas do zero: colunatas, muretas e rotas alternativas deixam menos corredores de tiro longo e mais jogo de posição.</p>
+        <p>E ficaram bonitas: sol de fim de tarde, céu pintado com nuvens, pedra gasta com musgo, braseiros acesos, arcos nos spawns e estandartes nas paredes.</p>
+      </div>
+    </article>
+
+    <article class="post">
+      <img src="img/news/magias.jpg" alt="Quatro magias lado a lado: chamas, estilhaços de gelo, raios e fitas de vento">
+      <div class="body">
+        <h2>Cada elemento com a sua cara</h2>
+        <p class="meta">26 de setembro de 2026 · por Vinicios</p>
+        <p>Fogo solta chamas, Gelo estilhaços, Raio faíscas em zigue-zague e Vento fitas que giram. Dá para saber o que vem na sua direção só pela forma, mesmo no meio da confusão.</p>
+      </div>
+    </article>
+
+    <article class="post">
+      <img src="img/news/alfa11.jpg" alt="Menu principal do DynMagic">
+      <div class="body">
+        <h2>Alfa 1.1: a primeira alfa pública</h2>
+        <p class="meta">26 de setembro de 2026 · por Vinicios</p>
+        <p>Depois da primeira noite de testes em LAN: golpe de cajado na tecla V, magia guardada na tecla G, acertos com mais peso e o servidor oficial no ar em <code>dynmagic.duckdns.org</code>.</p>
+      </div>
+    </article>
+
+    <article class="post small">
+      <div class="body">
+        <h2>Cajados, menus de grimório e servidor próprio</h2>
+        <p class="meta">25 de setembro de 2026 · por Vinicios</p>
+        <p>O mago ganhou corpo e um cajado para cada elemento, os menus viraram páginas de grimório e o jogo passou a ter servidor dedicado e modo espectador.</p>
+      </div>
+    </article>
+
+    <article class="post small">
+      <div class="body">
+        <h2>Vira uma partida de verdade</h2>
+        <p class="meta">24 de setembro de 2026 · por Vinicios</p>
+        <p>Rede em LAN, melhor de 7 com draft de elementos, runas, Núcleo Arcano e prorrogação, três arenas e o primeiro executável para baixar.</p>
+      </div>
+    </article>
+
+    <article class="post small">
+      <div class="body">
+        <h2>Onde tudo começou</h2>
+        <p class="meta">24 de setembro de 2026 · por Vinicios</p>
+        <p>Uma sala, um boneco de treino e 36 magias. A ideia: em vez de decorar uma lista, você monta cada feitiço com duas teclas, forma e efeito, sobre o elemento do round.</p>
+      </div>
+    </article>
+  </main>
+
+  <aside>
+    <div class="box" id="baixar">
+      <h3>Baixar DynMagic</h3>
+      <a class="button" id="download-win" href="https://github.com/VSennaa/DynMagic/releases">Baixar para Windows</a>
+      <p class="small"><span id="version">Versão mais recente</span> · grátis · <a id="download-linux" href="https://github.com/VSennaa/DynMagic/releases">servidor Linux</a></p>
     </div>
-  </section>
+    <div class="box">
+      <h3>Jogue online</h3>
+      <p>Em <strong>Jogar LAN → Entrar por IP</strong>, digite:</p>
+      <p><code>dynmagic.duckdns.org</code></p>
+    </div>
+    <div class="box">
+      <h3>O que é</h3>
+      <p>Duelos e batalhas de magia em primeira pessoa. Escolha seu elemento a cada round e monte os feitiços na hora.</p>
+      <div class="elements">
+        <span class="el-fire">Fogo</span><span class="el-frost">Gelo</span>
+        <span class="el-storm">Raio</span><span class="el-wind">Vento</span>
+      </div>
+    </div>
+    <div class="box">
+      <h3>Em que fase estamos</h3>
+      <p><strong>Alfa.</strong> Jogável de ponta a ponta, mas mudando rápido. Números, magias e arenas ainda vão mudar.</p>
+    </div>
+  </aside>
+</div>
 
-  <section class="panel">
-    <h2>Em que fase estamos</h2>
-    <p>Servidor aberto: em <strong>Jogar LAN → Entrar por IP</strong>, digite <code>dynmagic.duckdns.org</code>.</p>
-    <p>O jogo está no <strong>Alfa</strong>: jogável de ponta a ponta, mas ainda mudando rápido. Veja cada fase, do rascunho ao alfa, no <a href="historia.html">histórico de versões</a>.</p>
-  </section>
-</main>
-
-<footer class="site wrap">DynMagic · feito por Vinicios · <a href="licenca.html">licença</a></footer>
+<footer class="site">DynMagic · feito por Vinicios · <a href="licenca.html">licença</a></footer>
 
 <script>
-// Fill the download links from the latest GitHub release; prereleases are not in /latest.
+// Fill the download links from the newest GitHub release (alphas are prereleases, not in /latest).
 (async () => {
   const api = "https://api.github.com/repos/VSennaa/DynMagic/releases";
   try {
-    let res = await fetch(api + "/latest");
-    let rel = res.ok ? await res.json() : (await (await fetch(api + "?per_page=1")).json())[0];
+    const list = await (await fetch(api + "?per_page=1")).json();
+    const rel = list && list[0];
     if (!rel) return;
     const win = rel.assets.find(a => a.name.endsWith("-windows-x64.zip"));
     const lin = rel.assets.find(a => a.name.endsWith("-linux-x64.tar.gz"));
