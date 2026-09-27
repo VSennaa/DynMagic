@@ -14,8 +14,9 @@ var _exclude: Array[RID] = []
 var _homing_left: float = 0.0
 var _deflected_by: Array[Node] = []
 
-@onready var _mesh: MeshInstance3D = get_node_or_null(^"Mesh") as MeshInstance3D
 @onready var _light: OmniLight3D = get_node_or_null(^"Light") as OmniLight3D
+## Relative size of the element-specific body mesh (see SpellBodyFx); set per scene.
+@export var body_scale: float = 1.0
 
 
 func _ready() -> void:
@@ -69,16 +70,9 @@ func _on_expire() -> void:
 
 
 func _apply_color(color: Color) -> void:
-	if _mesh != null:
-		var mat: StandardMaterial3D = StandardMaterial3D.new()
-		mat.albedo_color = color
-		mat.emission_enabled = true
-		mat.emission = color
-		mat.emission_energy_multiplier = 3.0
-		mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-		_mesh.material_override = mat
 	if _light != null:
 		_light.light_color = color
+	add_child(SpellBodyFx.build_projectile_body(spell.element, color, body_scale))
 
 
 ## Wind Bolt: bends toward the point under the caster's crosshair, up to homing_deg in total.

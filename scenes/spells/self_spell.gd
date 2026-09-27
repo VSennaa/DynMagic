@@ -6,6 +6,7 @@ extends SpellNode
 ##   lingering = Aura    (duration; element bonuses read by Player and spells)
 
 const ZONE_SCENE: PackedScene = preload("res://scenes/spells/zone.tscn")
+const SHELL_SHADER: Shader = preload("res://shaders/spell_shell.gdshader")
 const TRAIL_POINTS: int = 3
 
 var _life: float = 0.4
@@ -120,12 +121,13 @@ func _process(delta: float) -> void:
 
 
 func _style_shell() -> void:
-	var mat: StandardMaterial3D = StandardMaterial3D.new()
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mat.cull_mode = BaseMaterial3D.CULL_BACK  # the caster's camera is inside the shell: only outside faces render
+	# spell_shell.gdshader is cull_back: the caster's camera sits inside the shell, so only
+	# the outside faces render, same contract the old StandardMaterial3D cull mode gave.
+	var mat: ShaderMaterial = ShaderMaterial.new()
+	mat.shader = SHELL_SHADER
 	var alpha: float = 0.3 if spell.effect == &"direct" else 0.15
-	mat.albedo_color = Color(spell.color, alpha)
+	mat.set_shader_parameter(&"color", spell.color)
+	mat.set_shader_parameter(&"base_alpha", alpha)
 	_shell.material_override = mat
 	if spell.effect == &"burst":
 		_shell.scale = Vector3(0.6, 1.2, 0.6)

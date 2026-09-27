@@ -4,7 +4,7 @@ extends SpellNode
 ## Params: zone_radius, zone_duration, zone_dps, zone_applies_status.
 
 const TICK: float = 0.5
-const RING_SHADER: Shader = preload("res://shaders/ground_ring.gdshader")
+const RING_SHADER: Shader = preload("res://shaders/spell_ground.gdshader")
 
 var radius: float = 3.5
 var duration: float = 4.0
@@ -34,6 +34,7 @@ func _ready() -> void:
 	_ring.shader = RING_SHADER
 	_ring.set_shader_parameter(&"color", Color(spell.color, 0.9))
 	_ring.set_shader_parameter(&"mode", 1)
+	_ring.set_shader_parameter(&"element", SpellBodyFx.element_index(spell.element))
 	_disc.material_override = _ring
 	if bool(spell.param(&"strip", false)):
 		_disc.scale = Vector3(1.0, 1.0, 3.0)

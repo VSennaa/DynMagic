@@ -138,7 +138,12 @@ func _prepare_meshes(root: Node3D) -> void:
 		mesh.layers = ARMS_LAYER
 		mesh.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		for index: int in mesh.mesh.get_surface_count():
-			var mat: ShaderMaterial = mesh.get_surface_override_material(index).duplicate() as ShaderMaterial
+			# The toon override is applied by asset_visual.gd; it can be missing (headless dummy
+			# renderer, or a mesh without an imported material), so skip instead of crashing.
+			var source: Material = mesh.get_surface_override_material(index)
+			if not source is ShaderMaterial:
+				continue
+			var mat: ShaderMaterial = source.duplicate() as ShaderMaterial
 			mat.shader = mirrored_shader
 			mesh.set_surface_override_material(index, mat)
 

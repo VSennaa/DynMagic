@@ -11,6 +11,7 @@ extends StaticBody3D
 const PROJECTILE_ONLY_LAYER: int = 2
 const CONTACT_TICK: float = 0.5
 const CONTACT_MARGIN: float = 0.6
+const WALL_SHADER: Shader = preload("res://shaders/spell_wall.gdshader")
 
 var spell: ResolvedSpell
 var caster: Node3D
@@ -52,14 +53,13 @@ func _ready() -> void:
 	mesh.size = _size
 	_mesh.mesh = mesh
 	_mesh.position.y = _size.y * 0.5
-	var mat: StandardMaterial3D = StandardMaterial3D.new()
 	var alpha: float = 1.0 if bool(spell.param(&"opaque", false)) else (0.35 if bool(spell.param(&"transparent", false)) else 0.7)
-	if alpha < 1.0:
-		mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mat.albedo_color = Color(spell.color.lerp(Color.WHITE, 0.3), alpha)
-	mat.emission_enabled = true
-	mat.emission = spell.color
-	mat.emission_energy_multiplier = 0.6
+	var mat: ShaderMaterial = ShaderMaterial.new()
+	mat.shader = WALL_SHADER
+	mat.set_shader_parameter(&"element", SpellBodyFx.element_index(spell.element))
+	mat.set_shader_parameter(&"core_color", spell.color.lerp(Color.WHITE, 0.35))
+	mat.set_shader_parameter(&"edge_color", spell.color)
+	mat.set_shader_parameter(&"base_alpha", alpha)
 	_mesh.material_override = mat
 	AudioBus.play_sample_at("stone", global_position, get_parent(), -2.0)
 

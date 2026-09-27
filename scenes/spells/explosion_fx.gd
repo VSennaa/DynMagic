@@ -5,7 +5,8 @@ extends Node3D
 const DURATION: float = 0.35
 ## M11: the ground ring of area spells, sharper and faster than the lingering ring.
 const RING_TIME: float = 0.3
-const RING_SHADER: Shader = preload("res://shaders/ground_ring.gdshader")
+const RING_SHADER: Shader = preload("res://shaders/spell_ground.gdshader")
+const SHELL_SHADER: Shader = preload("res://shaders/spell_shell.gdshader")
 
 var _radius: float = 3.0
 var _color: Color = Color.WHITE
@@ -21,16 +22,15 @@ func configure(radius: float, color: Color, element: StringName = &"fire") -> vo
 
 
 func _ready() -> void:
-	var mat: StandardMaterial3D = StandardMaterial3D.new()
-	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
-	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
-	mat.albedo_color = Color(_color, 0.6)
-	mat.cull_mode = BaseMaterial3D.CULL_DISABLED
+	var mat: ShaderMaterial = ShaderMaterial.new()
+	mat.shader = SHELL_SHADER
+	mat.set_shader_parameter(&"color", _color)
+	mat.set_shader_parameter(&"base_alpha", 0.5)
 	_mesh.material_override = mat
 	_mesh.scale = Vector3.ONE * 0.1
 	var tween: Tween = create_tween().set_parallel(true)
 	tween.tween_property(_mesh, ^"scale", Vector3.ONE * _radius, DURATION).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
-	tween.tween_property(mat, ^"albedo_color:a", 0.0, DURATION)
+	tween.tween_method(func(t: float) -> void: mat.set_shader_parameter(&"base_alpha", lerpf(0.5, 0.0, t)), 0.0, 1.0, DURATION)
 	var ring: MeshInstance3D = MeshInstance3D.new()
 	var plane: PlaneMesh = PlaneMesh.new()
 	plane.size = Vector2(2.0, 2.0)
@@ -41,6 +41,7 @@ func _ready() -> void:
 	ring_mat.shader = RING_SHADER
 	ring_mat.set_shader_parameter(&"color", _color.lightened(0.25))
 	ring_mat.set_shader_parameter(&"mode", 0)
+	ring_mat.set_shader_parameter(&"element", SpellBodyFx.element_index(_element))
 	ring.material_override = ring_mat
 	add_child(ring)
 	tween.tween_method(func(t: float) -> void: ring_mat.set_shader_parameter(&"progress", t), 0.0, 1.0, RING_TIME)

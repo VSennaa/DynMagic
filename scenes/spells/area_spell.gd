@@ -7,12 +7,14 @@ extends SpellNode
 
 const EXPLOSION_SCENE: PackedScene = preload("res://scenes/spells/explosion_fx.tscn")
 const WALL_SCENE: PackedScene = preload("res://scenes/spells/wall.tscn")
+const GROUND_SHADER: Shader = preload("res://shaders/spell_ground.gdshader")
 const CONE_FX_TIME: float = 0.2
 ## Range is measured to the target's centre; this margin covers its body radius.
 const CONE_REACH_MARGIN: float = 0.5
 
 var _timer: float = 0.0
 var _radius: float = 2.5
+var _mark_mat: ShaderMaterial
 
 @onready var _visual: MeshInstance3D = $Visual
 
@@ -39,6 +41,9 @@ func _process(delta: float) -> void:
 		# The ring shrinks toward the center as the blast approaches.
 		var t: float = clampf(_timer / float(spell.param(&"delay", 0.9)), 0.0, 1.0)
 		_visual.scale = Vector3(_radius * (0.25 + 0.75 * t), 1.0, _radius * (0.25 + 0.75 * t))
+		if _mark_mat != null:
+			_mark_mat.set_shader_parameter(&"progress", 1.0 - t)
+			_mark_mat.set_shader_parameter(&"pulse_time", float(spell.param(&"delay", 0.9)) - _timer)
 		if _timer <= 0.0:
 			_detonate()
 	elif _timer <= 0.0:
@@ -70,11 +75,16 @@ func _place_mark() -> void:
 	_radius = float(spell.param(&"radius", 2.5))
 	# SpellCaster.cast_params already dropped the target to the floor.
 	global_position = target_point + Vector3.UP * 0.04
-	var disc: CylinderMesh = CylinderMesh.new()
-	disc.top_radius = 1.0
-	disc.bottom_radius = 1.0
-	disc.height = 0.04
-	_visual.mesh = disc
+	var plane: PlaneMesh = PlaneMesh.new()
+	plane.size = Vector2(2.0, 2.0)
+	_visual.mesh = plane
+	_mark_mat = ShaderMaterial.new()
+	_mark_mat.shader = GROUND_SHADER
+	_mark_mat.set_shader_parameter(&"color", Color(spell.color, 0.85))
+	_mark_mat.set_shader_parameter(&"mode", 0)
+	_mark_mat.set_shader_parameter(&"element", SpellBodyFx.element_index(spell.element))
+	_visual.material_override = _mark_mat
+	_visual.rotation = Vector3.ZERO
 	_timer = float(spell.param(&"delay", 0.9))
 
 

@@ -4,7 +4,7 @@ Last update: 2026-09-25. Written so any AI agent (Claude, Codex, Gemini, etc.) c
 
 ## 0. Active agent
 
-Active agent: none (2026-09-27 08:45: R8/R9 + props committed; live bot matches PASS for 1v1, 2v2, 3v3, 5v5 Control with R8/R9, 0 script errors; 123 tests 0 failures; critic fixes (edge bevel, cover wear, flipbook fire) committed. Remaining: arena chicanes for sightline targets, visual gauntlet still "far" (wants baked-like lighting, trim sheets), gauntlet mid viewpoint of arena A now clips a cover, release v1.2.0-alpha not tagged.)
+Active agent: 4x Claude Sonnet in parallel (2026-09-27 ~09:15, user feedback on v1.2.0): [arenas] scenes/arena/* spawn-front wall + corner pillars; [ui] scenes/ui/settings_screen.gd tabs; [audio] autoload/audio_bus.gd + audio/ spell sounds; [spells] scenes/spells/* + vfx/ spell bodies. Each agent edits only its area.
 
 ### Round 10 — Codex (2026-09-27) — implementation and verification, no commit
 
