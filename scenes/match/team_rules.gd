@@ -52,3 +52,7 @@ static func friendly(source: Node, target: Node) -> bool:
 
 static func spawn_offset(index: int) -> Vector3:
 	return Vector3((index % 3 - 1) * 1.5, 0, (index / 3) * 1.5) if index >= 0 else Vector3.ZERO
+
+
+static func at_north(id: int, north_id: int, teams: Dictionary) -> bool:
+	return teams[id] == teams[north_id] if teams.has(id) and teams.has(north_id) else id == north_id

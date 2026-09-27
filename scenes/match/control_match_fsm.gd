@@ -36,6 +36,13 @@ func _begin_round() -> void:
 	decisive = score[players[0]] == CONTROL_ROUNDS_TO_WIN - 1 and score[players[1]] == CONTROL_ROUNDS_TO_WIN - 1
 
 
+## Control keeps its three-round arena rotation.
+func _choose_arena() -> StringName:
+	if arena_setting == &"rotation":
+		return ARENAS[(round_number - 1) % ARENAS.size()]
+	return super._choose_arena()
+
+
 ## Decision 6: no loser rune in Control.
 func _grants_rune() -> bool:
 	return false

@@ -117,9 +117,13 @@ func tick(delta: float) -> void:
 
 
 ## Applies damage through the shield first. Returns the HP actually lost.
+var damage_revision: int = 0
+
+
 func take_damage(amount: float) -> float:
 	if is_dead or amount <= 0.0:
 		return 0.0
+	damage_revision += 1
 	var remaining: float = amount
 	if shield > 0.0:
 		var absorbed: float = minf(shield, remaining)

@@ -104,6 +104,7 @@ func _end_round(winner_id: int, reason: StringName) -> void:
 		last_round_loser = other(winner_id)
 	else:
 		last_round_loser = 0
+	previous_round = {"arena": arena, "winner": winner_id, "reason": reason, "core_holder": core_holder, "elements": elements.duplicate()}
 	round_ended.emit(winner_id, reason)
 	_set_phase(Phase.ROUND_END, ROUND_END_TIME)
 

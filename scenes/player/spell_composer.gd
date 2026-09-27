@@ -45,6 +45,8 @@ var is_recasting: bool = false
 var compose_seconds: float = -1.0
 ## M11: spell held on the pre-cast key (G). Its mana is reserved until it fires or is dropped.
 var stored: ResolvedSpell
+## G keeps its reservation while a confirmed spell is aimed, until fire/cancel.
+var using_stored: bool = false
 ## M11: G pressed after the form key, so the effect key stores instead of casting.
 var _store_next: bool = false
 var _compose_elapsed: float = 0.0
@@ -177,12 +179,15 @@ func press_precast() -> void:
 		State.AIMING:
 			if pending != null and stored == null:
 				var spell: ResolvedSpell = pending
+				if get_parent() is Player and not (get_parent() as Player).stats.can_afford(spell.mana_cost):
+					cast_rejected.emit(spell, &"no_mana")
+					return
 				clear()
 				_set_stored(spell)
 		State.IDLE:
 			if stored != null:
 				var spell: ResolvedSpell = stored
-				_set_stored(null)  # release the reservation before validating the cast
+				using_stored = true
 				_begin(spell)
 			else:
 				_store_next = not _store_next
@@ -196,6 +201,9 @@ func _set_stored(spell: ResolvedSpell) -> void:
 
 ## Drops the sequence and any aim. Called on F, timeouts, death and round end.
 func clear() -> void:
+	if using_stored:
+		_set_stored(null)
+	using_stored = false
 	is_recasting = false
 	_compose_elapsed = 0.0
 	compose_seconds = -1.0
@@ -226,6 +234,8 @@ func _begin(spell: ResolvedSpell) -> void:
 	if _store_next:
 		_store_next = false
 		var store_reason: StringName = _validate(spell) if stored == null else &"invalid"
+		if store_reason == &"" and get_parent() is Player and not (get_parent() as Player).stats.can_afford(spell.mana_cost):
+			store_reason = &"no_mana"
 		if store_reason != &"":
 			cast_rejected.emit(spell, store_reason)
 			clear()
@@ -255,6 +265,9 @@ func _fire(spell: ResolvedSpell) -> void:
 		cast_rejected.emit(spell, reason)
 		clear()
 		return
+	if using_stored:
+		_set_stored(null)  # release only after validation, immediately before the cast
+	using_stored = false
 	last_spell = spell
 	compose_seconds = -1.0 if is_recasting else _compose_elapsed
 	pending = null

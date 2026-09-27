@@ -54,6 +54,8 @@ func _refresh() -> void:
 	if ids.size() < 2:
 		_players.add_child(UiKit.label("Aguardando oponente...", 18))
 	_rules.text = "Prorrogação: %s   Arena: %s" % [Glossary.overtime(Lobby.overtime_setting), Glossary.arena(Lobby.arena_setting)]
+	if Lobby.arena_setting == &"rotation":
+		_rules.text += "\nArenas: " + ("A → B → C" if Lobby.mode == &"5v5" else "A → A → B → B → C → C → A · lados trocados a cada round")
 	if Net.is_host():
 		_rules.text += "\nSeu IP na rede: %s" % Net.local_ip()
 	elif Net.host_address != "":

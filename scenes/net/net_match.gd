@@ -23,15 +23,8 @@ var _hud: Hud
 ## --bot: scripted input for headless smoke tests (walks, strafes and casts Bolt).
 var _bot: bool = false
 var _bot_clock: float = 0.0
-## 5v5 Control bot stuck-detection (decision 4 live-test support): the arenas' central
-## anteparo/side cover are built for a side detour, not a straight walk-in, so a bot that
-## just presses "forward" toward the point wedges against the first solid it meets and
-## never arrives. Track displacement over a short window and toggle a lateral dodge when
-## it stalls, instead of hard-coding one detour per arena.
-var _bot_stuck_check_pos: Vector3 = Vector3.ZERO
-var _bot_stuck_timer: float = 0.0
-var _bot_dodge_left: bool = true
-var _bot_dodge_time_left: float = 0.0
+var _bot_route: PackedVector3Array = PackedVector3Array()
+var _bot_waypoint: int = 0
 var _log_timer: float = 0.0
 var _overlay: Label
 var _match_label: Label
@@ -108,7 +101,7 @@ func _physics_process(delta: float) -> void:
 		var by_id: Dictionary = {}
 		for id: int in Net.players:
 			by_id[id] = _player(id)
-		_core.host_tick(delta, by_id)
+		_core.host_tick(delta, by_id, MatchState.view.get("teams", {}))
 	if Net.is_host() and _control != null:
 		var by_id_control: Dictionary = {}
 		for id: int in Net.players:
@@ -201,11 +194,9 @@ func _team_spawn_index(id: int) -> int:
 	return 0
 
 
-func _team_spawn(id: int, team: int) -> Transform3D:
-	var north_team: int = 0
-	if MatchState.active and MatchState.fsm is TeamMatchFsm:
-		north_team = (MatchState.fsm as TeamMatchFsm).teams.get(MatchState.fsm.north_id, 0)
-	var at_north: bool = team == north_team
+func _team_spawn(id: int, _team: int) -> Transform3D:
+	# Use the replicated draft side on both host and clients, including duels.
+	var at_north: bool = TeamRules.at_north(id, int(MatchState.view.get("north", 1)), MatchState.view.get("teams", {}))
 	var marker: Marker3D = _arena.get_node(^"Layout/SpawnNorth" if at_north else ^"Layout/SpawnSouth") as Marker3D
 	# 1v1 (solo team): spawn exactly on the marker, unchanged from before team modes.
 	if TeamRules.size_for(Lobby.mode) <= 1:
@@ -468,47 +459,25 @@ func _melee_fx(caster_id: int) -> void:
 
 func _bot_step(delta: float) -> void:
 	_bot_clock += delta
-	var phase: int = int(_bot_clock) % 4
 	for action: StringName in [&"move_forward", &"move_left", &"move_right"]:
 		Input.action_release(action)
-	# 5v5 Control: converge on the point instead of the 1-in-4 duty cycle used elsewhere, so
-	# headless bot matches actually exercise capture/contest instead of just wandering near
-	# their own spawn (decision 4; see docs/HANDOFF.md round 9 Sonnet-5 note).
-	if Lobby.mode == &"5v5" and _control != null:
-		var me_stuck: Player = _player(multiplayer.get_unique_id())
-		if me_stuck != null:
-			_bot_stuck_timer += delta
-			if _bot_stuck_timer >= 0.5:
-				if me_stuck.global_position.distance_to(_bot_stuck_check_pos) < 0.4:
-					_bot_dodge_left = not _bot_dodge_left
-					_bot_dodge_time_left = 1.5
-				_bot_stuck_check_pos = me_stuck.global_position
-				_bot_stuck_timer = 0.0
-		Input.action_press(&"move_forward")
-		if _bot_dodge_time_left > 0.0:
-			_bot_dodge_time_left -= delta
-			Input.action_press(&"move_left" if _bot_dodge_left else &"move_right")
-	else:
-		match phase:
-			0:
-				Input.action_press(&"move_forward")
-			1:
-				Input.action_press(&"move_left")
-			2:
-				Input.action_press(&"move_right")
 	var me: Player = _player(multiplayer.get_unique_id())
+	if me != null and not me.frozen:
+		_bot_aim(me)
+		var goal: Vector3 = _bot_route[-1] if not _bot_route.is_empty() else Vector3.ZERO
+		if _bot_waypoint < _bot_route.size() - 1 or me.global_position.distance_to(goal) > 1.0:
+			Input.action_press(&"move_forward")
 	_bot_draft()
 	# Poll the confirm request: at 60 Hz a per-frame RPC would flood the reliable channel.
 	if MatchState.phase() == MatchFsm.Phase.DRAFT and fmod(_bot_clock, 0.5) < delta:
 		MatchState.confirm_draft()
-	_bot_aim(me)
 	if me != null and not me.frozen and fmod(_bot_clock, 2.0) < delta:
 		me.composer.press_slot(0)
 		me.composer.press_slot(0)
 	# M11: swing the staff when the opponent is within reach (exercises the melee RPC path).
 	if me != null and not me.frozen and me.can_melee():
 		for child: Node in _players_root.get_children():
-			if child is Player and child != me and me.global_position.distance_to((child as Player).global_position) < Player.MELEE_RANGE:
+			if child is Player and child != me and not TeamRules.friendly(me, child) and me.global_position.distance_to((child as Player).global_position) < Player.MELEE_RANGE:
 				me.try_melee()
 				break
 
@@ -565,7 +534,9 @@ func _on_match_changed() -> void:
 		var layout: ArenaBuilder = _arena.get_node(^"Layout") as ArenaBuilder
 		var arena_id: StringName = view.get("arena", &"A")
 		if layout.variant != arena_id:
-			layout.variant = arena_id  # setter rebuilds the greybox
+			var space_paths: Dictionary = {&"A": "cloister", &"B": "patio", &"C": "spine"}
+			layout.spaces = load("res://scenes/arena/%s_spaces.tres" % space_paths[arena_id]) as ArenaSpaces
+			layout.variant = arena_id  # rebuild with the actual selected geometry
 		_start_round(int(view.get("north", 1)))
 	var elements: Dictionary = view.get("elements", {})
 	for id: Variant in elements:
@@ -600,6 +571,8 @@ func _on_match_changed() -> void:
 
 ## Round start: sides swap (north picks first), everyone respawns fresh.
 func _start_round(north_id: int) -> void:
+	_bot_route.clear()
+	_bot_waypoint = 0
 	for object: Node in get_children():
 		if object is SpellNode or object is Wall:
 			remove_child(object)
@@ -679,6 +652,11 @@ func _match_text() -> String:
 			return "%s\nFIM DE PARTIDA" % head
 		MatchFsm.Phase.PAUSED:
 			return "%s\nPAUSADO — oponente desconectado" % head
+	if Lobby.mode != &"5v5" and MatchState.phase() == MatchFsm.Phase.COMBAT:
+		var acts: Dictionary = {&"scouting": "Sondagem — Núcleo inativo", &"announcement": "Núcleo ativa aos 30 s — reposicione-se", &"conversion": "Disputa — capture e converta a vantagem", &"convergence": "Convergência — prepare a aproximação ao centro"}
+		head += "\n" + String(acts.get(view.get("combat_act", &""), ""))
+		if bool(view.get("core_contested", false)):
+			head += "\nNúcleo contestado — captura pausada"
 	return head
 
 ## Bot: pick the first free element when it is our turn, plus the first offered rune.
@@ -721,8 +699,10 @@ func _bot_draft() -> void:
 
 ## Spawns the Arcane Core at the arena centre when the host says so; grants Overcharge on capture.
 func _update_core(view: Dictionary, round_number: int) -> void:
+	if Lobby.mode == &"5v5":
+		return
 	var holder: int = int(view.get("core_holder", 0))
-	var should_exist: bool = bool(view.get("core_spawned", false)) and holder == 0 \
+	var should_exist: bool = holder == 0 \
 			and (MatchState.phase() == MatchFsm.Phase.COMBAT or MatchState.phase() == MatchFsm.Phase.OVERTIME)
 	if should_exist and _core == null:
 		_core = ArcaneCore.create()
@@ -733,6 +713,8 @@ func _update_core(view: Dictionary, round_number: int) -> void:
 	elif not should_exist and _core != null:
 		_core.queue_free()
 		_core = null
+	if _core != null:
+		_core.set_stage(view.get("combat_act", &"") != &"scouting", bool(view.get("core_spawned", false)), bool(view.get("core_contested", false)))
 	if holder != 0 and _core_granted_round != round_number:
 		_core_granted_round = round_number
 		var player: Player = _player(holder)
@@ -759,6 +741,9 @@ func _update_control(view: Dictionary) -> void:
 ## Host: a Control-mode wave-respawned player (M12) is teleported back to their team spawn
 ## with full HP/mana, exactly like the per-round respawn in `_start_round`.
 func wave_respawn(id: int) -> void:
+	if id == multiplayer.get_unique_id():
+		_bot_route.clear()
+		_bot_waypoint = 0
 	var player: Player = _player(id)
 	if player == null:
 		return
@@ -777,6 +762,13 @@ func control_progress() -> Dictionary:
 ## Overtime rules (spec 02 §5). Sudden Death and Mana Surge fall back to Collapse after 30 s / 20 s.
 func _update_overtime(view: Dictionary, round_number: int) -> void:
 	var in_overtime: bool = MatchState.phase() == MatchFsm.Phase.OVERTIME
+	var warning: bool = Lobby.mode != &"5v5" and view.get("combat_act", &"") == &"convergence" and (bool(view.get("decisive", false)) or view.get("overtime_setting", &"") == &"collapse")
+	if warning:
+		if _collapse == null:
+			_collapse = CollapseZone.new()
+			_collapse.warning_only = true
+			add_child(_collapse)
+		return
 	if not in_overtime:
 		if _collapse != null:
 			_collapse.queue_free()
@@ -803,9 +795,15 @@ func _update_overtime(view: Dictionary, round_number: int) -> void:
 			or (rule == &"mana_surge" and elapsed >= 20.0)
 	if rule == &"mana_surge" and elapsed >= 20.0:
 		_set_overtime_flags(false, false)
+	if _collapse != null and _collapse.warning_only:
+		_collapse.warning_only = false
+		_collapse.elapsed = 0.0
 	if collapse_now and _collapse == null:
 		_collapse = CollapseZone.new()
 		add_child(_collapse)
+	if _collapse != null:
+		_collapse.final_shrink = rule == &"collapse" and Lobby.mode != &"5v5"
+		_collapse.elapsed = elapsed - (30.0 if rule == &"sudden_death" else (20.0 if rule == &"mana_surge" else 0.0))
 
 
 func _set_overtime_flags(sudden: bool, surge: bool) -> void:
@@ -953,12 +951,27 @@ func _update_draft_panel(view: Dictionary) -> void:
 			var rune_id: StringName = StringName(offers[i])
 			button.text = "%d %s" % [i + 5, Glossary.rune(rune_id)]
 			button.tooltip_text = Glossary.rune_description(rune_id)
+			button.modulate = Color(0.65, 1.0, 0.65) if (view.get("runes", {}) as Dictionary).get(me, &"") == rune_id else Color.WHITE
 	if not offers.is_empty():
 		var descriptions: PackedStringArray = PackedStringArray()
 		for rune: Variant in offers:
 			descriptions.append("%s: %s" % [Glossary.rune(StringName(rune)), Glossary.rune_description(StringName(rune))])
 		_draft_rune_desc.text = "   ".join(descriptions)
 	_draft_timer.text = "Tempo: %d s" % ceili(float(view.get("time_left", 0.0)))
+	var previous: Dictionary = view.get("previous_round", {})
+	if not previous.is_empty():
+		_draft_timer.text += "\n" + ("Mesmo mapa, lados trocados" if previous.get("arena") == view.get("arena") else "Nova arena: %s" % view.get("arena"))
+		_draft_timer.text += " · Último round: %s" % Glossary.reason(StringName(previous.get("reason", "")))
+		var last_elements: Dictionary = previous.get("elements", {})
+		var opponents: PackedStringArray = PackedStringArray()
+		for id: int in last_elements:
+			if id != me and (teams.is_empty() or teams.get(id, -1) != teams.get(me, -2)):
+				opponents.append(Glossary.element(StringName(last_elements[id])))
+		_draft_timer.text += "\nPlano rival anterior: " + ", ".join(opponents)
+		if int(previous.get("core_holder", 0)) != 0:
+			_draft_timer.text += " · Núcleo: " + String(Net.players.get(int(previous["core_holder"]), "jogador"))
+	if bool(view.get("decisive", false)):
+		_draft_rune_label.text = "Decisivo: ofertas iguais, escolhas secretas até o fim"
 
 
 func _build_draft_panel() -> void:
@@ -1000,6 +1013,10 @@ func _pick_rune_index(index: int) -> void:
 		MatchState.pick_rune(StringName(_draft_offers[index]))
 
 ## Host: capture progress ratios for the view (clients get them once per second).
+func core_contested() -> bool:
+	return _core != null and _core.contested
+
+
 func core_progress() -> Dictionary:
 	var out: Dictionary = {}
 	if _core != null:
@@ -1042,38 +1059,39 @@ func _scoreboard_input(event: InputEvent) -> void:
 			_scoreboard.queue_free()
 			_scoreboard = null
 
-## Bot: face the opponent so its Bolts can actually land (full-match tests end by kills).
-## 5v5 Control: only chase a nearby opponent (fight for the point); with none close, face
-## the control point itself so "move forward" carries the bot there instead of drifting
-## toward whichever enemy is currently farthest across the map.
+## Bots follow authored clear routes to exercise objectives through ordinary inputs.
 func _bot_aim(me: Player) -> void:
 	if me == null or me.frozen:
 		return
-	var teams: Dictionary = MatchState.view.get("teams", {})
-	var my_team: int = int(teams.get(int(me.name), -1))
-	var engage_range: float = 14.0
+	if not _bot_route.is_empty() and _bot_waypoint == _bot_route.size() - 1 and me.global_position.distance_to(_bot_route[-1]) > 12.0:
+		_bot_route.clear()  # replicated Control wave respawn
+	if _bot_route.is_empty():
+		var spaces: ArenaSpaces = (_arena.get_node(^"Layout") as ArenaBuilder).effective_spaces()
+		var nearest: float = INF
+		for route_name: String in spaces.routes:
+			var route: PackedVector3Array = spaces.routes[route_name]
+			var distance: float = me.global_position.distance_to(route[0])
+			if distance < nearest:
+				nearest = distance
+				_bot_route = route.duplicate()
+		_bot_waypoint = 0
+	if not _bot_route.is_empty():
+		while _bot_waypoint < _bot_route.size() - 1 and me.global_position.distance_to(_bot_route[_bot_waypoint]) < 0.65:
+			_bot_waypoint += 1
+		var direction: Vector3 = _bot_route[_bot_waypoint] - me.global_position
+		if direction.length() > 0.1:
+			me.set_look(atan2(-direction.x, -direction.z), 0.0)
+		if _bot_waypoint < _bot_route.size() - 1 or direction.length() > 1.0:
+			return
+	# At the objective, aim only at visible enemies, never allies through a wall.
 	for child: Node in _players_root.get_children():
 		var other: Player = child as Player
-		if other == null or other == me:
+		if other == null or other == me or other.stats.is_dead or TeamRules.friendly(me, other):
 			continue
-		if Lobby.mode == &"5v5" and int(teams.get(int(other.name), -2)) == my_team:
+		if not SpatialContract.clear_path(get_world_3d(), me.global_position + Vector3.UP, other.global_position + Vector3.UP, other, me):
 			continue
-		var to: Vector3 = other.global_position - me.global_position
-		if Lobby.mode == &"5v5" and to.length() > engage_range:
-			continue
-		me.set_look(atan2(-to.x, -to.z), 0.0)
-		return
-	if Lobby.mode == &"5v5" and _control != null:
-		var to_point: Vector3 = _control.global_position - me.global_position
-		if to_point.length() > 0.5:
-			me.set_look(atan2(-to_point.x, -to_point.z), 0.0)
-		return
-	for child: Node in _players_root.get_children():
-		var other: Player = child as Player
-		if other == null or other == me:
-			continue
-		var to: Vector3 = other.global_position - me.global_position
-		me.set_look(atan2(-to.x, -to.z), 0.0)
+		var direction: Vector3 = other.global_position - me.global_position
+		me.set_look(atan2(-direction.x, -direction.z), 0.0)
 		return
 
 ## C14: 3×3 card of the local player's spells for this round.

@@ -9,6 +9,8 @@ const SHRINK_TIME: float = 20.0
 const DPS: float = 12.0
 const TICK: float = 0.5
 
+var final_shrink: bool = true
+var warning_only: bool = false
 var elapsed: float = 0.0
 var _tick_timer: float = 0.0
 var _wall: MeshInstance3D
@@ -34,6 +36,10 @@ func _ready() -> void:
 
 
 func radius() -> float:
+	if warning_only:
+		return END_RADIUS
+	if final_shrink and elapsed > SHRINK_TIME:
+		return lerpf(END_RADIUS, 2.0, clampf((elapsed - SHRINK_TIME) / 15.0, 0.0, 1.0))
 	return lerpf(START_RADIUS, END_RADIUS, clampf(elapsed / SHRINK_TIME, 0.0, 1.0))
 
 
@@ -45,6 +51,8 @@ func _process(delta: float) -> void:
 
 ## Host: damage everyone outside the circle.
 func host_tick(delta: float, players: Array[Player]) -> void:
+	if warning_only:
+		return
 	_tick_timer += delta
 	if _tick_timer < TICK:
 		return

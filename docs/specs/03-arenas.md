@@ -61,7 +61,7 @@ Toda cobertura bloqueia projéteis. Muralha de Vento é a exceção documentada 
 - 2 pares de caixas e 2 caixas altas soltas nos quadrantes.
 - Leitura: combate em corredores. Favorece Leque, Muralha e emboscada.
 
-A variante é escolhida no lobby: Fixa A, B, C, Rotação (padrão: A, B, C e repete) ou Aleatória.
+A variante é escolhida no lobby: Fixa A, B, C, Rotação (R9, eliminação: A,A,B,B,C,C,A; Controle MD3: A,B,C) ou Aleatória.
 
 ## 4. Elementos dinâmicos
 

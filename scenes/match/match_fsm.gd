@@ -22,7 +22,9 @@ const CORE_SPAWN_AT: float = 30.0
 const ELEMENTS: Array[StringName] = [&"fire", &"frost", &"storm", &"wind"]
 const OVERTIME_RULES: Array[StringName] = [&"collapse", &"sudden_death", &"mana_surge"]
 const ARENAS: Array[StringName] = [&"A", &"B", &"C"]
-const RUNES: Array[StringName] = [&"breath", &"haste", &"light_step", &"husk", &"focus", &"echo", &"cold_blood"]
+const RUNES: Array[StringName] = [&"breath", &"echo", &"light_step", &"focus", &"husk"]
+const REMATCH_ROTATION: Array[StringName] = [&"A", &"A", &"B", &"B", &"C", &"C", &"A"]
+const RUNE_CATEGORIES: Array = [[&"breath", &"echo"], [&"light_step", &"focus"], [&"husk"]]
 
 var phase: Phase = Phase.LOBBY
 ## Seconds left in the current phase (the HUD clock).
@@ -52,6 +54,7 @@ var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 ## Debug: multiplies the clock (e.g. --match-speed 8 for automated full-match runs).
 var speed: float = 1.0
 
+var previous_round: Dictionary = {}
 var confirmed: Array[int] = []
 var _draft_elapsed: float = 0.0
 var _loaded: Array[int] = []
@@ -68,6 +71,7 @@ func start(p_players: Array[int], p_overtime_setting: StringName = &"collapse") 
 	round_number = 0
 	north_id = players[rng.randi_range(0, players.size() - 1)]
 	last_round_loser = 0
+	previous_round.clear()
 	_loaded.clear()
 	_set_phase(Phase.LOADING, 0.0)
 
@@ -266,16 +270,42 @@ func _choose_overtime() -> StringName:
 	return OVERTIME_RULES[rng.randi_range(0, OVERTIME_RULES.size() - 1)]
 
 
-## Decisive round: random arena, never the previous one (spec 02 §6).
+## Rotation is a spatial rematch; fixed/random settings keep their own policy.
 func _choose_arena() -> StringName:
+	if arena_setting == &"rotation":
+		return REMATCH_ROTATION[mini(round_number - 1, REMATCH_ROTATION.size() - 1)]
+	# R9 only replaces the decisive lottery in rotation mode.
 	if decisive or arena_setting == &"random":
 		var options: Array[StringName] = ARENAS.duplicate()
 		if decisive and round_number > 1:
 			options.erase(arena)
 		return options[rng.randi_range(0, options.size() - 1)]
-	if ARENAS.has(arena_setting):
-		return arena_setting
-	return ARENAS[(round_number - 1) % ARENAS.size()]
+	return arena_setting if ARENAS.has(arena_setting) else &"A"
+
+
+func adaptation_offer() -> Array[StringName]:
+	var offer: Array[StringName] = []
+	for category: Array in RUNE_CATEGORIES:
+		offer.append(category[rng.randi_range(0, category.size() - 1)])
+	return offer
+
+
+## Per-recipient draft view: even spectators must not receive opponents' secret picks.
+func visible_runes(viewer: int) -> Dictionary:
+	if draft_step == DraftStep.DONE:
+		return runes.duplicate()
+	return {viewer: runes[viewer]} if runes.has(viewer) else {}
+
+
+func combat_act() -> StringName:
+	if phase != Phase.COMBAT:
+		return &""
+	var elapsed: float = COMBAT_TIME - time_left
+	if elapsed < 20.0:
+		return &"scouting"
+	if elapsed < CORE_SPAWN_AT:
+		return &"announcement"
+	return &"conversion" if elapsed < 60.0 else &"convergence"
 
 
 func _begin_round() -> void:
@@ -296,12 +326,9 @@ func _begin_round() -> void:
 			rune_takers.assign(players)
 		elif last_round_loser != 0:
 			rune_takers.append(last_round_loser)
+		var shared_offer: Array[StringName] = adaptation_offer()
 		for id: int in rune_takers:
-			var pool: Array[StringName] = RUNES.duplicate()
-			var offer: Array[StringName] = []
-			for i: int in 3:
-				offer.append(pool.pop_at(rng.randi_range(0, pool.size() - 1)))
-			rune_offers[id] = offer
+			rune_offers[id] = shared_offer.duplicate()
 	confirmed.clear()
 	_draft_elapsed = 0.0
 	draft_step = DraftStep.SIDE_A
@@ -319,6 +346,7 @@ func _end_round(winner_id: int, reason: StringName) -> void:
 		last_round_loser = other(winner_id)
 	else:
 		last_round_loser = 0
+	previous_round = {"arena": arena, "winner": winner_id, "reason": reason, "core_holder": core_holder, "elements": elements.duplicate()}
 	round_ended.emit(winner_id, reason)
 	_set_phase(Phase.ROUND_END, ROUND_END_TIME)
 

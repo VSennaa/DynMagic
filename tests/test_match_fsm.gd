@@ -195,7 +195,7 @@ func test_disconnect_pause_resume_and_forfeit() -> void:
 	assert_eq(fsm.phase, MatchFsm.Phase.MATCH_END)
 	assert_eq(match_winner, A)
 
-func test_arena_rotation_and_decisive_random() -> void:
+func test_arena_rotation_and_decisive_rematch() -> void:
 	_load_both()
 	assert_eq(fsm.arena, &"A")
 	var seen: Array[StringName] = [fsm.arena]
@@ -204,9 +204,9 @@ func test_arena_rotation_and_decisive_random() -> void:
 		fsm.player_died(B if i % 2 == 0 else A)
 		_finish_round_end()
 		seen.append(fsm.arena)
-	assert_eq(seen.slice(0, 6), [&"A", &"B", &"C", &"A", &"B", &"C"] as Array[StringName])
+	assert_eq(seen.slice(0, 6), [&"A", &"A", &"B", &"B", &"C", &"C"] as Array[StringName])
 	assert_true(fsm.decisive)
-	assert_ne(fsm.arena, seen[5], "decisive arena differs from the previous round")
+	assert_eq(fsm.arena, &"A", "decisive returns to the simplest arena")
 
 
 func test_reconnect_moves_entire_slot_and_restores_clock() -> void:

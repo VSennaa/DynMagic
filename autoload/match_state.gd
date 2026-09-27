@@ -268,20 +268,29 @@ func _broadcast() -> void:
 		"draft_step": fsm.draft_step,
 		"elements": fsm.elements.duplicate(),
 		# Rune picks stay hidden until the draft ends (spec 02 §8).
-		"runes": fsm.runes.duplicate() if fsm.draft_step == MatchFsm.DraftStep.DONE else {},
+		"runes": {},
 		"rune_offers": fsm.rune_offers.duplicate(),
 		"decisive": fsm.decisive,
 		"overtime_rule": fsm.overtime_rule,
 		"core_spawned": fsm.core_spawned,
 		"core_holder": fsm.core_holder,
 		"arena": fsm.arena,
+		"combat_act": fsm.combat_act(),
+		"overtime_setting": fsm.overtime_setting,
+		"previous_round": fsm.previous_round.duplicate(),
 		"core_progress": _core_progress(),
+		"core_contested": _core_contested(),
 		"teams": (fsm as TeamMatchFsm).teams if fsm is TeamMatchFsm else {},
 		"mode": Lobby.mode,
 		"control_progress": _control_progress(),
 		"respawn_at": (fsm as ControlMatchFsm).respawn_at.duplicate() if fsm is ControlMatchFsm else {},
 	}
-	_sync.rpc(state)
+	# Recipient-specific secrets; never broadcast the full picks then hide them in UI.
+	for id: int in multiplayer.get_peers():
+		state["runes"] = fsm.visible_runes(id)
+		_sync.rpc_id(id, state)
+	state["runes"] = fsm.visible_runes(multiplayer.get_unique_id())
+	_sync(state)
 
 
 @rpc("authority", "call_local", "reliable", Net.CHANNEL_RELIABLE)
@@ -351,6 +360,11 @@ func _hp_by_player() -> Dictionary:
 		if player != null:
 			out[id] = player.stats.hp
 	return out
+
+
+func _core_contested() -> bool:
+	var net_match: Node = get_tree().get_first_node_in_group(&"net_match")
+	return bool(net_match.call(&"core_contested")) if net_match != null else false
 
 
 func _core_progress() -> Dictionary:

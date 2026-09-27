@@ -475,7 +475,8 @@ func _validate_cast(spell: ResolvedSpell) -> StringName:
 	# D1: RMB only repeats confirmed spells; quick spells are cast with their keys.
 	if composer.is_recasting and spell.is_quick():
 		return &"invalid"
-	if not stats.can_afford(mana_cost_for(spell, composer.is_recasting), reserved_mana()):
+	var reservation: float = 0.0 if composer.using_stored and composer.stored == spell else reserved_mana()
+	if not stats.can_afford(mana_cost_for(spell, composer.is_recasting), reservation):
 		return &"no_mana"
 	return &""
 
@@ -537,8 +538,6 @@ func start_dash(distance: float, duration: float, iframes: float, lift: float = 
 func damage_mult() -> float:
 	var mult: float = 1.0 + (float(active_aura.param(&"damage_bonus", 0.0)) if active_aura != null else 0.0)
 	if rune == &"cold_blood" and stats.hp < 30.0:
-		mult *= 1.2
-	if has_overcharge():
 		mult *= 1.2
 	return mult
 
@@ -711,7 +710,7 @@ func _resolve_melee() -> void:
 
 ## Mana held by the pre-cast spell; it shows as a striped segment on the mana bar.
 func reserved_mana() -> float:
-	return mana_cost_for(composer.stored, false) if composer.stored != null else 0.0
+	return composer.stored.mana_cost if composer.stored != null else 0.0
 
 
 func _on_stored_changed(spell: ResolvedSpell) -> void:
