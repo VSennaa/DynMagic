@@ -9,7 +9,8 @@ const CREAM: Color = Color("#F2E8D5")
 const GOLD: Color = Color("#E8C170")
 const ACCENT: Color = Color("#C98BFF")
 const BACKDROP_SHADER: Shader = preload("res://ui/menu_backdrop.gdshader")
-const PAINTING: String = "res://assets/ui/menu_backdrop.png"
+const PAINTING: String = "res://assets/ui/menu_backdrop.webp"
+const TITLE_BANNER: String = "res://assets/ui/title_banner.png"
 const CORNERS: Array[String] = ["tl", "tr", "bl", "br"]
 const CORNER_SIZE: float = 56.0
 
@@ -82,13 +83,31 @@ static func backdrop() -> Control:
 	return root
 
 
-static func title(text: String, size: int = 56) -> Label:
+static func title(text: String, size: int = 56) -> Control:
 	var heading: Label = Label.new()
 	heading.text = text
 	heading.theme_type_variation = &"TitleLabel"
 	heading.add_theme_font_size_override(&"font_size", size)
 	heading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	return heading
+	if size < 56 or not ResourceLoader.exists(TITLE_BANNER):
+		return heading
+	# Large titles sit on the painted title banner (spec 07 §8: 1024x256, margins 128/64).
+	var holder: Control = Control.new()
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	holder.custom_minimum_size = Vector2(0, size * 2 + 24)
+	var banner: NinePatchRect = NinePatchRect.new()
+	banner.texture = load(TITLE_BANNER) as Texture2D
+	banner.patch_margin_left = 128
+	banner.patch_margin_top = 64
+	banner.patch_margin_right = 128
+	banner.patch_margin_bottom = 64
+	banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	banner.set_anchors_preset(Control.PRESET_FULL_RECT)
+	holder.add_child(banner)
+	heading.set_anchors_preset(Control.PRESET_FULL_RECT)
+	heading.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	holder.add_child(heading)
+	return holder
 
 
 ## Section header in the title font, framed by small rune marks.

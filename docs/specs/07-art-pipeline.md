@@ -155,7 +155,10 @@ Margens abaixo na ordem **esquerda / topo / direita / base**, em pixels da image
 | `rune_corner_br.png` | 128 × 128 | 0 / 0 / 0 / 0; sem slice |
 | `title_banner.png` | 1024 × 256 | 128 / 64 / 128 / 64 |
 | `menu_backdrop.png` | 1920 × 1080 | 0 / 0 / 0 / 0; sem slice, manter proporção |
+| `menu_backdrop.webp` | 1920 × 1080 | 0 / 0 / 0 / 0; sem slice, manter proporção (WebP q0,9, substitui o PNG em runtime) |
 
 Integração desses PNGs nas telas/tema pertence ao agente de UI. Os cantos decorativos do painel ficam dentro dos 32 px fixos. O título é uma faixa vazia para texto sobreposto pela UI.
+
+Integração (rodada A03): `title_banner.png` é desenhado atrás de títulos grandes (`UiKit.title()` com `size >= 56`) como `NinePatchRect` com margens 128 / 64 / 128 / 64. O pergaminho virou variações de tema opt-in `ParchmentPanel` (PanelContainer) e `ParchmentLabel` (texto escuro `#2A2233`), aplicadas só por `theme_type_variation`; os painéis padrão continuam escuros. `menu_backdrop.webp` (WebP q0,9, gerado de `menu_backdrop.png`) é o fundo dos menus; o PNG original é mantido apenas para a verificação de assets.
 
 Validação: `--import` e `tools/verify_assets.tscn` cobrem dimensões, UV/texturas, triângulos, origem de pega, osso da mão, troca dos quatro elementos local/remota, poses, lateralidade ao vivo, FOV, morte/respawn, presença dos 11 PNGs e colisões A/B/C. Galeria: `--staffs`, `--remote-staff`, `--first-person [--left] [--element fire|frost|storm|wind] [--pose compose|aim|cast]`, sempre com `--capture <arquivo.png>`. Evidências locais em `tools/blender/validation/r6-*`.

@@ -25,9 +25,9 @@ func _ready() -> void:
 	column.custom_minimum_size = Vector2(420, 0)
 	column.add_theme_constant_override(&"separation", 14)
 	panel.add_child(column)
-	var heading: Label = UiKit.title("DynMagic", 76)
+	var heading: Control = UiKit.title("DynMagic", 76)
 	column.add_child(heading)
-	var tagline: Label = UiKit.label("Arena 1v1 de magia dinâmica", 20)
+	var tagline: Label = UiKit.label("Duelos e batalhas de magia dinâmica", 20)
 	tagline.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	tagline.modulate = Color(1, 1, 1, 0.8)
 	column.add_child(tagline)

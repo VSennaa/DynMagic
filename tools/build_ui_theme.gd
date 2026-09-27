@@ -11,6 +11,7 @@ const CREAM: Color = Color("#F2E8D5")
 const GOLD: Color = Color("#E8C170")
 const GOLD_DIM: Color = Color("#8A7148")
 const VIOLET: Color = Color("#C98BFF")
+const PARCHMENT_INK: Color = Color("#2A2233")
 
 
 func _initialize() -> void:
@@ -92,6 +93,17 @@ static func build() -> Theme:
 	theme.set_color(&"font_color", &"PopupMenu", CREAM)
 	theme.set_color(&"font_hover_color", &"PopupMenu", GOLD)
 	theme.set_stylebox(&"hover", &"PopupMenu", _flat(INK_3, VIOLET, 0, 2))
+
+	# Parchment light variations (spec 07 §8): opt-in readable light panel for reading
+	# screens. Default panels stay dark ink; apply via theme_type_variation only.
+	theme.add_type(&"ParchmentPanel")
+	theme.set_type_variation(&"ParchmentPanel", &"PanelContainer")
+	theme.set_stylebox(&"panel", &"ParchmentPanel", _parchment_box())
+	theme.add_type(&"ParchmentLabel")
+	theme.set_type_variation(&"ParchmentLabel", &"Label")
+	theme.set_color(&"font_color", &"ParchmentLabel", PARCHMENT_INK)
+	theme.set_color(&"font_outline_color", &"ParchmentLabel", Color(1, 1, 1, 0))
+	theme.set_constant(&"outline_size", &"ParchmentLabel", 0)
 
 	# Text fields and lists
 	var field: StyleBoxFlat = _flat(Color(INK, 0.85), GOLD_DIM, 1, 4)
@@ -186,20 +198,27 @@ static func _check_icon(checked: bool) -> ImageTexture:
 	return ImageTexture.create_from_image(image)
 
 
-static func _panel_box(textured: bool) -> StyleBox:
-	# The light parchment art is kept for future light pages; menus keep dark ink panels so the
-	# cream text stays readable.
-	if false and textured and ResourceLoader.exists("res://assets/ui/parchment_panel.png"):
+static func _panel_box(_textured: bool) -> StyleBox:
+	# Menus keep dark ink panels so the cream text stays readable; the light parchment art is
+	# available as the opt-in ParchmentPanel variation (see _parchment_box).
+	var box: StyleBoxFlat = _flat(Color(INK, 0.94), GOLD_DIM, 2, 8)
+	box.set_content_margin_all(28)
+	box.shadow_color = Color(0, 0, 0, 0.6)
+	box.shadow_size = 12
+	return box
+
+
+## Light parchment 9-slice (spec 07 §8: 512x512, margins 32/32/32/32) for reading screens.
+static func _parchment_box() -> StyleBox:
+	if ResourceLoader.exists("res://assets/ui/parchment_panel.png"):
 		var tex: StyleBoxTexture = StyleBoxTexture.new()
 		tex.texture = load("res://assets/ui/parchment_panel.png") as Texture2D
 		for side: Side in [SIDE_LEFT, SIDE_RIGHT, SIDE_TOP, SIDE_BOTTOM]:
 			tex.set_texture_margin(side, 32)
 			tex.set_content_margin(side, 30)
 		return tex
-	var box: StyleBoxFlat = _flat(Color(INK, 0.94), GOLD_DIM, 2, 8)
+	var box: StyleBoxFlat = _flat(Color("#E6D9BE"), GOLD_DIM, 2, 8)
 	box.set_content_margin_all(28)
-	box.shadow_color = Color(0, 0, 0, 0.6)
-	box.shadow_size = 12
 	return box
 
 
