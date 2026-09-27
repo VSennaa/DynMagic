@@ -1,18 +1,27 @@
 ## Audio bus volumes and one-shot playback helpers. See docs/specs/06-ui-settings.md.
 ## Mixed sources (user decision 2026-09-25): CC0 samples (Kenney, audio/cc0/) for UI, footsteps,
-## hits and foley; spells are synthesised in three layers (spec 01 §5): element timbre, form
-## attack and effect tail, cached per spell and played with small pitch variation.
+## hits and foley. Round 2026-09-27 ("spell sounds still bad"): spells now build on real CC0
+## samples (audio/cc0/spells/, Kenney Sci-Fi Sounds + Digital Audio) decoded and resampled in
+## GDScript (pitch-shift, layering, one-pole low/high-pass) with synthesis kept as a subtle
+## sparkle/crackle support layer only. Cached per spell and played with small pitch variation.
 extends Node
 
 signal spell_played(spell: ResolvedSpell, position: Vector3)
 
 const MIX_RATE: int = 22050
-const BUSES: Array[String] = ["Music", "SFX", "UI"]
+const BUSES: Array[String] = ["Music", "SFX", "UI", "Spells"]
+## Spells is a dedicated sub-bus that sends into SFX (so spell casts/impacts pick up the SFX
+## reverb send and the SFX volume slider) instead of feeding Master directly.
+const BUS_SEND: Dictionary = {"Spells": "SFX"}
+const MAX_VOICES_PER_SPELL: int = 3
 
 var _cache: Dictionary[String, AudioStreamWAV] = {}
 ## Sample groups: name -> list of streams (a random one plays each time).
 var _samples: Dictionary[String, Array] = {}
 var _music: AudioStreamPlayer
+## Per spell-key list of currently playing voices, so no single spell can stack more than
+## MAX_VOICES_PER_SPELL simultaneous instances.
+var _active_voices: Dictionary = {}
 
 const SAMPLE_GROUPS: Dictionary = {
 	"click": ["ui/click_002.ogg"],
@@ -53,7 +62,7 @@ func _ready() -> void:
 			AudioServer.add_bus()
 			var index: int = AudioServer.bus_count - 1
 			AudioServer.set_bus_name(index, bus)
-			AudioServer.set_bus_send(index, "Master")
+			AudioServer.set_bus_send(index, BUS_SEND.get(bus, "Master"))
 	_add_sfx_reverb()
 	Settings.load_settings()  # re-apply saved volumes now that the buses exist
 	for group: String in SAMPLE_GROUPS:
@@ -75,7 +84,7 @@ func play_spell(spell: ResolvedSpell, position: Vector3, parent: Node) -> void:
 	var key: String = "%s_%s" % [spell.element, spell.key]
 	if not _cache.has(key):
 		_cache[key] = _synth(spell.element, spell.form, spell.effect)
-	_play_at(_cache[key], position, parent, 0.0)
+	_play_at(_cache[key], position, parent, 0.0, &"Spells", key)
 
 
 ## Low boom for explosions and Mark detonations.
@@ -85,23 +94,49 @@ func play_impact(element: StringName, position: Vector3, parent: Node) -> void:
 	var key: String = "%s_impact" % element
 	if not _cache.has(key):
 		_cache[key] = _synth(element, &"area", &"burst", true)
-	_play_at(_cache[key], position, parent, 2.0)
+	_play_at(_cache[key], position, parent, 2.0, &"Spells", key)
 	play_sample_at(String(IMPACT_LAYER.get(element, "thud")), position, parent, 0.0)
 
 
-func _play_at(stream: AudioStream, position: Vector3, parent: Node, volume_db: float) -> void:
+## voice_key, when non-empty, caps concurrent instances of that spell (MAX_VOICES_PER_SPELL):
+## the oldest playing voice is stopped before a new one starts, so spam never stacks endlessly.
+func _play_at(stream: AudioStream, position: Vector3, parent: Node, volume_db: float, bus: StringName = &"SFX", voice_key: String = "") -> void:
 	if Net.dedicated or parent == null or not parent.is_inside_tree():
 		return
+	if voice_key != "":
+		_limit_voices(voice_key)
 	var player: AudioStreamPlayer3D = AudioStreamPlayer3D.new()
 	player.stream = stream
-	player.bus = &"SFX"
+	player.bus = bus
 	player.volume_db = volume_db + randf_range(-1.0, 1.0)
 	player.unit_size = 6.0
-	player.pitch_scale = randf_range(0.93, 1.07)
+	player.pitch_scale = randf_range(0.96, 1.04)
 	parent.add_child(player)
 	player.global_position = position
+	if voice_key != "":
+		var list: Array = _active_voices.get(voice_key, [])
+		list.append(player)
+		_active_voices[voice_key] = list
+		player.finished.connect(_on_voice_finished.bind(voice_key, player))
 	player.finished.connect(player.queue_free)
 	player.play()
+
+
+func _on_voice_finished(voice_key: String, player: AudioStreamPlayer3D) -> void:
+	var list: Array = _active_voices.get(voice_key, [])
+	list.erase(player)
+	_active_voices[voice_key] = list
+
+
+## Stops the oldest voice(s) of a spell so a new one never pushes it past MAX_VOICES_PER_SPELL.
+func _limit_voices(voice_key: String) -> void:
+	var list: Array = _active_voices.get(voice_key, [])
+	while list.size() >= MAX_VOICES_PER_SPELL:
+		var oldest: AudioStreamPlayer3D = list.pop_front()
+		if is_instance_valid(oldest):
+			oldest.stop()
+			oldest.queue_free()
+	_active_voices[voice_key] = list
 
 
 ## 2D sample on the UI bus (menus, own hits, round events).
@@ -182,123 +217,220 @@ func _pad_loop() -> AudioStreamWAV:
 	return wav
 
 
-## Cast tonal center per element (Hz) and the low-end center used for impacts.
-const BASE_FREQ: Dictionary = {&"fire": 150.0, &"frost": 900.0, &"storm": 260.0, &"wind": 480.0}
-const IMPACT_FREQ: Dictionary = {&"fire": 70.0, &"frost": 1900.0, &"storm": 55.0, &"wind": 90.0}
-## Inharmonic partial ratios/decay rates for the frost chime (spec 01 §5: glassy/crystal identity).
-const FROST_PARTIAL_RATIO: Array[float] = [1.0, 2.02, 2.99, 4.13]
-const FROST_PARTIAL_DECAY: Array[float] = [2.6, 4.5, 6.5, 9.0]
+## Element sample layers (Kenney Sci-Fi Sounds / Digital Audio, audio/cc0/spells/). Each element's
+## identity comes from 2-3 real CC0 samples that get pitch-shifted/layered in _synth; "pitch" is
+## the element's base playback-rate multiplier and "cutoff" its final low-pass corner (frost stays
+## bright, wind/fire stay warm). Synthesis is only ever a subtle sparkle/crackle layer on top.
+const ELEMENT_SAMPLES: Dictionary = {
+	&"fire": {
+		"body": ["spells/thrusterFire_000.ogg", "spells/thrusterFire_001.ogg", "spells/thrusterFire_002.ogg", "spells/thrusterFire_003.ogg", "spells/thrusterFire_004.ogg"],
+		"impact": ["spells/explosionCrunch_000.ogg", "spells/explosionCrunch_001.ogg", "spells/explosionCrunch_002.ogg", "spells/explosionCrunch_003.ogg", "spells/explosionCrunch_004.ogg"],
+		"low": ["spells/lowFrequency_explosion_000.ogg", "spells/lowFrequency_explosion_001.ogg"],
+		"pitch": 0.8, "cutoff": 3200.0,
+	},
+	&"frost": {
+		"body": ["spells/forceField_000.ogg", "spells/forceField_001.ogg", "spells/forceField_002.ogg", "spells/forceField_003.ogg", "spells/forceField_004.ogg"],
+		"shimmer": ["spells/phaserUp1.ogg", "spells/phaserUp2.ogg", "spells/phaserUp3.ogg", "spells/phaserUp4.ogg", "spells/phaserUp5.ogg", "spells/phaserUp6.ogg", "spells/phaserUp7.ogg"],
+		"impact": ["spells/impactMetal_000.ogg", "spells/impactMetal_001.ogg", "spells/impactMetal_002.ogg", "spells/impactMetal_003.ogg", "spells/impactMetal_004.ogg"],
+		"pitch": 1.4, "cutoff": 9500.0,
+	},
+	&"storm": {
+		"body": ["spells/zap1.ogg", "spells/zap2.ogg", "spells/zapTwoTone.ogg", "spells/zapTwoTone2.ogg", "spells/zapThreeToneUp.ogg", "spells/zapThreeToneDown.ogg"],
+		"snap": ["spells/laserSmall_000.ogg", "spells/laserSmall_001.ogg", "spells/laserSmall_002.ogg", "spells/laserRetro_000.ogg", "spells/laserRetro_001.ogg"],
+		"impact": ["spells/lowFrequency_explosion_000.ogg", "spells/lowFrequency_explosion_001.ogg"],
+		"low": ["spells/lowFrequency_explosion_000.ogg", "spells/lowFrequency_explosion_001.ogg"],
+		"pitch": 1.0, "cutoff": 8000.0,
+	},
+	&"wind": {
+		"body": ["spells/phaseJump1.ogg", "spells/phaseJump2.ogg", "spells/phaseJump3.ogg", "spells/phaseJump4.ogg", "spells/phaseJump5.ogg"],
+		"impact": ["spells/forceField_000.ogg", "spells/forceField_002.ogg", "spells/forceField_004.ogg"],
+		"pitch": 0.95, "cutoff": 5500.0,
+	},
+}
+## Real sample used for the "self" form's rising shimmer, layered on top of every element's body.
+const SELF_SHIMMER: Array[String] = ["spells/powerUp1.ogg", "spells/powerUp2.ogg", "spells/powerUp3.ogg", "spells/powerUp4.ogg", "spells/powerUp5.ogg", "spells/powerUp6.ogg", "spells/powerUp7.ogg", "spells/powerUp8.ogg", "spells/powerUp9.ogg", "spells/powerUp10.ogg", "spells/powerUp11.ogg", "spells/powerUp12.ogg"]
+
+## Decoded-sample cache: "spells/foo.ogg" -> {data: PackedFloat32Array (mono, -1..1), rate: int}.
+var _pcm_cache: Dictionary = {}
 
 
-## Redesigned spell audio (user feedback "spell sound effects are still bad"): each element
-## gets a distinct identity (fire = whoosh+crackle, frost = glassy chime, storm = electric zap,
-## wind = airy whoosh+whistle); form shapes the pitch sweep (projectile steady/travelling,
-## self rising shimmer, area deeper+wider); effect shapes the envelope (direct = clean single
-## hit, burst = louder low-end punch, lingering = sustained tail). Everything is generated into
-## a float buffer first so a shared attack/release envelope, a single ~9kHz low-pass and a
-## final loudness normalization pass apply identically to all 36 combos.
+## Decodes a CC0 sample once (offline, via AudioStreamPlayback.mix_audio) and caches the mono PCM.
+func _load_pcm(rel_path: String) -> Dictionary:
+	if _pcm_cache.has(rel_path):
+		return _pcm_cache[rel_path]
+	var out: Dictionary = {"data": PackedFloat32Array(), "rate": MIX_RATE}
+	var stream: AudioStream = load("res://audio/cc0/" + rel_path) as AudioStream
+	if stream != null:
+		var playback: AudioStreamPlayback = stream.instantiate_playback()
+		if playback != null:
+			playback.start(0.0)
+			var mono: PackedFloat32Array = PackedFloat32Array()
+			const CHUNK: int = 4096
+			while true:
+				var frames: PackedVector2Array = playback.mix_audio(1.0, CHUNK)
+				for v: Vector2 in frames:
+					mono.append((v.x + v.y) * 0.5)
+				if frames.size() < CHUNK:
+					break
+			playback.stop()
+			_normalize_sample_rms(mono, -16.0)  # equalize source loudness (Kenney packs vary)
+			out = {"data": mono, "rate": AudioServer.get_mix_rate()}
+	_pcm_cache[rel_path] = out
+	return out
+
+
+## Normalizes a decoded source sample to a fixed RMS before it ever gets layered/pitched, so
+## differently-mastered Kenney packs (Sci-Fi Sounds vs Digital Audio) don't bias one element's
+## loudness before the final per-spell normalization pass even runs.
+func _normalize_sample_rms(data: PackedFloat32Array, target_rms_db: float) -> void:
+	var sum_sq: float = 0.0
+	for v: float in data:
+		sum_sq += v * v
+	var rms: float = sqrt(sum_sq / maxf(data.size(), 1))
+	if rms < 0.0001:
+		return
+	var gain: float = db_to_linear(target_rms_db) / rms
+	for i: int in data.size():
+		data[i] = clampf(data[i] * gain, -1.0, 1.0)
+
+
+## Resamples (pitch-shift via linear interpolation) and mixes one real sample into buf at
+## start_time, sweeping pitch/gain linearly across the remaining buffer so "self" shimmer can
+## rise and fading layers can taper. gain_start/gain_end are plain linear multipliers.
+func _mix_sample(buf: PackedFloat32Array, group: Array, rng: RandomNumberGenerator, start_time: float, pitch_start: float, pitch_end: float, gain_start: float, gain_end: float, max_len: float, loop: bool = false) -> void:
+	if group.is_empty():
+		return
+	var pcm: Dictionary = _load_pcm(group[rng.randi() % group.size()])
+	var data: PackedFloat32Array = pcm["data"]
+	if data.is_empty():
+		return
+	var native_rate: float = float(pcm["rate"])
+	var limit_samples: int = data.size() if max_len < 0.0 else mini(data.size(), int(max_len * native_rate))
+	var start_idx: int = int(start_time * MIX_RATE)
+	var span: float = maxf(float(buf.size() - start_idx) / MIX_RATE, 0.001)
+	var src_pos: float = 0.0
+	var i: int = start_idx
+	while i < buf.size():
+		var idx0: int = int(src_pos)
+		if idx0 >= limit_samples - 1 or idx0 >= data.size() - 1:
+			# A pitched-up short sample can run out well before the shared envelope's decay
+			# ends; textural layers (body/shimmer) loop back to the start instead of leaving
+			# the rest of the shaped envelope silent (one-shot impact/punch layers don't loop).
+			if loop and limit_samples > 1:
+				src_pos = fmod(src_pos, float(limit_samples - 1))
+				idx0 = int(src_pos)
+			else:
+				break
+		var progress: float = clampf(float(i - start_idx) / MIX_RATE / span, 0.0, 1.0)
+		var pitch: float = lerpf(pitch_start, pitch_end, progress)
+		var gain: float = lerpf(gain_start, gain_end, progress)
+		var frac: float = src_pos - idx0
+		buf[i] += lerpf(data[idx0], data[idx0 + 1], frac) * gain
+		src_pos += native_rate / MIX_RATE * pitch
+		i += 1
+
+
+## Subtle synthesized support layer only (sparkle/crackle/soft noise/sub-punch): the real samples
+## carry each element's identity, this just adds texture that would be tedious to sample.
+func _add_synth_support(buf: PackedFloat32Array, element: StringName, effect: StringName, impact: bool, rng: RandomNumberGenerator) -> void:
+	var noise_lp: float = 0.0
+	var noise_lp2: float = 0.0
+	var crackle_env: float = 0.0
+	for i: int in buf.size():
+		var t: float = float(i) / MIX_RATE
+		var white: float = rng.randf_range(-1.0, 1.0)
+		noise_lp = lerpf(noise_lp, white, 0.35)
+		noise_lp2 = lerpf(noise_lp2, noise_lp, 0.12)
+		var noise_band: float = noise_lp - noise_lp2
+		var support: float = 0.0
+		match element:
+			&"fire":
+				crackle_env = maxf(crackle_env - 0.02, 0.0)
+				if not impact and rng.randf() < 0.04:
+					crackle_env = 1.0
+				support = 0.18 * crackle_env * white
+			&"storm":
+				if rng.randf() < (0.03 if impact else 0.07):
+					support = 0.22 * white
+			&"wind":
+				support = 0.22 * noise_lp2 * (0.6 + 0.4 * sin(TAU * 2.0 * t))
+			&"frost":
+				support = 0.05 * sin(TAU * 6.0 * t) * noise_band
+		if effect == &"burst" and not impact:
+			support += 0.35 * sin(TAU * 55.0 * t) * exp(-t * 14.0)  # low-end punch on cast bursts
+		buf[i] += support
+
+
+## Rebuilt spell audio (round "spell sounds still bad"): each element's cast/impact is now built
+## from 2-3 real CC0 samples (ELEMENT_SAMPLES) pitch-shifted and layered per form/effect, with a
+## thin synthesized sparkle/crackle/noise layer on top (_add_synth_support). Form shapes the layer
+## choice (projectile steady, self rising shimmer, area deeper+wider+detuned); effect shapes which
+## extra layer joins in (burst adds a bigger hit, lingering adds a soft fading shimmer tail) and
+## the shared envelope's shape. A single low-pass (element cutoff) plus loudness normalization
+## keep all 36 combos consistent.
 func _synth(element: StringName, form: StringName, effect: StringName, impact: bool = false) -> AudioStreamWAV:
-	var length: float = {&"direct": 0.22, &"burst": 0.5, &"lingering": 0.85}.get(effect, 0.3)
+	var layers: Dictionary = ELEMENT_SAMPLES.get(element, ELEMENT_SAMPLES[&"fire"])
+	var base_pitch: float = layers.get("pitch", 1.0)
+	var cutoff: float = layers.get("cutoff", 8000.0)
+	var length: float
+	var attack: float
 	if impact:
-		length = 0.55
-	var attack: float = {&"projectile": 0.006, &"self": 0.09, &"area": 0.02}.get(form, 0.012)
-	if impact:
+		length = {&"direct": 0.35, &"burst": 0.9, &"lingering": 1.05}.get(effect, 0.55)
 		attack = 0.004
-	var base_freq: float = IMPACT_FREQ.get(element, 70.0) if impact else BASE_FREQ.get(element, 300.0)
+	else:
+		length = {&"direct": 0.16, &"burst": 0.45, &"lingering": 0.6}.get(effect, 0.3)
+		attack = {&"projectile": 0.006, &"self": 0.09, &"area": 0.02}.get(form, 0.012)
+		if form == &"projectile" and effect == &"direct":
+			# Arrow-like spam (cast every 0.3s): keep this combo very short and soft so it never
+			# gets fatiguing.
+			length = 0.11
+			attack = 0.003
 	var samples: int = maxi(int(length * MIX_RATE), 1)
 	var buf: PackedFloat32Array = PackedFloat32Array()
 	buf.resize(samples)
 	var rng: RandomNumberGenerator = RandomNumberGenerator.new()
 	rng.seed = hash("%s%s%s%s" % [element, form, effect, impact])
-	var phase: float = 0.0
-	var phase_b: float = 0.0  # slightly detuned layer: chime 2nd voice / area "width"
-	var noise_lp: float = 0.0
-	var noise_lp2: float = 0.0
-	var noise_band: float = 0.0
-	var crackle_env: float = 0.0
-	var partial_phase: Array[float] = [0.0, 0.0, 0.0, 0.0]
-	for i: int in samples:
+	var depth_pitch: float = base_pitch * (0.82 if form == &"area" else 1.0)
+
+	if impact:
+		var impact_group: Array = layers.get("impact", layers.get("body", []))
+		var impact_pitch: float = depth_pitch * (0.85 if effect == &"burst" else 1.0)
+		_mix_sample(buf, impact_group, rng, 0.0, impact_pitch, impact_pitch * 0.94, 0.9, 0.0, length)
+		if effect != &"direct" and layers.has("low"):
+			_mix_sample(buf, layers["low"], rng, 0.0, depth_pitch * 0.8, depth_pitch * 0.7, 0.8, 0.0, length)
+		if form == &"area":
+			_mix_sample(buf, impact_group, rng, 0.01, impact_pitch * 1.03, impact_pitch * 0.97, 0.5, 0.0, length)
+	else:
+		var body_group: Array = layers.get("body", [])
+		match form:
+			&"self":
+				# Rising shimmer climbing away from the caster. Both layers loop: a pitched-up
+				# body/shimmer sample can otherwise run out well before the cast's full length.
+				_mix_sample(buf, body_group, rng, 0.0, depth_pitch * 0.9, depth_pitch * 1.05, 0.7, 0.9, length, true)
+				_mix_sample(buf, SELF_SHIMMER, rng, 0.0, base_pitch * 0.85, base_pitch * 1.35, 0.0, 0.8, length, true)
+			&"area":
+				# Deeper + wider: a second, detuned copy of the body sample for width.
+				_mix_sample(buf, body_group, rng, 0.0, depth_pitch, depth_pitch * 0.92, 0.9, 0.5, length, true)
+				_mix_sample(buf, body_group, rng, 0.015, depth_pitch * 1.03, depth_pitch * 0.95, 0.5, 0.25, length, true)
+			_:  # projectile: steady launch, softer for the spammable direct combo
+				var g: float = 0.55 if effect == &"direct" else 0.85
+				_mix_sample(buf, body_group, rng, 0.0, depth_pitch, depth_pitch * 0.97, g, g * 0.5, length, true)
+		if effect == &"burst":
+			var punch_group: Array = layers.get("impact", layers.get("low", body_group))
+			_mix_sample(buf, punch_group, rng, 0.0, depth_pitch * 0.9, depth_pitch * 0.8, 0.6, 0.0, length)
+		elif effect == &"lingering" and layers.has("shimmer"):
+			_mix_sample(buf, layers["shimmer"], rng, length * 0.15, base_pitch * 0.9, base_pitch * 1.1, 0.0, 0.35, length, true)
+
+	_add_synth_support(buf, element, effect, impact, rng)
+
+	for i: int in buf.size():
 		var t: float = float(i) / MIX_RATE
-		var progress: float = t / length
-		# Form sweep: projectile stays steady with a light travel fade, self rises (shimmer
-		# climbing away from the caster), area sinks (deeper, wider impact-like body).
-		var sweep: float = 1.0
-		if not impact:
-			match form:
-				&"self":
-					sweep = 1.0 + progress * 0.6
-				&"area":
-					sweep = 1.0 - progress * 0.45
-				_:
-					sweep = 1.0 - progress * 0.08
-		phase += TAU * base_freq * sweep / MIX_RATE
-		phase_b += TAU * base_freq * sweep * 1.015 / MIX_RATE
-		var white: float = rng.randf_range(-1.0, 1.0)
-		noise_lp = lerpf(noise_lp, white, 0.35)
-		noise_lp2 = lerpf(noise_lp2, noise_lp, 0.12)
-		noise_band = noise_lp - noise_lp2  # cheap band-pass: difference of two low-passes
-		var raw: float = 0.0
-		match element:
-			&"fire":
-				if impact:
-					# Low thump plus a handful of ember crackles dying out under it.
-					raw = sin(phase) * exp(-t * 9.0)
-					raw += 0.5 * noise_band * exp(-t * 14.0)
-				else:
-					# Whoosh (band-passed noise, brighter at the start) + sparse crackle ticks.
-					crackle_env = maxf(crackle_env - 0.02, 0.0)
-					if rng.randf() < 0.05:
-						crackle_env = 1.0
-					raw = 0.85 * noise_band * (1.0 - 0.4 * progress)
-					raw += 0.6 * crackle_env * white
-					if form == &"area":
-						raw += 0.3 * noise_lp2  # deeper/wider: add low rumble body
-			&"frost":
-				if impact:
-					# Icy crunch: bright band-passed noise burst with a couple of short "cracks".
-					raw = 0.8 * noise_band * exp(-t * 16.0)
-					raw += 0.4 * sin(phase * 3.0) * exp(-t * 40.0)
-				else:
-					# Inharmonic chime partials with independent decays + a slow shimmer tail.
-					for p: int in FROST_PARTIAL_RATIO.size():
-						partial_phase[p] += TAU * base_freq * sweep * FROST_PARTIAL_RATIO[p] / MIX_RATE
-						raw += (0.5 / (p + 1)) * sin(partial_phase[p]) * exp(-t * FROST_PARTIAL_DECAY[p])
-					raw += 0.06 * sin(phase * 2.0) * sin(TAU * 6.0 * t)  # shimmer
-					if form == &"area":
-						raw += 0.15 * sin(phase_b)  # width: detuned twin voice
-			&"storm":
-				if impact:
-					# Low boom (slow sine) under low-passed rumble noise, with a brief crackle.
-					raw = sin(phase) * exp(-t * 6.0)
-					raw += 0.5 * noise_lp2 * exp(-t * 8.0)
-					if rng.randf() < 0.02:
-						raw += white * 0.6
-				else:
-					# Electric zap: square/saw with a fast pitch drop, plus sparse crackle noise.
-					var drop: float = exp(-t * 22.0)
-					var zap_phase: float = phase * (1.0 + 2.0 * drop)
-					raw = 0.55 * signf(sin(zap_phase)) + 0.2 * (fmod(zap_phase / TAU, 1.0) * 2.0 - 1.0)
-					if rng.randf() < 0.1:
-						raw += 0.5 * white
-					if form == &"area":
-						raw += 0.2 * signf(sin(phase_b * (1.0 + 2.0 * drop)))
-			_:  # wind
-				if impact:
-					raw = 0.5 * noise_lp2 * exp(-t * 12.0)
-					raw += 0.3 * sin(phase) * exp(-t * 16.0)
-				else:
-					# Airy filtered-noise sweep plus a soft tonal whistle.
-					raw = 0.7 * noise_lp2 * (0.6 + 0.4 * sin(TAU * 2.0 * t))
-					raw += 0.35 * sin(phase) * (0.5 + 0.5 * sin(TAU * 3.0 * t + 1.0))
-					if form == &"area":
-						raw += 0.2 * noise_band
-		var env: float = _envelope(t, length, attack, effect, impact)
-		var sample: float = raw * env
-		if effect == &"burst" and not impact:
-			# Extra low-end punch on the cast so bursts read louder without just being clipped.
-			sample += 0.55 * sin(TAU * 60.0 * t) * exp(-t * 16.0)
-		buf[i] = sample
-	_lowpass(buf, 9000.0)
+		buf[i] *= _envelope(t, length, attack, effect, impact)
+
+	_lowpass(buf, cutoff)
+	if element == &"frost":
+		_highpass(buf, 200.0)  # trim sub-bass mud, keep it bright without biting into loudness
+	_soft_limit(buf, 0.35)  # tame transient sample peaks so loudness normalizes consistently
 	_normalize(buf, -16.0, -1.5)
 	return _to_wav(buf)
 
@@ -329,7 +461,7 @@ func _envelope(t: float, length: float, attack: float, effect: StringName, impac
 	return fade_in * body * fade_out
 
 
-## Single ~9 kHz low-pass (two cascaded one-pole stages) so nothing in the spell layer is harsh.
+## Per-element low-pass (two cascaded one-pole stages) so nothing in the spell layer is harsh.
 func _lowpass(buf: PackedFloat32Array, cutoff_hz: float) -> void:
 	var coef: float = 1.0 - exp(-TAU * cutoff_hz / MIX_RATE)
 	var y1: float = 0.0
@@ -338,6 +470,34 @@ func _lowpass(buf: PackedFloat32Array, cutoff_hz: float) -> void:
 		y1 += coef * (buf[i] - y1)
 		y2 += coef * (y1 - y2)
 		buf[i] = y2
+
+
+## One-pole high-pass (used to keep frost bright by trimming low-end mud from its samples).
+func _highpass(buf: PackedFloat32Array, cutoff_hz: float) -> void:
+	var rc: float = 1.0 / (TAU * cutoff_hz)
+	var dt: float = 1.0 / MIX_RATE
+	var alpha: float = rc / (rc + dt)
+	var prev_in: float = 0.0
+	var prev_out: float = 0.0
+	for i: int in buf.size():
+		var x: float = buf[i]
+		var y: float = alpha * (prev_out + x - prev_in)
+		prev_in = x
+		prev_out = y
+		buf[i] = y
+
+
+## Soft-knee saturation above `threshold` (tanh) so a single sharp sample transient can't dominate
+## the peak and starve the RMS normalization pass below of headroom (keeps the 36 combos within
+## a few dB of each other even when their source samples have very different crest factors).
+func _soft_limit(buf: PackedFloat32Array, threshold: float) -> void:
+	var span: float = maxf(1.0 - threshold, 0.0001)
+	for i: int in buf.size():
+		var x: float = buf[i]
+		var a: float = absf(x)
+		if a > threshold:
+			var over: float = (a - threshold) / span
+			buf[i] = signf(x) * (threshold + span * tanh(over))
 
 
 ## Normalizes to a target RMS loudness (with a hard peak ceiling) so all 36 combos sit within

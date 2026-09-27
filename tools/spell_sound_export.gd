@@ -1,7 +1,10 @@
 extends Node
 ## Renders all 36 element x form x effect spell sounds (cast immediately followed by its own
 ## impact variant) to build/sounds/<element>_<form>_<effect>.wav so a human can listen to the
-## redesigned spell audio (AudioBus._synth, spec 01 §5) outside of a match. Run headless:
+## sample-based spell audio (AudioBus._synth: real CC0 samples from audio/cc0/spells/, pitch-
+## shifted/layered per element/form/effect, with synthesis only as a thin support layer) outside
+## of a match. Also prints peak and RMS dBFS per file so loudness consistency (±3 dB target) can
+## be checked without opening every WAV. Run headless:
 ##   Godot --headless --path D:\DynMagic res://tools/spell_sound_export.tscn
 
 const ELEMENTS: Array[StringName] = [&"fire", &"frost", &"storm", &"wind"]
@@ -24,9 +27,10 @@ func _ready() -> void:
 				var path: String = "%s/%s" % [OUT_DIR, filename]
 				_write_wav(path, combined, AudioBus.MIX_RATE)
 				var peak_db: float = _peak_dbfs(combined)
+				var rms_db: float = _rms_dbfs(combined)
 				var seconds: float = combined.size() / 2.0 / AudioBus.MIX_RATE
 				count += 1
-				print("SOUND_OK %s len=%.2fs peak=%.1fdBFS" % [filename, seconds, peak_db])
+				print("SOUND_OK %s len=%.2fs peak=%.1fdBFS rms=%.1fdBFS" % [filename, seconds, peak_db, rms_db])
 	print("SPELL_SOUND_EXPORT: %d files" % count)
 	get_tree().quit(0)
 
@@ -73,3 +77,17 @@ func _peak_dbfs(data: PackedByteArray) -> float:
 	if peak == 0:
 		return -100.0
 	return linear_to_db(float(peak) / 32768.0)
+
+
+func _rms_dbfs(data: PackedByteArray) -> float:
+	var sum_sq: float = 0.0
+	var samples: int = data.size() / 2
+	if samples == 0:
+		return -100.0
+	for i: int in samples:
+		var v: float = float(data.decode_s16(i * 2)) / 32768.0
+		sum_sq += v * v
+	var rms: float = sqrt(sum_sq / samples)
+	if rms < 0.00001:
+		return -100.0
+	return linear_to_db(rms)
