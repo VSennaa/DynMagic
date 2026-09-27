@@ -9,24 +9,45 @@ const ACTION_LABELS: Dictionary = {
 }
 const FPS_OPTIONS: Array[int] = [60, 120, 144, 240, 0]
 
+## Last tab the player had open, remembered for the session (spec: reopen where they left off).
+static var _last_tab: int = 0
+
 var _waiting_action: StringName = &""
 var _binding_buttons: Dictionary[StringName, Button] = {}
 var _status: Label
 
 
+## Builds a tab's content column, adding it to `tabs` under `title`. Wraps it in a
+## ScrollContainer when the section has too many rows to fit 1280x720 flat (Controles).
+func _tab(tabs: TabContainer, title: String, scrolling: bool = false) -> VBoxContainer:
+	var body: VBoxContainer = VBoxContainer.new()
+	body.name = title
+	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	body.add_theme_constant_override(&"separation", 10)
+	if scrolling:
+		var scroll: ScrollContainer = ScrollContainer.new()
+		scroll.name = title
+		scroll.custom_minimum_size = Vector2(640, 420)
+		scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+		body.name = "%s_body" % title
+		body.custom_minimum_size.x = 620
+		scroll.add_child(body)
+		tabs.add_child(scroll)
+	else:
+		body.custom_minimum_size = Vector2(640, 420)
+		tabs.add_child(body)
+	return body
+
+
 func _ready() -> void:
 	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	var column: VBoxContainer = UiKit.screen(self)
-	var scroll: ScrollContainer = ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(640, 620)
 	column.add_child(UiKit.title("Configurações", 40))
-	column.add_child(scroll)
-	var body: VBoxContainer = VBoxContainer.new()
-	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	body.add_theme_constant_override(&"separation", 10)
-	scroll.add_child(body)
+	var tabs: TabContainer = TabContainer.new()
+	tabs.custom_minimum_size = Vector2(640, 440)
+	column.add_child(tabs)
 
-	body.add_child(UiKit.header("Vídeo"))
+	var body: VBoxContainer = _tab(tabs, "Vídeo")
 	body.add_child(_check("Tela cheia", Settings.fullscreen, func(v: bool) -> void: Settings.fullscreen = v))
 	var resolutions: PackedStringArray = []
 	for size: Vector2i in VideoSettings.RESOLUTIONS:
@@ -52,11 +73,11 @@ func _ready() -> void:
 	fps.item_selected.connect(func(i: int) -> void: Settings.max_fps = FPS_OPTIONS[i])
 	body.add_child(UiKit.row([UiKit.label("Limite de FPS", 18), fps]))
 
-	body.add_child(UiKit.header("Áudio"))
+	body = _tab(tabs, "Áudio")
 	for bus: String in Settings.volumes:
 		body.add_child(_slider(bus, 0.0, 1.0, 0.05, Settings.volumes[bus], func(v: float) -> void: Settings.set_volume(bus, v)))
 
-	body.add_child(UiKit.header("Controles"))
+	body = _tab(tabs, "Controles", true)
 	body.add_child(_slider("Sensibilidade", 0.0005, 0.008, 0.0001, Settings.mouse_sensitivity, func(v: float) -> void: Settings.mouse_sensitivity = v))
 	body.add_child(_check("Inverter Y", Settings.invert_y, func(v: bool) -> void: Settings.invert_y = v))
 	body.add_child(_check("Modo canhoto (cajado na mão esquerda)", Settings.left_handed, func(v: bool) -> void: Settings.left_handed = v))
@@ -69,7 +90,7 @@ func _ready() -> void:
 		Settings.restore_default_bindings()
 		_refresh_bindings()))
 
-	body.add_child(UiKit.header("Jogo"))
+	body = _tab(tabs, "Jogo")
 	var name_edit: LineEdit = LineEdit.new()
 	name_edit.text = Settings.player_name
 	name_edit.text_changed.connect(func(t: String) -> void: Settings.player_name = t)
@@ -85,7 +106,7 @@ func _ready() -> void:
 	body.add_child(UiKit.row([UiKit.label("Roda de magias", 18), wheel]))
 	body.add_child(_check("Mostrar FPS", Settings.show_fps, func(v: bool) -> void: Settings.show_fps = v))
 
-	body.add_child(UiKit.header("Acessibilidade"))
+	body = _tab(tabs, "Acessibilidade")
 	var palette: OptionButton = OptionButton.new()
 	for text: String in ["Padrão", "Deuteranopia", "Protanopia", "Tritanopia"]:
 		palette.add_item(text)
@@ -93,6 +114,9 @@ func _ready() -> void:
 	body.add_child(_check("Legendas de sons de magia", Settings.sound_captions, func(v: bool) -> void: Settings.sound_captions = v))
 	palette.item_selected.connect(func(i: int) -> void: Settings.colorblind_mode = i)
 	body.add_child(UiKit.row([UiKit.label("Paleta de cores", 18), palette]))
+
+	tabs.current_tab = clampi(_last_tab, 0, tabs.get_tab_count() - 1)
+	tabs.tab_changed.connect(func(i: int) -> void: _last_tab = i)
 
 	_status = UiKit.label("", 18)
 	column.add_child(_status)

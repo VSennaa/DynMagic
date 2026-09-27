@@ -84,6 +84,47 @@ static func build() -> Theme:
 	theme.set_stylebox(&"pressed", &"CheckBox", StyleBoxEmpty.new())
 	theme.set_stylebox(&"focus", &"CheckBox", StyleBoxEmpty.new())
 
+	# TabContainer / TabBar (settings screen tabs): gold text on ink, selected tab gets a
+	# gold underline instead of a full frame so it reads as a rune-marked bookmark.
+	var tab_unselected: StyleBoxFlat = _flat(Color(INK_2, 0.6), Color(0, 0, 0, 0), 0, 0)
+	tab_unselected.content_margin_left = 16
+	tab_unselected.content_margin_right = 16
+	tab_unselected.content_margin_top = 8
+	tab_unselected.content_margin_bottom = 8
+	var tab_selected: StyleBoxFlat = tab_unselected.duplicate()
+	tab_selected.bg_color = INK_3
+	tab_selected.border_color = GOLD
+	tab_selected.set_border_width_all(0)
+	tab_selected.border_width_bottom = 3
+	var tab_hovered: StyleBoxFlat = tab_unselected.duplicate()
+	tab_hovered.bg_color = Color(INK_3, 0.7)
+	theme.set_stylebox(&"tab_selected", &"TabContainer", tab_selected)
+	theme.set_stylebox(&"tab_unselected", &"TabContainer", tab_unselected)
+	theme.set_stylebox(&"tab_hovered", &"TabContainer", tab_hovered)
+	theme.set_stylebox(&"tab_disabled", &"TabContainer", tab_unselected)
+	theme.set_stylebox(&"tab_focus", &"TabContainer", tab_selected)
+	theme.set_stylebox(&"panel", &"TabContainer", _flat(Color(INK, 0.94), GOLD_DIM, 1, 0))
+	theme.set_font(&"font", &"TabContainer", bold)
+	theme.set_font_size(&"font_size", &"TabContainer", 18)
+	theme.set_color(&"font_selected_color", &"TabContainer", GOLD)
+	theme.set_color(&"font_unselected_color", &"TabContainer", Color(CREAM, 0.7))
+	theme.set_color(&"font_hovered_color", &"TabContainer", GOLD)
+	theme.set_color(&"font_outline_color", &"TabContainer", Color(0, 0, 0, 0.8))
+	theme.set_constant(&"outline_size", &"TabContainer", 3)
+	theme.set_constant(&"side_margin", &"TabContainer", 0)
+	theme.set_stylebox(&"tab_selected", &"TabBar", tab_selected)
+	theme.set_stylebox(&"tab_unselected", &"TabBar", tab_unselected)
+	theme.set_stylebox(&"tab_hovered", &"TabBar", tab_hovered)
+	theme.set_stylebox(&"tab_disabled", &"TabBar", tab_unselected)
+	theme.set_stylebox(&"tab_focus", &"TabBar", tab_selected)
+	theme.set_font(&"font", &"TabBar", bold)
+	theme.set_font_size(&"font_size", &"TabBar", 18)
+	theme.set_color(&"font_selected_color", &"TabBar", GOLD)
+	theme.set_color(&"font_unselected_color", &"TabBar", Color(CREAM, 0.7))
+	theme.set_color(&"font_hovered_color", &"TabBar", GOLD)
+	theme.set_color(&"font_outline_color", &"TabBar", Color(0, 0, 0, 0.8))
+	theme.set_constant(&"outline_size", &"TabBar", 3)
+
 	# Panels
 	var panel: StyleBox = _panel_box(textured)
 	theme.set_stylebox(&"panel", &"PanelContainer", panel)
