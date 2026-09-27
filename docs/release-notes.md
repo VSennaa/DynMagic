@@ -1,8 +1,20 @@
-# DynMagic v1.2.0-alpha — jogue em times
+# DynMagic v1.2.1-alpha — magias com cara e som próprios
+
+Ajustes pedidos depois da 1.2.
+
+## Novidades na 1.2.1
+
+- **Magias com corpo novo**: Fogo vira um cometa de chamas, Gelo um cristal lapidado girando, Raio uma esfera de plasma com raios, Vento um redemoinho de fitas. Áreas e zonas ganham desenhos no chão (brasas, estrela de gelo, arcos elétricos, espiral de vento) e cada muralha tem a textura do seu elemento.
+- **Sons das magias refeitos**: cada elemento tem som próprio (estalo de fogo, cristal de gelo, zap elétrico, sopro de vento), e forma e efeito mudam o som.
+- **Configurações em abas**: Vídeo, Áudio, Controles, Jogo e Acessibilidade; a última aba aberta é lembrada.
+- **Saída do spawn mais livre**: a mureta logo à frente do spawn foi afastada nas três arenas.
+- **Pilares dos cantos** não atravessam mais as paredes.
+- Corrigido um erro que podia travar o cajado em primeira pessoa ao entrar numa partida.
+
+## Da 1.2.0 — jogue em times
 
 A maior atualização até agora: o duelo virou também jogo de equipe, as arenas foram redesenhadas e cada round agora tem começo, meio e fim.
 
-## Novidades na 1.2
 
 - **Modos em time**: **2v2** nas arenas clássicas, **3v3** em versões maiores das arenas com rotas de flanco, e **5v5 Controle** — um ponto no centro, capture até 100%, reforços chegam em ondas a cada 10 s, melhor de 3. No draft em time, ninguém do mesmo time repete elemento.
 - **Rounds em três atos**: comece explorando, o Núcleo é anunciado aos 20 s e pode ser capturado aos 30 s; depois o Colapso fecha a arena em etapas e força o encontro.
