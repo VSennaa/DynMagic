@@ -103,7 +103,15 @@ static func build() -> Theme:
 	theme.set_stylebox(&"tab_hovered", &"TabContainer", tab_hovered)
 	theme.set_stylebox(&"tab_disabled", &"TabContainer", tab_unselected)
 	theme.set_stylebox(&"tab_focus", &"TabContainer", tab_selected)
-	theme.set_stylebox(&"panel", &"TabContainer", _flat(Color(INK, 0.94), GOLD_DIM, 1, 0))
+	# No inner frame (it doubled the panel border): transparent body, a single gold rule under the
+	# tabs and some breathing room so controls do not touch the edge.
+	var tab_panel: StyleBoxFlat = _flat(Color(0, 0, 0, 0), GOLD_DIM, 0, 0)
+	tab_panel.border_width_top = 1
+	tab_panel.content_margin_left = 8
+	tab_panel.content_margin_right = 8
+	tab_panel.content_margin_top = 16
+	tab_panel.content_margin_bottom = 8
+	theme.set_stylebox(&"panel", &"TabContainer", tab_panel)
 	theme.set_font(&"font", &"TabContainer", bold)
 	theme.set_font_size(&"font_size", &"TabContainer", 18)
 	theme.set_color(&"font_selected_color", &"TabContainer", GOLD)
