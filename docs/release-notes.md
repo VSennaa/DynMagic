@@ -1,8 +1,20 @@
-# DynMagic v1.1.0-alpha — alfa 1.1
+# DynMagic v1.2.0-alpha — jogue em times
+
+A maior atualização até agora: o duelo virou também jogo de equipe, as arenas foram redesenhadas e cada round agora tem começo, meio e fim.
+
+## Novidades na 1.2
+
+- **Modos em time**: **2v2** nas arenas clássicas, **3v3** em versões maiores das arenas com rotas de flanco, e **5v5 Controle** — um ponto no centro, capture até 100%, reforços chegam em ondas a cada 10 s, melhor de 3. No draft em time, ninguém do mesmo time repete elemento.
+- **Rounds em três atos**: comece explorando, o Núcleo é anunciado aos 20 s e pode ser capturado aos 30 s; depois o Colapso fecha a arena em etapas e força o encontro.
+- **A melhor de 7 tem memória**: as arenas se repetem em pares (A, A, B, B, C, C, A) para você ter a revanche no mesmo lugar; o draft mostra o que o rival usou e por que o último round acabou; as runas vêm em categorias equilibradas e o round decisivo oferece a mesma escolha para os dois lados.
+- **Arenas redesenhadas**: Claustro, Pátio Partido e Espinha ganharam novo traçado, colunatas, muretas e rotas alternativas — menos corredores de tiro longo, mais jogo de posição.
+- **Visual novo**: luz de fim de tarde, céu pintado com nuvens, pedra e lajotas com desgaste, musgo e poeira, braseiros com fogo animado, estandartes e arcos nos spawns, e cada elemento com magias de forma própria (chama, estilhaço, raio em zigue-zague, fita de vento).
+- **Menu** com faixa de título e fundo mais leve.
+
+## Da 1.1
 
 Primeira alfa pública. Junta tudo da alfa 1.0 (interna) com os ajustes pedidos na primeira sessão de teste em LAN.
 
-## Novidades na 1.1
 
 - **Golpe de cajado** na tecla **V**: 12 de dano a curta distância, sem custo de mana, 0,8 s de recarga.
 - **Pré-conjuração** na tecla **G**: monte a magia, aperte G antes do efeito (ou durante a mira) e ela fica guardada. G de novo dispara; F descarta. A mana dela fica **reservada**, marcada em listras na barra.
