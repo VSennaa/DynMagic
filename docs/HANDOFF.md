@@ -4,7 +4,7 @@ Last update: 2026-09-25. Written so any AI agent (Claude, Codex, Gemini, etc.) c
 
 ## 0. Active agent
 
-Active agent: none (round 10 Codex: R8 three-act rounds, R9 match memory, prop remodel done and committed by Claude — 123 tests, integration 0 failures, 1v1 live match OK; Codex hit usage limit (resets 13:11) before its own final live matches for 2v2/3v3/5v5 — rerun those. Remaining: arena chicanes for sightlines, visual gauntlet still "far".)
+Active agent: none (2026-09-27 08:45: R8/R9 + props committed; live bot matches PASS for 1v1, 2v2, 3v3, 5v5 Control with R8/R9, 0 script errors; 123 tests 0 failures; critic fixes (edge bevel, cover wear, flipbook fire) committed. Remaining: arena chicanes for sightline targets, visual gauntlet still "far" (wants baked-like lighting, trim sheets), gauntlet mid viewpoint of arena A now clips a cover, release v1.2.0-alpha not tagged.)
 
 ### Round 10 — Codex (2026-09-27) — implementation and verification, no commit
 
