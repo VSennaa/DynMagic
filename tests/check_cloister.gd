@@ -32,7 +32,11 @@ func _ready() -> void:
 	await get_tree().physics_frame
 	check(not ArenaMetrics.route_clear(get_world_3d(), spaces.routes["north_west"]), "barrier blocks west")
 	check(ArenaMetrics.route_clear(get_world_3d(), spaces.routes["north_east"]), "barrier leaves east open")
-	print(ArenaMetrics.sightlines(get_world_3d(), spaces.sightline_limit))
+	var sight: Dictionary = ArenaMetrics.sightlines(get_world_3d(), spaces.sightline_limit)
+	print(sight)
+	# Sightline gate is a warning until the chicane pass lands (ROADMAP M13, HANDOFF Sonnet-6 notes).
+	if sight["max_sightline"] > spaces.sightline_limit + 2.0:
+		print("WARN: max sightline %.2f m above target %.2f m (+2 m tolerance)" % [sight["max_sightline"], spaces.sightline_limit])
 	# M12 decision 10: 3v3/5v5 expanded arena (x1.5) with extra ground-level flank routes.
 	wall.queue_free()
 	layout.team_scale = 1.5
