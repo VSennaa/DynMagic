@@ -23,6 +23,15 @@ var _hud: Hud
 ## --bot: scripted input for headless smoke tests (walks, strafes and casts Bolt).
 var _bot: bool = false
 var _bot_clock: float = 0.0
+## 5v5 Control bot stuck-detection (decision 4 live-test support): the arenas' central
+## anteparo/side cover are built for a side detour, not a straight walk-in, so a bot that
+## just presses "forward" toward the point wedges against the first solid it meets and
+## never arrives. Track displacement over a short window and toggle a lateral dodge when
+## it stalls, instead of hard-coding one detour per arena.
+var _bot_stuck_check_pos: Vector3 = Vector3.ZERO
+var _bot_stuck_timer: float = 0.0
+var _bot_dodge_left: bool = true
+var _bot_dodge_time_left: float = 0.0
 var _log_timer: float = 0.0
 var _overlay: Label
 var _match_label: Label
@@ -462,13 +471,31 @@ func _bot_step(delta: float) -> void:
 	var phase: int = int(_bot_clock) % 4
 	for action: StringName in [&"move_forward", &"move_left", &"move_right"]:
 		Input.action_release(action)
-	match phase:
-		0:
-			Input.action_press(&"move_forward")
-		1:
-			Input.action_press(&"move_left")
-		2:
-			Input.action_press(&"move_right")
+	# 5v5 Control: converge on the point instead of the 1-in-4 duty cycle used elsewhere, so
+	# headless bot matches actually exercise capture/contest instead of just wandering near
+	# their own spawn (decision 4; see docs/HANDOFF.md round 9 Sonnet-5 note).
+	if Lobby.mode == &"5v5" and _control != null:
+		var me_stuck: Player = _player(multiplayer.get_unique_id())
+		if me_stuck != null:
+			_bot_stuck_timer += delta
+			if _bot_stuck_timer >= 0.5:
+				if me_stuck.global_position.distance_to(_bot_stuck_check_pos) < 0.4:
+					_bot_dodge_left = not _bot_dodge_left
+					_bot_dodge_time_left = 1.5
+				_bot_stuck_check_pos = me_stuck.global_position
+				_bot_stuck_timer = 0.0
+		Input.action_press(&"move_forward")
+		if _bot_dodge_time_left > 0.0:
+			_bot_dodge_time_left -= delta
+			Input.action_press(&"move_left" if _bot_dodge_left else &"move_right")
+	else:
+		match phase:
+			0:
+				Input.action_press(&"move_forward")
+			1:
+				Input.action_press(&"move_left")
+			2:
+				Input.action_press(&"move_right")
 	var me: Player = _player(multiplayer.get_unique_id())
 	_bot_draft()
 	# Poll the confirm request: at 60 Hz a per-frame RPC would flood the reliable channel.
@@ -1016,8 +1043,30 @@ func _scoreboard_input(event: InputEvent) -> void:
 			_scoreboard = null
 
 ## Bot: face the opponent so its Bolts can actually land (full-match tests end by kills).
+## 5v5 Control: only chase a nearby opponent (fight for the point); with none close, face
+## the control point itself so "move forward" carries the bot there instead of drifting
+## toward whichever enemy is currently farthest across the map.
 func _bot_aim(me: Player) -> void:
 	if me == null or me.frozen:
+		return
+	var teams: Dictionary = MatchState.view.get("teams", {})
+	var my_team: int = int(teams.get(int(me.name), -1))
+	var engage_range: float = 14.0
+	for child: Node in _players_root.get_children():
+		var other: Player = child as Player
+		if other == null or other == me:
+			continue
+		if Lobby.mode == &"5v5" and int(teams.get(int(other.name), -2)) == my_team:
+			continue
+		var to: Vector3 = other.global_position - me.global_position
+		if Lobby.mode == &"5v5" and to.length() > engage_range:
+			continue
+		me.set_look(atan2(-to.x, -to.z), 0.0)
+		return
+	if Lobby.mode == &"5v5" and _control != null:
+		var to_point: Vector3 = _control.global_position - me.global_position
+		if to_point.length() > 0.5:
+			me.set_look(atan2(-to_point.x, -to_point.z), 0.0)
 		return
 	for child: Node in _players_root.get_children():
 		var other: Player = child as Player
