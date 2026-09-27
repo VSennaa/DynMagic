@@ -8,6 +8,8 @@ signal match_starting
 var overtime_setting: StringName = &"collapse"
 ## "rotation" | "random" | "A" | "B" | "C".
 var arena_setting: StringName = &"rotation"
+## M12 team mode: "1v1" | "2v2" | "3v3" | "5v5".
+var mode: StringName = &"1v1"
 ## peer id -> ready
 var ready_flags: Dictionary[int, bool] = {}
 ## Mirrors Net.dedicated for clients: the server starts the match by itself.
@@ -21,6 +23,7 @@ var _starting: bool = false
 func _ready() -> void:
 	overtime_setting = default_overtime()
 	arena_setting = default_arena()
+	mode = default_mode()
 	Net.peer_joined.connect(func(_id: int, _name: String) -> void: _push())
 	Net.peer_left.connect(func(id: int) -> void:
 		ready_flags.erase(id)
@@ -33,6 +36,7 @@ func reset() -> void:
 	ready_flags.clear()
 	overtime_setting = default_overtime()
 	arena_setting = default_arena()
+	mode = default_mode()
 
 
 ## D3: Colapso is the alpha default; the host lobby or the server flags override it.
@@ -42,6 +46,18 @@ func default_overtime() -> StringName:
 
 func default_arena() -> StringName:
 	return Net.cli_arena if Net.cli_arena != &"" else &"rotation"
+
+
+func default_mode() -> StringName:
+	var from_cli: StringName = Net.cli_mode
+	return from_cli if TeamRules.MODES.has(from_cli) else &"1v1"
+
+
+func set_mode(value: StringName) -> void:
+	if not Net.is_host() or not TeamRules.MODES.has(value):
+		return
+	mode = value
+	_push()
 
 
 func set_ready(value: bool) -> void:
@@ -60,7 +76,8 @@ func set_rules(overtime: StringName, arena: StringName) -> void:
 
 
 func can_start() -> bool:
-	if not Net.is_host() or _starting or MatchState.active or Net.players.size() < 2:
+	var required: int = TeamRules.size_for(mode) * 2
+	if not Net.is_host() or _starting or MatchState.active or Net.players.size() < required:
 		return false
 	for id: int in Net.players:
 		if not ready_flags.get(id, false):
@@ -89,7 +106,7 @@ func _request_ready(value: bool) -> void:
 func _push() -> void:
 	if not Net.is_host():
 		return
-	_sync.rpc(ready_flags, overtime_setting, arena_setting, Net.dedicated)
+	_sync.rpc(ready_flags, overtime_setting, arena_setting, mode, Net.dedicated)
 	if Net.dedicated and can_start() and not _auto_start_pending:
 		_auto_start()
 
@@ -104,14 +121,15 @@ func _auto_start() -> void:
 
 
 @rpc("authority", "call_local", "reliable", Net.CHANNEL_RELIABLE)
-func _sync(flags: Dictionary, overtime: StringName, arena: StringName, is_dedicated: bool = false) -> void:
-	# On the host (call_local) lags IS ready_flags: copy before clearing.
+func _sync(flags: Dictionary, overtime: StringName, arena: StringName, p_mode: StringName = &"1v1", is_dedicated: bool = false) -> void:
+	# On the host (call_local) flags IS ready_flags: copy before clearing.
 	var incoming: Dictionary = flags.duplicate()
 	ready_flags.clear()
 	for id: Variant in incoming:
 		ready_flags[int(id)] = bool(incoming[id])
 	overtime_setting = overtime
 	arena_setting = arena
+	mode = p_mode if TeamRules.MODES.has(p_mode) else &"1v1"
 	dedicated = is_dedicated
 	changed.emit()
 

@@ -328,6 +328,9 @@ func get_aim_camera() -> Camera3D:
 func receive_hit(amount: float, spell: ResolvedSpell, source: Node) -> void:
 	if invulnerable_time > 0.0 or stats.is_dead or (MatchState.active and MatchState.is_frozen()) or (Net.is_online() and not Net.is_host()):
 		return
+	# M12: friendly fire is off in team modes.
+	if source is Player and source != self and TeamRules.friendly(self, source as Player):
+		return
 	# Shock: the next damage taken is increased, then the shock is consumed.
 	if stats.has_status(&"shock") and amount > 0.0 and spell != null and spell.effect in [&"direct", &"burst"] and spell.form in [&"projectile", &"area"]:
 		amount *= 1.0 + _shock_bonus

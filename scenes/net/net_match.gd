@@ -13,6 +13,8 @@ const MAX_ORIGIN_ERROR: float = 1.5
 const MAX_TARGET_RANGE: float = 80.0
 ## Host rejects compose times outside these bounds (C10: unsanitized client numbers).
 const MAX_COMPOSE_SECONDS: float = 60.0
+## M12: spacing between teammates at a shared spawn marker.
+const SPAWN_SPACING: float = 1.5
 
 var _snapshot_timer: float = 0.0
 var _tick: int = 0
@@ -131,8 +133,8 @@ func _sync_players() -> void:
 		player.add_child(sync)
 		sync.configure(player, id)
 		# Host (id 1) starts north, the guest south (sides swap per round in M4).
-		var spawn: Marker3D = _arena.get_node(^"Layout/SpawnNorth" if id == 1 else ^"Layout/SpawnSouth") as Marker3D
-		player.global_transform = spawn.global_transform
+		var spawn: Transform3D = _team_spawn(id, _team_for(id))
+		player.global_transform = spawn
 		if player.is_local and _hud != null:
 			_hud.bind(player)
 		if Net.is_host():
@@ -140,16 +142,55 @@ func _sync_players() -> void:
 	for child: Node in _players_root.get_children():
 		if child is Player and not (child as Player).is_local and _hud != null:
 			_hud.threat = child as Node3D
-	if Net.players.size() >= 2 and not _loaded_sent and _players_root.get_child_count() >= 2:
+	var required: int = TeamRules.size_for(Lobby.mode) * 2
+	if Net.players.size() >= required and not _loaded_sent and _players_root.get_child_count() >= required:
 		_loaded_sent = true
 		if Net.is_host() and not MatchState.active:
-			MatchState.start_match(Lobby.overtime_setting, Lobby.arena_setting)
+			MatchState.start_match(Lobby.overtime_setting, Lobby.arena_setting, Lobby.mode)
 		if not Net.dedicated and not Net.spectating:
 			MatchState.mark_loaded()
 
 
 func get_player(id: int) -> Player:
 	return _player(id)
+
+
+func _team_for(id: int) -> int:
+	var view: Dictionary = MatchState.view
+	var teams: Dictionary = view.get("teams", {})
+	if teams.has(id):
+		return int(teams[id])
+	# Before the host broadcasts teams, infer from sorted id parity (same as TeamRules.assign).
+	var sorted: Array = Net.players.keys()
+	sorted.sort()
+	return sorted.find(id) % 2
+
+
+func _team_spawn_index(id: int) -> int:
+	var team: int = _team_for(id)
+	var sorted: Array = Net.players.keys()
+	sorted.sort()
+	var index: int = 0
+	for other: int in sorted:
+		if _team_for(other) == team:
+			if other == id:
+				return index
+			index += 1
+	return 0
+
+
+func _team_spawn(id: int, team: int) -> Transform3D:
+	var north_team: int = 0
+	if MatchState.active and MatchState.fsm is TeamMatchFsm:
+		north_team = (MatchState.fsm as TeamMatchFsm).teams.get(MatchState.fsm.north_id, 0)
+	var at_north: bool = team == north_team
+	var marker: Marker3D = _arena.get_node(^"Layout/SpawnNorth" if at_north else ^"Layout/SpawnSouth") as Marker3D
+	# 1v1 (solo team): spawn exactly on the marker, unchanged from before team modes.
+	if TeamRules.size_for(Lobby.mode) <= 1:
+		return marker.global_transform
+	var index: int = _team_spawn_index(id)
+	var offset: Vector3 = Vector3((index % 3 - 1) * SPAWN_SPACING, 0.0, (index / 3) * SPAWN_SPACING)
+	return marker.global_transform * Transform3D(Basis.IDENTITY, offset)
 
 
 func _player(id: int) -> Player:
@@ -522,8 +563,8 @@ func _start_round(north_id: int) -> void:
 		if player == null:
 			continue
 		var id: int = int(String(player.name))
-		var spawn: Marker3D = _arena.get_node(^"Layout/SpawnNorth" if id == north_id else ^"Layout/SpawnSouth") as Marker3D
-		player.global_transform = spawn.global_transform
+		var spawn: Transform3D = _team_spawn(id, _team_for(id))
+		player.global_transform = spawn
 		player.reset_round()
 		(player.get_node(^"NetSync") as NetSync).reset_transport(id)
 
@@ -552,12 +593,22 @@ func _match_text() -> String:
 		return "Aguardando oponente..."
 	var me: int = multiplayer.get_unique_id()
 	var score: Dictionary = view.get("score", {})
-	var other: int = 0
+	var teams: Dictionary = view.get("teams", {})
+	var my_team: int = int(teams.get(me, 0))
+	var team_scores: Array[int] = [0, 0]
 	for id: Variant in score:
-		if int(id) != me:
-			other = int(id)
+		var team: int = int(teams.get(int(id), 0))
+		team_scores[team] += int(score[id])
 	var clock: String = "%d:%02d" % [int(view["time_left"]) / 60, int(view["time_left"]) % 60]
-	var head: String = "Round %d   Você %d × %d Oponente   %s" % [int(view["round"]), int(score.get(me, 0)), int(score.get(other, 0)), clock]
+	var head: String
+	if teams.is_empty():
+		var other: int = 0
+		for id: Variant in score:
+			if int(id) != me:
+				other = int(id)
+		head = "Round %d   Você %d × %d Oponente   %s" % [int(view["round"]), int(score.get(me, 0)), int(score.get(other, 0)), clock]
+	else:
+		head = "Round %d   Time %d × %d   %s" % [int(view["round"]), team_scores[0], team_scores[1], clock]
 	if Net.spectating or Net.dedicated:
 		var names: PackedStringArray = PackedStringArray()
 		for id: Variant in score:
@@ -596,12 +647,29 @@ func _bot_draft() -> void:
 	var runes: Dictionary = view.get("runes", {})
 	if not offers.is_empty() and not runes.has(me):
 		MatchState.pick_rune(StringName(offers[0]))
-	var my_turn: bool = (int(view["draft_step"]) == MatchFsm.DraftStep.SIDE_A and int(view["north"]) == me) or (int(view["draft_step"]) == MatchFsm.DraftStep.SIDE_B and int(view["north"]) != me)
+	var draft_step: int = int(view["draft_step"])
+	var north: int = int(view["north"])
+	var teams: Dictionary = view.get("teams", {})
+	var my_turn: bool
+	if teams.is_empty():
+		# 1v1: exactly two players, no team indirection needed.
+		my_turn = (draft_step == MatchFsm.DraftStep.SIDE_A and north == me) or (draft_step == MatchFsm.DraftStep.SIDE_B and north != me)
+	else:
+		# Team modes: every member of the currently active team gets to pick, not only its leader.
+		var north_team: int = int(teams.get(north, -1))
+		var active_team: int = north_team if draft_step == MatchFsm.DraftStep.SIDE_A else (1 - north_team)
+		my_turn = int(teams.get(me, -1)) == active_team
 	if not my_turn or elements.has(me):
 		return
-	var taken: Array = elements.values()
+	var my_team: int = int(teams.get(me, -1))
 	for element: StringName in MatchFsm.ELEMENTS:
-		if not taken.has(element):
+		var team_taken: bool = false
+		if my_team >= 0:
+			for other: Variant in elements:
+				if int(teams.get(int(other), -1)) == my_team and elements[other] == element:
+					team_taken = true
+					break
+		if not team_taken:
 			MatchState.pick_element(element)
 			return
 
@@ -778,10 +846,18 @@ func _update_draft_panel(view: Dictionary) -> void:
 		_build_draft_panel()
 		Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
 	_draft_title.text = "Escolha seu elemento" if my_turn else "Oponente escolhendo..."
+	var teams: Dictionary = view.get("teams", {})
+	var my_team: int = int(teams.get(me, -1))
 	for i: int in _draft_cards.size():
 		var element_id: StringName = MatchFsm.ELEMENTS[i]
 		var card: Button = _draft_cards[i]
-		card.disabled = not my_turn or taken.has(element_id) or elements.has(me)
+		var team_taken: bool = false
+		if my_team >= 0:
+			for other: Variant in elements:
+				if int(teams.get(int(other), -1)) == my_team and elements[other] == element_id:
+					team_taken = true
+					break
+		card.disabled = not my_turn or team_taken or elements.has(me)
 		card.modulate = Color(0.65, 1.0, 0.65) if elements.get(me, &"") == element_id else Color(1, 1, 1)
 	_draft_owned.visible = elements.has(me)
 	if elements.has(me):
@@ -865,11 +941,20 @@ func _scoreboard_input(event: InputEvent) -> void:
 			var score: Dictionary = view.get("score", {})
 			var elements: Dictionary = view.get("elements", {})
 			var runes: Dictionary = view.get("runes", {})
-			for id: int in Net.players:
+			var teams: Dictionary = view.get("teams", {})
+			# M12: team modes group the roster by side so a shared team score reads as one line.
+			var ids: Array = Net.players.keys()
+			ids.sort_custom(func(a: int, b: int) -> bool: return int(teams.get(a, 0)) < int(teams.get(b, 0)) if teams.has(a) or teams.has(b) else a < b)
+			var shown_team: int = -1
+			for id: int in ids:
+				if teams.has(id) and int(teams[id]) != shown_team:
+					shown_team = int(teams[id])
+					column.add_child(UiKit.label("Time %s — %d rounds" % [char(0x41 + shown_team), int(score.get(id, 0))], 18))
 				var player: Player = _player(id)
-				column.add_child(UiKit.label("%s — %d rounds — %s%s — HP %d" % [
-					Net.players[id], int(score.get(id, 0)), Glossary.element(StringName(elements.get(id, &""))),
-					" + " + Glossary.rune(StringName(runes[id])) if runes.has(id) else "", roundi(player.stats.hp) if player else 0], 20))
+				column.add_child(UiKit.label("%s — %s%s — HP %d%s" % [
+					Net.players[id], Glossary.element(StringName(elements.get(id, &""))),
+					" + " + Glossary.rune(StringName(runes[id])) if runes.has(id) else "", roundi(player.stats.hp) if player else 0,
+					"" if teams.has(id) else " — %d rounds" % int(score.get(id, 0))], 20))
 			column.add_child(UiKit.label("Round %d · arena %s" % [int(view.get("round", 0)), String(view.get("arena", "A"))], 18))
 			_add_spell_card(column)
 		elif not event.is_pressed() and _scoreboard != null:

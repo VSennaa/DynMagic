@@ -16,7 +16,7 @@ const DISCOVERY_PORT: int = 7778
 const BROADCAST_INTERVAL: float = 1.0
 const LOBBY_TIMEOUT: float = 3.0
 ## Two players plus room for spectators later (spec 04 §1).
-const MAX_CLIENTS: int = 5
+const MAX_CLIENTS: int = 10
 const NET_MATCH_SCENE: String = "res://scenes/net/net_match.tscn"
 const SERVER_SCENE: String = "res://scenes/net/server_lobby.tscn"
 
@@ -45,6 +45,8 @@ var disconnect_reason: String = ""
 ## D3: server flags `--overtime` / `--arena` override the lobby defaults.
 var cli_overtime: StringName = &""
 var cli_arena: StringName = &""
+## M12: `--mode 1v1|2v2|3v3|5v5` overrides the lobby mode default.
+var cli_mode: StringName = &""
 ## peer id -> player name, host included (id 1). Only complete after the handshake.
 var players: Dictionary[int, String] = {}
 ## "ip:port" -> {info..., "ip", "seen"} for lobbies heard on the LAN.
@@ -164,7 +166,8 @@ func _rpc_hello(version: int, name: String, as_spectator: bool = false, token: S
 		_log("peer %d joined as spectator '%s'" % [peer_id, spectators[peer_id]])
 		_rpc_welcome.rpc(players, false, spectators, _in_match())
 		return
-	if players.size() >= 2:
+	var required: int = TeamRules.size_for(Lobby.mode) * 2
+	if players.size() >= required:
 		_rpc_reject.rpc_id(peer_id, "Sala cheia")
 		_kick_later(peer_id)
 		return
@@ -194,12 +197,20 @@ func _rpc_hello(version: int, name: String, as_spectator: bool = false, token: S
 @rpc("authority", "call_remote", "reliable", CHANNEL_RELIABLE)
 func _rpc_welcome(all_players: Dictionary, reconnecting: bool = false, all_spectators: Dictionary = {}, in_match: bool = false) -> void:
 	var first_time: bool = players.is_empty() and spectators.is_empty()
+	var previous_players: Dictionary[int, String] = players.duplicate()
 	players.clear()
 	for id: Variant in all_players:
 		players[int(id)] = str(all_players[id])
 	spectators.clear()
 	for id: Variant in all_spectators:
 		spectators[int(id)] = str(all_spectators[id])
+	# Clients learn about peers that joined after their own handshake through welcome rebroadcasts.
+	for id: int in players:
+		if not previous_players.has(id):
+			peer_joined.emit(id, players[id])
+	for id: int in previous_players:
+		if not players.has(id):
+			peer_left.emit(id)
 	# Spectators joining mid-match go straight to the arena.
 	if first_time and spectating and in_match:
 		_log("joined as spectator (match in progress)")
@@ -409,6 +420,10 @@ func _parse_cli() -> void:
 				if i + 1 < args.size():
 					cli_arena = StringName(args[i + 1])
 					i += 1
+			"--mode":
+				if i + 1 < args.size():
+					cli_mode = StringName(args[i + 1])
+					i += 1
 			"--discover":
 				start_discovery()
 				lobbies_changed.connect(func() -> void: _log("lobbies %s" % [lobbies.keys()]))
@@ -417,6 +432,8 @@ func _parse_cli() -> void:
 		Lobby.overtime_setting = cli_overtime
 	if cli_arena != &"":
 		Lobby.arena_setting = cli_arena
+	if cli_mode != &"" and TeamRules.MODES.has(cli_mode):
+		Lobby.mode = cli_mode
 	if action == "host":
 		if host(port) == OK:
 			get_tree().change_scene_to_file(NET_MATCH_SCENE)

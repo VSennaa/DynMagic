@@ -25,12 +25,22 @@ var _match_started_at: int = 0
 ## C2: source_id -> {amount, hits} accumulated since the last 100 ms flush.
 var _damage_pending: Dictionary = {}
 var _damage_flush: float = 0.0
+## M12: clients may call mark_loaded before the host's fsm exists (their local `Lobby.mode`
+## can still be stale on the very first sync in team modes with more than 2 players);
+## queue those ids and replay them once start_match() creates the fsm, instead of dropping them.
+var _pending_loaded: Array[int] = []
 
 
-func start_match(overtime_setting: StringName = &"collapse", arena_setting: StringName = &"rotation") -> void:
+func start_match(overtime_setting: StringName = &"collapse", arena_setting: StringName = &"rotation", mode: StringName = &"1v1") -> void:
 	if not Net.is_host():
 		return
-	fsm = MatchFsm.new()
+	var team_size: int = TeamRules.size_for(mode)
+	if team_size > 1:
+		var team_fsm: TeamMatchFsm = TeamMatchFsm.new()
+		team_fsm.team_size = team_size
+		fsm = team_fsm
+	else:
+		fsm = MatchFsm.new()
 	fsm.phase_changed.connect(func(_p: MatchFsm.Phase) -> void: _broadcast())
 	fsm.round_ended.connect(func(w: int, r: StringName) -> void: _round_ended.rpc(w, r))
 	fsm.match_ended.connect(func(w: int, r: StringName) -> void: _match_ended.rpc(w, r, stats))
@@ -54,6 +64,9 @@ func start_match(overtime_setting: StringName = &"collapse", arena_setting: Stri
 	if not Net.peer_left.is_connected(_on_peer_left):
 		Net.peer_left.connect(_on_peer_left)
 	fsm.start(ids, overtime_setting)
+	for id: int in _pending_loaded:
+		fsm.mark_loaded(id)
+	_pending_loaded.clear()
 
 
 ## Disconnect: pause, then forfeit if the player is still gone after the grace period.
@@ -130,15 +143,24 @@ func pick_rune(rune: StringName) -> void:
 
 @rpc("any_peer", "call_local", "reliable", Net.CHANNEL_RELIABLE)
 func _request_loaded() -> void:
-	if fsm != null and Net.is_host():
-		if _sender() == reconnecting_id and fsm.phase == MatchFsm.Phase.PAUSED and fsm.time_left > 0.0:
-			var arena: Node = get_tree().get_first_node_in_group(&"net_match")
-			arena.call(&"restore_client", reconnecting_id)
-			reconnecting_id = 0
-			disconnected_id = 0
-			fsm.player_reconnected()
-			print("[match] reconnected; phase=%s players=%s" % [MatchFsm.Phase.keys()[fsm.phase], fsm.players])
-		fsm.mark_loaded(_sender())
+	if not Net.is_host():
+		return
+	if fsm == null:
+		# M12: a client's local Lobby.mode can still be the stale "1v1" default the moment it
+		# sees enough peers for ITS OWN guess of room size, so it may call this before
+		# start_match() created the fsm; queue it and replay once the fsm exists.
+		var id: int = _sender()
+		if not _pending_loaded.has(id):
+			_pending_loaded.append(id)
+		return
+	if _sender() == reconnecting_id and fsm.phase == MatchFsm.Phase.PAUSED and fsm.time_left > 0.0:
+		var arena: Node = get_tree().get_first_node_in_group(&"net_match")
+		arena.call(&"restore_client", reconnecting_id)
+		reconnecting_id = 0
+		disconnected_id = 0
+		fsm.player_reconnected()
+		print("[match] reconnected; phase=%s players=%s" % [MatchFsm.Phase.keys()[fsm.phase], fsm.players])
+	fsm.mark_loaded(_sender())
 
 
 @rpc("any_peer", "call_local", "reliable", Net.CHANNEL_RELIABLE)
@@ -236,6 +258,8 @@ func _broadcast() -> void:
 		"core_holder": fsm.core_holder,
 		"arena": fsm.arena,
 		"core_progress": _core_progress(),
+		"teams": (fsm as TeamMatchFsm).teams if fsm is TeamMatchFsm else {},
+		"mode": Lobby.mode,
 	}
 	_sync.rpc(state)
 
@@ -318,6 +342,7 @@ func reset_for_lobby() -> void:
 	fsm = null
 	view = {}
 	active = false
+	_pending_loaded.clear()
 
 
 func _resolve_deaths() -> void:

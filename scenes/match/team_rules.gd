@@ -5,8 +5,23 @@ extends RefCounted
 const MODES: Array[StringName] = [&"1v1", &"2v2", &"3v3", &"5v5"]
 
 
+## Players per side (1, 2, 3 or 5).
 static func size_for(mode: StringName) -> int:
-	return int(String(mode).left(1)) if MODES.has(mode) else 1
+	match mode:
+		&"2v2":
+			return 2
+		&"3v3":
+			return 3
+		&"5v5":
+			return 5
+		_:
+			return 1
+
+
+## Total players in the match, both sides (2, 4, 6 or 10). Use for room
+## capacity / "everyone loaded" checks; use `size_for` for per-team draft rules.
+static func total_for(mode: StringName) -> int:
+	return size_for(mode) * 2
 
 
 static func assign(ids: Array[int]) -> Dictionary[int, int]:
