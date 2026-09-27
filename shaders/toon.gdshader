@@ -17,6 +17,11 @@ uniform float paint_noise : hint_range(0.0, 0.3) = 0.06;
 // running-bond stone on walls, flagstones on floors, grime at the foot of walls.
 uniform bool procedural_surface = false;
 uniform float brick_size = 0.9;
+// M13 "look" pass (brief gauntlet-look2): edge bevel, foot grime and low-frequency
+// wear, all inside the procedural_surface branch so textured objects are untouched.
+uniform float bevel_strength : hint_range(0.0, 0.5) = 0.15;
+uniform float wear_strength : hint_range(0.0, 0.3) = 0.08;
+uniform float grime_strength : hint_range(0.0, 1.0) = 1.0;
 
 float hash(vec2 p) {
 	return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
@@ -71,17 +76,26 @@ vec3 masonry(vec3 p, vec3 nrm) {
 	// Painted face: per-stone value shift, a soft top-left highlight and blotchy wear.
 	float face = 0.8 + jitter * 0.3;
 	face += (1.0 - uv.y) * 0.05 * step(up, 0.6) - uv.x * 0.03;
+	// Fake bevel: a ~4 cm band on the top and left edges of each wall block catches light.
+	if (up <= 0.6) {
+		float bevel = 1.0 - smoothstep(0.0, 0.045, min(1.0 - uv.y, uv.x));
+		face += bevel_strength * bevel;
+	}
 	face *= 0.94 + noise(p.xz * 3.1 + p.y * 2.3) * 0.12;
 	vec3 col = vec3(face);
 	// Macro variation: large soft patches break the tiling read at distance (warm/cool drift).
 	float macro = noise(p.xz * 0.11 + p.y * 0.07) * 0.6 + noise(p.xz * 0.37 - p.y * 0.21) * 0.4;
 	col *= mix(vec3(0.86, 0.88, 0.94), vec3(1.08, 1.03, 0.95), macro);
 	col = mix(col, vec3(0.74), line * 0.7);
-	// Grime and moss tint at the foot of walls, lighter wash near the top.
+	// Grime rising from the floor: blotchy, darkest at the base, fading over ~0.4 m.
 	if (up <= 0.6) {
-		float foot = 1.0 - smoothstep(0.0, 0.9, p.y);
-		col *= mix(vec3(1.0), vec3(0.72, 0.78, 0.66), foot * 0.6);
+		float blotch = 0.55 + noise(p.xz * 3.0) * 0.6 + noise(p.xz * 8.0 + 11.3) * 0.25;
+		float foot = 1.0 - smoothstep(0.0, 0.4 * blotch, p.y);
+		col *= mix(vec3(1.0), vec3(0.74, 0.72, 0.67), clamp(foot, 0.0, 1.0) * grime_strength);
 	}
+	// Low-frequency wear blotches (0.3-0.6 m) that brighten/darken slightly.
+	float wear = noise(p.xz * 2.0 + p.y * 0.4) * 2.0 - 1.0;
+	col *= 1.0 + wear * wear_strength;
 	return col;
 }
 
@@ -100,7 +114,13 @@ void light() {
 	float lit = ndotl * ATTENUATION;
 	float band = lit > 0.55 ? 1.0 : (lit > 0.05 ? mid_band : shadow_floor);
 	vec3 tint = mix(shadow_tint.rgb, vec3(1.0), step(0.05, lit));
-	DIFFUSE_LIGHT += ALBEDO * LIGHT_COLOR * tint * band / PI * 1.6;
+	// Point/spot lights fade with distance (ATTENUATION) instead of a hard toon disc at their
+	// range; the sun keeps the banded look (its ATTENUATION is only the shadow term).
+	float falloff = LIGHT_IS_DIRECTIONAL ? 1.0 : ATTENUATION;
+	if (!LIGHT_IS_DIRECTIONAL) {
+		band = mix(0.0, 1.0, smoothstep(0.0, 0.6, ndotl)) ;
+	}
+	DIFFUSE_LIGHT += ALBEDO * LIGHT_COLOR * tint * band * falloff / PI * 1.6;
 	float rim = pow(1.0 - clamp(dot(NORMAL, VIEW), 0.0, 1.0), 4.0);
 	DIFFUSE_LIGHT += rim_color.rgb * step(0.5, rim) * rim_strength * LIGHT_COLOR / PI * max(ndotl, 0.2);
 	vec3 half_vec = normalize(LIGHT + VIEW);

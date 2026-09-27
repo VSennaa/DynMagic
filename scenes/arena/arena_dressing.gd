@@ -172,7 +172,8 @@ static func _add_props(parent: Node3D) -> void:
 		var arch_yaw: float = 0.0 if sign_z > 0.0 else PI
 		_place_prop(parent, ARCH_SCENE, "SpawnArch", Vector3(0.0, 0.0, z_wall), arch_yaw)
 		for sx: float in [-1.0, 1.0]:
-			_place_prop(parent, BRAZIER_SCENE, "Brazier", Vector3(sx * 3.2, 0.0, sign_z * ARENA_HALF_Z), 0.0)
+			var brazier: Node3D = _place_prop(parent, BRAZIER_SCENE, "Brazier", Vector3(sx * 3.2, 0.0, sign_z * ARENA_HALF_Z), 0.0)
+			_add_brazier_fire(brazier)
 	# Banners hung on the side walls ~12 m apart, alternating sides (180° symmetric).
 	var banner_zs: Array[float] = [-18.0, -6.0, 6.0, 18.0]
 	for i: int in banner_zs.size():
@@ -182,12 +183,13 @@ static func _add_props(parent: Node3D) -> void:
 		_place_prop(parent, BANNER_SCENE, "Banner%d" % i, Vector3(x, BANNER_TOP_HEIGHT - BANNER_HEIGHT_M, banner_zs[i]), yaw)
 
 
-static func _place_prop(parent: Node3D, scene: PackedScene, prop_name: String, pos: Vector3, yaw: float) -> void:
+static func _place_prop(parent: Node3D, scene: PackedScene, prop_name: String, pos: Vector3, yaw: float) -> Node3D:
 	var instance: Node3D = scene.instantiate() as Node3D
 	instance.name = prop_name
 	instance.position = pos
 	instance.rotation.y = yaw
 	parent.add_child(instance)
+	return instance
 
 
 static func _mesh(parent: Node3D, mesh_name: String, size: Vector3, pos: Vector3, color: Color, yaw: float = 0.0) -> void:
@@ -200,3 +202,41 @@ static func _mesh(parent: Node3D, mesh_name: String, size: Vector3, pos: Vector3
 	instance.rotation.y = yaw
 	instance.material_override = Toon.material(color)
 	parent.add_child(instance)
+
+
+## Adds a rising fire trail and a warm flickering light to one brazier, and hides the
+## model's static triangular flame mesh (docs/briefs/gauntlet-look2.md task 3).
+static func _add_brazier_fire(brazier: Node3D) -> void:
+	_hide_flame_meshes(brazier)
+
+	var fire: GPUParticles3D = ElementFx.trail(&"fire", Color("ff5a1f"), 36)
+	fire.name = "Fire"
+	fire.position = Vector3(0.0, 1.1, 0.0)
+	var process: ParticleProcessMaterial = fire.process_material as ParticleProcessMaterial
+	process.direction = Vector3.UP
+	brazier.add_child(fire)
+
+	var light: OmniLight3D = OmniLight3D.new()
+	light.name = "FireLight"
+	light.light_color = Color("ffb060")
+	light.light_energy = 1.2
+	light.omni_range = 4.0
+	light.shadow_enabled = false
+	light.position = Vector3(0.0, 1.35, 0.0)
+	brazier.add_child(light)
+	if not Engine.is_editor_hint():
+		_flicker_step(light, 1.2)
+
+
+static func _hide_flame_meshes(node: Node) -> void:
+	for child: Node in node.get_children():
+		if child.name.begins_with("FacetedFlame") and child is Node3D:
+			(child as Node3D).visible = false
+		_hide_flame_meshes(child)
+
+
+## Looping energy flicker (±15%) driven by a self-chaining Tween so no script is needed.
+static func _flicker_step(light: OmniLight3D, base_energy: float) -> void:
+	var tween: Tween = light.create_tween()
+	tween.tween_property(light, "light_energy", base_energy * randf_range(0.85, 1.15), randf_range(0.06, 0.16))
+	tween.tween_callback(_flicker_step.bind(light, base_energy))
