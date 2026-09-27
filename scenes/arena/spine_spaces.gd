@@ -8,7 +8,11 @@ extends ArenaSpaces
 
 func _init() -> void:
 	solids = mirrored([
-		solid(0, -16, 7, 3.5, 2),
+		# Pushed 1.6 m further from the spawn exit along +z (user feedback v1.2.0: the low
+		# wall sat only 1 m past the exit at z=-18). Front face now at z=-15.4, giving a
+		# clear 2.6 m apron. Capped below a 1.75 m push by the hall route's (-3,-12)
+		# convergence elbow, which needs its 2.5 m capsule clearance from this box.
+		solid(0, -14.4, 7, 3.5, 2),
 		solid(0, -6, 1.5, 3.5, 6),
 		solid(-10, -6, 8, 3.5, 6),
 		solid(10, -6, 8, 3.5, 6),

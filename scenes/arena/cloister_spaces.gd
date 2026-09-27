@@ -6,7 +6,11 @@ extends ArenaSpaces
 
 func _init() -> void:
 	solids = mirrored([
-		solid(0, -16, 7, 3.5, 2),
+		# Pushed 2 m further from the spawn exit along +z (user feedback v1.2.0: the low
+		# wall sat only 1 m past the exit at z=-18). Front face now at z=-15, giving a
+		# clear 3 m apron. Still clear of the route funnel (which turns to x=+-5 by
+		# z=-18.5, well short of this box) and of the z=-10 cover below it.
+		solid(0, -14, 7, 3.5, 2),
 		# Shifted 0.1 m further from centre and raised to full height (Round 9 Sonnet-6,
 		# sightline gate): the old 2.2/1.4 m height let a balcony-eye ray (3.1 m) clear both
 		# boxes untouched, and the old edge sat exactly on the sightline sampler's 0.5 m

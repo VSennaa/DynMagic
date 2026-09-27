@@ -28,6 +28,14 @@ const COVER_TOP_OVERHANG: float = 0.08
 const ARENA_HALF_X: float = 14.0
 const ARENA_HALF_Z: float = 19.0
 
+# pillar.json footprint is 3.0 x 3.0 m (x/z); half-footprint 1.5 m + 0.05 m clearance so the
+# corner pillars sit fully inside the playable corner instead of intersecting the side/end
+# walls whose inner faces are exactly at ARENA_HALF_X / ARENA_HALF_Z (user feedback v1.2.0:
+# "corner pillars are being cut off").
+const PILLAR_FOOTPRINT_HALF: float = 1.5
+const PILLAR_WALL_CLEARANCE: float = 0.05
+const PILLAR_INSET: float = PILLAR_FOOTPRINT_HALF + PILLAR_WALL_CLEARANCE
+
 const BANNER_HEIGHT_M: float = 2.7
 const BANNER_TOP_HEIGHT: float = 5.0
 
@@ -170,7 +178,7 @@ static func _add_props(parent: Node3D) -> void:
 	# Corner pillars at the four arena corners.
 	for sx: float in [-1.0, 1.0]:
 		for sz: float in [-1.0, 1.0]:
-			_place_prop(parent, PILLAR_SCENE, "CornerPillar", Vector3(sx * ARENA_HALF_X, 0.0, sz * ARENA_HALF_Z), 0.0)
+			_place_prop(parent, PILLAR_SCENE, "CornerPillar", Vector3(sx * (ARENA_HALF_X - PILLAR_INSET), 0.0, sz * (ARENA_HALF_Z - PILLAR_INSET)), 0.0)
 	# Spawn arches framing the back-wall openings, plus a brazier in each inner spawn corner.
 	for sign_z: float in [-1.0, 1.0]:
 		var z_wall: float = sign_z * (ARENA_HALF_Z + 0.5)

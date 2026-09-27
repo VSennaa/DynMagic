@@ -8,10 +8,17 @@ extends ArenaSpaces
 
 func _init() -> void:
 	solids = mirrored([
-		# Deepened 0.2 m (Round 9 Sonnet-6, sightline gate): the old near edge (z=-17) sat
+		# Pushed 0.6 m further from the spawn exit and narrowed from 2.2 m to 1.0 m deep
+		# (user feedback v1.2.0: the low wall sat only 0.9 m past the exit at z=-18). Front
+		# face now at z=-15.9, giving a clear 2.1 m apron. Both the push and the narrowing
+		# are tightly capped by the east route's (5,-13.5)-(3,-12.8) diagonal elbow, which
+		# needs its 2.5 m capsule clearance from this box the whole way along, not just at
+		# its endpoints; the old 2.2 m depth left almost no room to move before clipping it.
+		# (Depth note, superseding the comment this replaces: the old near edge (z=-17) sat
 		# exactly on the sightline sampler's grid, letting a ray at x=-1 graze along the
-		# vestibule wall past the anteparo untouched.
-		solid(0, -16, 7, 3.5, 2.2),
+		# vestibule wall past the anteparo untouched; the new position/depth keeps that edge
+		# off-grid too.)
+		solid(0, -15.4, 7, 3.5, 1.0),
 		solid(-2, -7, 2, 3.5, 4),
 		# Widened from the original 3 m and thinned from 3 m to 1 m deep (Round 9 Sonnet-6,
 		# sightline gate): the old east edge sat exactly on the sightline sampler's grid
